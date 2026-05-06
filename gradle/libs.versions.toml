@@ -1,0 +1,54 @@
+[versions]
+kotlin = "2.2.21"
+kotest = "6.1.6"
+kotlinter = "5.3.0"
+spring-boot = "4.0.3"
+kotlin-snowflake = "0.0.5"
+kotlin-serialization = "1.8.0"
+exposed = "1.2.0"
+h2-database = "2.3.232"
+rest-assured = "5.5.1"
+
+[libraries]
+# build-logic
+kotlin-gradle-plugin = { module = "org.jetbrains.kotlin.jvm:org.jetbrains.kotlin.jvm.gradle.plugin", version.ref = "kotlin" }
+
+# kotlin
+kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
+kotlin-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlin-serialization" }
+kotlin-snowflake = { module = "io.github.crispindeity:kotlin-snowflake", version.ref = "kotlin-snowflake" }
+
+# spring (versions resolved by spring-boot-bom)
+spring-boot-bom = { module = "org.springframework.boot:spring-boot-dependencies", version.ref = "spring-boot" }
+spring-boot-starter = { module = "org.springframework.boot:spring-boot-starter" }
+spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-starter-web" }
+spring-boot-starter-validation = { module = "org.springframework.boot:spring-boot-starter-validation" }
+
+# database
+exposed-spring-boot-starter = { module = "org.jetbrains.exposed:exposed-spring-boot-starter", version.ref = "exposed" }
+h2-database = { module = "com.h2database:h2", version.ref = "h2-database" }
+
+# test
+kotlin-test-junit5 = { module = "org.jetbrains.kotlin:kotlin-test-junit5" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+kotest-runner-junit5 = { module = "io.kotest:kotest-runner-junit5", version.ref = "kotest" }
+spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
+rest-assured = { module = "io.rest-assured:rest-assured", version.ref = "rest-assured" }
+rest-assured-kotlin-extensions = { module = "io.rest-assured:kotlin-extensions", version.ref = "rest-assured" }
+
+[plugins]
+# external
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-plugin-spring = { id = "org.jetbrains.kotlin.plugin.spring", version.ref = "kotlin" }
+kotlin-plugin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+kotlin-linter = { id = "org.jmailen.kotlinter", version.ref = "kotlinter" }
+spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
+
+# convention (user-facing)
+crispinlab-jvm = { id = "crispinlab.jvm" }
+crispinlab-kopring-service = { id = "crispinlab.kopring.service" }
+crispinlab-kopring-web = { id = "crispinlab.kopring.web" }
+crispinlab-kopring-exposed = { id = "crispinlab.kopring.exposed" }
+crispinlab-snowflake = { id = "crispinlab.snowflake" }
+crispinlab-kotlin-serialization = { id = "crispinlab.kotlin.serialization" }
+crispinlab-rest-assured = { id = "crispinlab.rest-assured" }

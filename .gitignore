@@ -36,6 +36,9 @@ out/
 ### VS Code ###
 .vscode/
 
+### Claude Code (per-user settings only) ###
+.claude/settings.local.json
+
 ### Kotlin ###
 .kotlin
 ### JEnv template

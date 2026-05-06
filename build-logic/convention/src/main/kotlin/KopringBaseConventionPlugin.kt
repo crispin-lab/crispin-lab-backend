@@ -8,6 +8,7 @@ class KopringBaseConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) {
         with(target) {
             plugins(
+                "crispinlab.jvm",
                 "org.springframework.boot",
                 "org.jetbrains.kotlin.plugin.spring",
                 "crispinlab.kopring.test"

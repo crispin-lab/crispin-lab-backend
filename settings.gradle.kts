@@ -16,3 +16,10 @@ dependencyResolutionManagement {
 }
 
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
+
+include(
+    ":lab-common",
+    ":lab-space:domain",
+    ":lab-space:app",
+    ":app"
+)

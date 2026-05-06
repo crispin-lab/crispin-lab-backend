@@ -1,5 +1,6 @@
 package com.crispinlab.common.pagination
 
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 
@@ -54,6 +55,18 @@ class PageResultTest :
             mapped.page shouldBe 1
             mapped.size shouldBe 3
             mapped.totalElements shouldBe 10L
+        }
+
+        test("rejects invalid constructor arguments") {
+            shouldThrow<IllegalArgumentException> {
+                PageResult<Int>(items = emptyList(), page = -1, size = 10, totalElements = 0L)
+            }
+            shouldThrow<IllegalArgumentException> {
+                PageResult<Int>(items = emptyList(), page = 0, size = 0, totalElements = 0L)
+            }
+            shouldThrow<IllegalArgumentException> {
+                PageResult<Int>(items = emptyList(), page = 0, size = 10, totalElements = -1L)
+            }
         }
 
         test("empty creates a result with zero items but the requested pagination") {

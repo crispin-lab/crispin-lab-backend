@@ -9,8 +9,8 @@ data class PageRequest(
         require(size in 1..MAX_SIZE) { "size must be in 1..$MAX_SIZE, was $size" }
     }
 
-    val offset: Int
-        get() = page * size
+    val offset: Long
+        get() = page.toLong() * size
 
     companion object {
         const val MAX_SIZE: Int = 200

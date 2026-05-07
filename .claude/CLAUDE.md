@@ -5,4 +5,5 @@
 @rules/commit.md
 @rules/project-context.md
 @rules/architecture.md
+@rules/conventions.md
 @rules/docs-style.md

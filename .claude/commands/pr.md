@@ -3,7 +3,7 @@
 **중요: PR은 항상 draft로 생성한다.** `gh pr create`에 `--draft` 플래그를 반드시 포함한다. 사용자가 ready 상태로 만들고 싶으면 머지 직전에 직접 토글한다.
 
 ## 사전 조건
-- 브랜치 명명: `LAB-N-짧은-요약` (예: `LAB-10-module-scaffold`)
+- 브랜치 명명: `feature/LAB-N-짧은-요약` (예: `feature/LAB-10-module-scaffold`)
 - main과 차이 있는 커밋이 1개 이상
 - gh CLI가 personal 계정으로 인증돼 있어야 함 (`gh auth status`로 확인. 필요 시 사용자에게 `gh personal` alias 안내)
 

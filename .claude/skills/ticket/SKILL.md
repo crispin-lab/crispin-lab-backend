@@ -45,7 +45,7 @@ jira issue view <KEY> --plain --comments 5
 
 ### 4단계: 브랜치 제안
 
-작업 브랜치명을 제안한다 — `LAB-N-짧은-요약` 형식 (예: `LAB-12-domain-models`).
+작업 브랜치명을 제안한다 — `feature/LAB-N-짧은-요약` 형식 (예: `feature/LAB-12-domain-models`).
 
 - 영문 kebab-case, 5단어 이내, 동사보다는 명사구 (티켓 제목에서 핵심 명사 추출).
 - **자동 생성하지 않는다.** 제안만 하고, 사용자가 만들지 말지 결정하게 한다.

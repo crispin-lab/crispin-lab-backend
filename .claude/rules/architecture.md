@@ -1,7 +1,8 @@
 # 아키텍처
 
 ## 모듈 레이아웃
-- `lab-common` — cross-cutting 전용 (snowflake ID, 예외, pagination 타입). **도메인 로직은 두지 않는다.**
+- `lab-common` — cross-cutting 전용 (snowflake ID, 예외, pagination, 트랜잭션 인터페이스 등). **도메인 로직·Spring 의존은 두지 않는다.**
+- `lab-common-infra` — `lab-common` 인터페이스의 Spring/인프라 어댑터 모음 (예: `TransactionProvider` 구현). Spring Boot auto-config 으로 노출.
 - `lab-space/domain` — 순수 도메인. **Spring / Exposed / HTTP import 금지.**
 - `lab-space/app` — Spring + Exposed 어댑터: controller, repository 구현, search 어댑터.
 - `app` — `@SpringBootApplication`이 있는 실행 가능 모듈. 이 모듈만 `bootJar`를 활성화한다.

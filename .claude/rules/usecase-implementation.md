@@ -27,6 +27,7 @@
 package com.crispinlab.space.application.usecase.page
 
 import com.crispinlab.common.exception.NotFoundException
+import com.crispinlab.common.transaction.TransactionProvider
 import com.crispinlab.space.application.port.incoming.page.PageGetting
 import com.crispinlab.space.application.port.incoming.page.PageGetting.Request
 import com.crispinlab.space.application.port.incoming.page.PageGetting.Result
@@ -35,12 +36,15 @@ import com.crispinlab.space.domain.page.Page
 
 class PageGettingUseCase(
     private val pageRepository: PageRepository,
+    private val transactionProvider: TransactionProvider,
 ) : PageGetting {
     override fun perform(request: Request): Result =
-        request
-            .also { it.validate() }
-            .toEntity()
-            .toResult()
+        transactionProvider.transactional(readOnly = true) {
+            request
+                .also { it.validate() }
+                .toEntity()
+                .toResult()
+        }
 
     private fun Request.validate() {
         // 외부 의존 검증이 필요할 때만 채운다. 없으면 함수 자체를 두지 않는다.

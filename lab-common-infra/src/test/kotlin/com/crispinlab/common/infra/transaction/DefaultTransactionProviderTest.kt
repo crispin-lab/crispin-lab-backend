@@ -21,6 +21,7 @@ class DefaultTransactionProviderTest :
         val jdbcTemplate: JdbcTemplate = context.getBean(JdbcTemplate::class.java)
 
         beforeSpec {
+            jdbcTemplate.execute("DROP TABLE IF EXISTS counter")
             jdbcTemplate.execute("CREATE TABLE counter (id INT PRIMARY KEY, amount INT)")
             jdbcTemplate.update("INSERT INTO counter (id, amount) VALUES (1, 0)")
         }

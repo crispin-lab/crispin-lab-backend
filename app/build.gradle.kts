@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.crispinlab.kopring.web)
+    alias(libs.plugins.crispinlab.kopring.exposed)
 }
 
 dependencies {

@@ -7,7 +7,9 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean
 import org.springframework.transaction.PlatformTransactionManager
 
-@AutoConfiguration
+@AutoConfiguration(
+    afterName = ["org.jetbrains.exposed.v1.spring.boot.autoconfigure.ExposedAutoConfiguration"]
+)
 class TransactionProviderConfiguration {
     @Bean
     @ConditionalOnBean(PlatformTransactionManager::class)

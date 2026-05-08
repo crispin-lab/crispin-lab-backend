@@ -2,4 +2,4 @@ spring:
   application:
     name: crispin-lab
   profiles:
-    active: local
+    default: local

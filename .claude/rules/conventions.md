@@ -599,17 +599,11 @@ val page = Fixtures.basicPage()
 
 ## 에러 메시지 / 보안
 
-### 에러 메시지
+세부 패턴은 `error-messages.md` 참조. 한 줄 요약:
 
-- 존댓말, 한 문장, 구체적 표현.
-- `"오류가 발생했습니다"` 같은 모호한 문구 금지.
-- not found / forbidden / conflict / already exists 패턴을 일관되게 쓴다.
-- `lab-common` 의 `DomainException`, `NotFoundException`, `ConflictException` 을 우선 사용.
-
-### 정보 노출 방지
-
-- 에러 메시지에 내부 ID, 경로, 시크릿, 스택 트레이스를 노출하지 않는다.
-- 외부 응답에서 존재 여부와 권한 부족을 과하게 구분 노출하지 않는다.
+- 존댓말, 한 문장, 구체적. `lab-common` 예외(`DomainException`, `NotFoundException`, `ConflictException`) 우선.
+- 메시지에 내부 ID·경로·시크릿·스택 트레이스 노출 금지.
+- "없음" 과 "권한 없음" 을 응답으로 구분하지 않는다 (IDOR/enumeration 방지).
 
 ## 코드 위생
 

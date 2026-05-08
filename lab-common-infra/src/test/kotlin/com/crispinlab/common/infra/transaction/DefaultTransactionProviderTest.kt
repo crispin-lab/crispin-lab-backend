@@ -12,13 +12,13 @@ import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.jdbc.datasource.DataSourceTransactionManager
 import org.springframework.jdbc.datasource.DriverManagerDataSource
 import org.springframework.transaction.PlatformTransactionManager
-import org.springframework.transaction.support.TransactionSynchronizationManager
+import org.springframework.transaction.support.TransactionSynchronizationManager.isCurrentTransactionReadOnly
 
 class DefaultTransactionProviderTest :
     DescribeSpec({
         val context = AnnotationConfigApplicationContext(TestConfig::class.java)
-        val provider: TransactionProvider = context.getBean(TransactionProvider::class.java)
-        val jdbcTemplate: JdbcTemplate = context.getBean(JdbcTemplate::class.java)
+        val provider = context.getBean(TransactionProvider::class.java)
+        val jdbcTemplate = context.getBean(JdbcTemplate::class.java)
 
         beforeSpec {
             jdbcTemplate.execute("DROP TABLE IF EXISTS counter")
@@ -58,7 +58,7 @@ class DefaultTransactionProviderTest :
             it("readOnly = true 가 현재 트랜잭션에 반영된다") {
                 val isReadOnly =
                     provider.transactional(readOnly = true) {
-                        TransactionSynchronizationManager.isCurrentTransactionReadOnly()
+                        isCurrentTransactionReadOnly()
                     }
 
                 isReadOnly shouldBe true
@@ -67,7 +67,7 @@ class DefaultTransactionProviderTest :
             it("readOnly 기본값(false)에서는 read-only 가 아니다") {
                 val isReadOnly =
                     provider.transactional {
-                        TransactionSynchronizationManager.isCurrentTransactionReadOnly()
+                        isCurrentTransactionReadOnly()
                     }
 
                 isReadOnly shouldBe false

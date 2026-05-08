@@ -79,6 +79,7 @@ import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.space.application.port.incoming.page.PageGetting.Request
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.domain.page.PageId
+import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicPage
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -88,7 +89,7 @@ import io.mockk.mockk
 
 class PageGettingUseCaseTest : DescribeSpec({
     val pageRepository = mockk<PageRepository>()
-    val useCase = PageGettingUseCase(pageRepository)
+    val useCase = PageGettingUseCase(pageRepository, DummyTransactionProvider())
 
     describe("페이지 단건 조회") {
         it("정상적으로 조회한다") {

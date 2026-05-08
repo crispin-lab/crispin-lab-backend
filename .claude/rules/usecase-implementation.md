@@ -70,6 +70,7 @@ class PageGettingUseCase(
 package com.crispinlab.space.application.usecase.page
 
 import com.crispinlab.common.id.IdGenerator
+import com.crispinlab.common.transaction.TransactionProvider
 import com.crispinlab.space.application.port.incoming.page.PageRegistering
 import com.crispinlab.space.application.port.incoming.page.PageRegistering.Request
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
@@ -79,12 +80,15 @@ import com.crispinlab.space.domain.page.PageId.Companion.asPageId
 class PageRegisteringUseCase(
     private val pageRepository: PageRepository,
     private val idGenerator: IdGenerator,
+    private val transactionProvider: TransactionProvider,
 ) : PageRegistering {
     override fun perform(request: Request) {
-        request
-            .also { it.validate() }
-            .toEntity()
-            .let { pageRepository.save(it) }
+        transactionProvider.transactional {
+            request
+                .also { it.validate() }
+                .toEntity()
+                .let { pageRepository.save(it) }
+        }
     }
 
     private fun Request.validate() {
@@ -110,14 +114,19 @@ class PageRegisteringUseCase(
 ## Modifying (수정)
 
 ```kotlin
-class PageEditingUseCase(...) : PageEditing {
+class PageEditingUseCase(
+    private val pageRepository: PageRepository,
+    private val transactionProvider: TransactionProvider,
+) : PageEditing {
     override fun perform(request: Request): Result =
-        request
-            .also { it.validate() }
-            .toEntity()
-            .editWith(request)
-            .let { pageRepository.save(it) }
-            .toResult()
+        transactionProvider.transactional {
+            request
+                .also { it.validate() }
+                .toEntity()
+                .editWith(request)
+                .let { pageRepository.save(it) }
+                .toResult()
+        }
 
     private fun Request.toEntity(): Page =
         pageRepository.findBy(pageId)

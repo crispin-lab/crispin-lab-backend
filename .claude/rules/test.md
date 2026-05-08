@@ -196,6 +196,27 @@ class ExposedPageRepositoryTest : DescribeSpec({
 - 실제 SQL/매핑이 회귀 지점이라 단위 mock 보다 통합 테스트 가치가 큼.
 - 시간 포맷, enum 직렬화, null 컬럼 매핑 등 매핑 비대칭이 잡힌다.
 
+## 부팅 컨텍스트 로드 테스트 (`app` 모듈)
+
+`app` 모듈의 `@SpringBootApplication` 이 정상 부팅 가능한지 자체를 회귀로 둔다 — auto-config 누락, profile 잘못 활성, 의존성 누락 같은 케이스가 사전 차단된다.
+
+```kotlin
+@SpringBootTest
+class ApplicationTest : DescribeSpec({
+    extensions(SpringExtension())
+
+    describe("Spring 컨텍스트") {
+        it("정상적으로 로드된다") {
+            // 컨텍스트 로드 자체가 회귀 케이스
+        }
+    }
+})
+```
+
+- `crispinlab.kopring.test` 가 `kotest-extensions-spring` (group `io.kotest`, kotest 본 버전과 동기화) 을 testImplementation 으로 자동 wiring.
+- `SpringExtension` 은 kotest 6 부터 일반 `class` — `extensions(SpringExtension())` 처럼 인스턴스화해서 등록 (`SpringExtension` 단일 object 호출 금지).
+- spec 본문에서 `@Autowired` 생성자 주입은 **하지 말 것**. SpringExtension 은 spec 인스턴스화 *후* 적용되므로 생성자 인자 자리에 빈을 채워주지 못해 `SpecInstantiationException` 발생. 빈을 단언하려면 ApplicationContext 까지 띄운 후 별도 spec 에서.
+
 ## 자주 빠뜨리는 것
 
 - **`Instant.now()` 직접 사용** — flaky 의 원인. `DUMMY_INSTANT` 로.

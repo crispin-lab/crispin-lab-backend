@@ -9,6 +9,7 @@ class KopringTestConventionPlugin : Plugin<Project> {
         with(target) {
             dependencies {
                 add("testImplementation", libs.findLibrary("spring.boot.starter.test").get())
+                add("testImplementation", libs.findLibrary("kotest.extensions.spring").get())
             }
         }
     }

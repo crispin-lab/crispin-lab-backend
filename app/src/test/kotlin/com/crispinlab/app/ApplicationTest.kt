@@ -1,4 +1,4 @@
-package com.crispinlab
+package com.crispinlab.app
 
 import com.crispinlab.common.transaction.TransactionProvider
 import io.kotest.core.spec.style.DescribeSpec

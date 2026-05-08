@@ -16,6 +16,7 @@
 - **문자열 `scanBasePackages` 금지** — 패키지 리네임·이동을 컴파일러가 못 잡는다. marker 클래스 참조로 통일.
 - **default scan (좁힘 안 함) 금지** — `com.crispinlab.common.*` 까지 스캔되어 auto-config 노출 모듈과 충돌 가능.
 - 새 도메인 모듈을 추가하면 marker 클래스 신설 + `scanBasePackageClasses` 에 한 줄 추가가 PR 체크리스트.
+- **marker 1 모듈 1 개** — 같은 도메인에 marker 를 둘 이상 만들지 않는다. 한 marker 의 패키지(`com.crispinlab.<domain>`) 가 그 도메인의 component scan 루트라, 같은 패키지에 marker 가 2 개여도 scan 결과는 같지만 의미 분산. 그리고 다른 도메인의 marker 를 잘못 import 해 `scanBasePackageClasses` 에 두 번 들어가지 않게 주의 — 같은 marker 가 중복 등록되면 Spring 이 한 번만 처리하지만 의도가 흐려진다.
 
 ## auto-config ordering
 

@@ -1,1 +1,2 @@
 com.crispinlab.common.infra.transaction.TransactionProviderConfiguration
+com.crispinlab.common.infra.time.ClockConfiguration

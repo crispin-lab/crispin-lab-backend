@@ -17,9 +17,11 @@ class DefaultTransactionProvider(
         readOnly: Boolean,
         block: () -> T
     ): T =
-        templateFor(readOnly).execute {
-            block()
-        }
+        requireNotNull(
+            templateFor(readOnly).execute {
+                block()
+            }
+        )
 
     private fun templateFor(readOnly: Boolean): TransactionTemplate =
         if (readOnly) readOnlyTemplate else readWriteTemplate

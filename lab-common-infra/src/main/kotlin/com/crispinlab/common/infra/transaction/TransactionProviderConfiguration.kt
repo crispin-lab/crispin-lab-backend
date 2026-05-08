@@ -8,9 +8,9 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.transaction.PlatformTransactionManager
 
 @Configuration(proxyBeanMethods = false)
-@ConditionalOnBean(PlatformTransactionManager::class)
 class TransactionProviderConfiguration {
     @Bean
+    @ConditionalOnBean(PlatformTransactionManager::class)
     @ConditionalOnMissingBean(TransactionProvider::class)
     fun transactionProvider(transactionManager: PlatformTransactionManager): TransactionProvider =
         DefaultTransactionProvider(transactionManager)

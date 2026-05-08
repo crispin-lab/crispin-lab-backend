@@ -1,13 +1,15 @@
 package com.crispinlab.common.infra.transaction
 
 import com.crispinlab.common.transaction.TransactionProvider
+import org.springframework.boot.autoconfigure.AutoConfiguration
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Configuration
 import org.springframework.transaction.PlatformTransactionManager
 
-@Configuration(proxyBeanMethods = false)
+@AutoConfiguration(
+    afterName = ["org.jetbrains.exposed.v1.spring.boot.autoconfigure.ExposedAutoConfiguration"]
+)
 class TransactionProviderConfiguration {
     @Bean
     @ConditionalOnBean(PlatformTransactionManager::class)

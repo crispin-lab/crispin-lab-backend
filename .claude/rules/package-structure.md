@@ -108,6 +108,19 @@ lab-user/domain   → com.crispinlab.user.domain.*
                     com.crispinlab.user.application.port.*
 lab-user/app      → com.crispinlab.user.application.usecase.*
                     com.crispinlab.user.adapter.*
+                    com.crispinlab.user.UserModule        # component scan 마커
 ```
 
 도메인 간 호출이 필요하면 — port 를 통해서만. 한 도메인의 entity 를 다른 도메인이 직접 import 하지 않는다.
+
+새 도메인 모듈은 `app` 모듈의 `@SpringBootApplication(scanBasePackageClasses = [...])` 에 marker 클래스 한 줄 추가가 필요 (`architecture.md` "component scan 범위" 참조).
+
+## `app` 모듈 패키지 구조
+
+```
+com.crispinlab.app                # @SpringBootApplication 진입 클래스
+com.crispinlab.app.config         # cross-cutting 설정 (필요 시)
+```
+
+- 진입 클래스 패키지는 `com.crispinlab.app` — default scan 이 `com.crispinlab` 루트로 퍼지지 않게.
+- 도메인 어댑터·UseCase 는 `lab-<domain>/app` 에 둔다. `app` 모듈 안에 도메인 코드를 두지 않는다.

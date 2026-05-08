@@ -34,6 +34,7 @@ h2-database = { module = "com.h2database:h2", version.ref = "h2-database" }
 kotlin-test-junit5 = { module = "org.jetbrains.kotlin:kotlin-test-junit5" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
 kotest-runner-junit5 = { module = "io.kotest:kotest-runner-junit5", version.ref = "kotest" }
+kotest-extensions-spring = { module = "io.kotest:kotest-extensions-spring", version.ref = "kotest" }
 spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
 rest-assured = { module = "io.rest-assured:rest-assured", version.ref = "rest-assured" }
 rest-assured-kotlin-extensions = { module = "io.rest-assured:kotlin-extensions", version.ref = "rest-assured" }

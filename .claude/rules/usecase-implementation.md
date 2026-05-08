@@ -136,14 +136,37 @@ class PageEditingUseCase(...) : PageEditing {
 
 ## 트랜잭션 경계
 
-> 본 저장소는 Spring + Exposed 기반. 첫 UseCase 가 들어올 때 한 번에 정한다 — 본 룰은 의도적으로 비워둠.
+`lab-common` 의 `TransactionProvider` 를 UseCase 생성자로 주입받아 **`perform` 진입에서 한 번** 감싼다. 구현체(`DefaultTransactionProvider`) 는 `lab-common-infra` 가 Spring Boot auto-config 로 등록하므로 app 모듈은 의존만 추가하면 된다.
 
-후보:
-- Spring `@Transactional` (서비스 클래스에 부착)
-- Exposed `transaction { }` 블록을 perform 진입에 두기
-- 별도 `TransactionProvider` 추상화
+```kotlin
+class PageEditingUseCase(
+    private val pageRepository: PageRepository,
+    private val transactionProvider: TransactionProvider,
+) : PageEditing {
+    override fun perform(request: Request): Result =
+        transactionProvider.transactional {
+            request
+                .also { it.validate() }
+                .toEntity()
+                .editWith(request)
+                .let { pageRepository.save(it) }
+                .toResult()
+        }
+}
+```
 
-선택 후 본 문서에 한 줄 추가.
+### 규칙
+
+- **경계는 perform 진입 한 번**. `validate` → `toEntity` → `save` → `toResult` 전체가 한 트랜잭션 안에서 흐른다. `toResult` 안의 추가 조회도 같은 세션에서 안전.
+- **조회 전용 UseCase 는 `transactional(readOnly = true) { ... }`**. 쓰기 동반(Registering, Editing, Deleting) 은 기본값(false).
+- **도메인 예외(NotFoundException 등) 도 자동 롤백**된다 — `RuntimeException` 이므로 `TransactionTemplate` 가 롤백 처리. 별도 옵션 불필요.
+- 어댑터(`ExposedPageRepository` 등) 는 현재 트랜잭션을 가정하고 `transaction { ... }` 블록을 다시 열지 않는다 (`repository.md` 참조).
+- propagation / isolation / after-commit 콜백이 필요해지면 그때 시그니처를 확장한다 — 지금은 `readOnly` 만.
+
+### 테스트
+
+- UseCase 단위 테스트에서는 `lab-space/app/testsupport` 의 `DummyTransactionProvider` (block 을 그대로 실행) 를 주입해 트랜잭션 매니저 없이 검증한다. (첫 UseCase 티켓에서 testsupport 추가)
+- `DefaultTransactionProvider` 자체의 회귀(commit/rollback/readOnly) 는 `lab-common-infra` 의 통합 테스트가 책임진다.
 
 ## perform 작성 시 자주 빠뜨리는 것
 

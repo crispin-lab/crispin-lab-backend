@@ -19,5 +19,8 @@ class PageRevision(
         require(title.isNotBlank()) {
             "제목을 입력해 주세요."
         }
+        require(title.length <= Page.MAX_TITLE_LENGTH) {
+            "제목은 ${Page.MAX_TITLE_LENGTH}자를 넘을 수 없습니다."
+        }
     }
 }

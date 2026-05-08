@@ -60,6 +60,12 @@ class PageContentTest :
                 content.extractLinks().single().type shouldBe PageLink.Type.EXTERNAL
             }
 
+            it("HTTPS:// 같은 대문자 prefix 도 EXTERNAL 로 분류한다") {
+                val content: PageContent = PageContent("[[HTTPS://example.com]]")
+
+                content.extractLinks().single().type shouldBe PageLink.Type.EXTERNAL
+            }
+
             it("링크 안의 좌우 공백은 제거한다") {
                 val content: PageContent = PageContent("[[  여백 페이지  ]]")
 

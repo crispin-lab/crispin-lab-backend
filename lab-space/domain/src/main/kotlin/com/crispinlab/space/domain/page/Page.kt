@@ -30,12 +30,7 @@ class Page(
         private set
 
     init {
-        require(title.isNotBlank()) {
-            "제목을 입력해 주세요."
-        }
-        require(title.length <= MAX_TITLE_LENGTH) {
-            "제목은 ${MAX_TITLE_LENGTH}자를 넘을 수 없습니다."
-        }
+        validateTitle(title)
         require(currentVersion >= 1) {
             "현재 버전은 1 이상이어야 합니다."
         }
@@ -49,12 +44,7 @@ class Page(
         content: String,
         occurredAt: Instant
     ): UpdateResult {
-        require(title.isNotBlank()) {
-            "제목을 입력해 주세요."
-        }
-        require(title.length <= MAX_TITLE_LENGTH) {
-            "제목은 ${MAX_TITLE_LENGTH}자를 넘을 수 없습니다."
-        }
+        validateTitle(title)
         val newContent: PageContent = PageContent(content)
         val newVersion: Int = currentVersion + 1
         val newWikiLinks: List<ExtractedWikiLink> = newContent.extractLinks()
@@ -94,6 +84,15 @@ class Page(
     ) {
         this.visibility = visibility
         this.updatedAt = occurredAt
+    }
+
+    private fun validateTitle(title: String) {
+        require(title.isNotBlank()) {
+            "제목을 입력해 주세요."
+        }
+        require(title.length <= MAX_TITLE_LENGTH) {
+            "제목은 ${MAX_TITLE_LENGTH}자를 넘을 수 없습니다."
+        }
     }
 
     data class UpdateResult(

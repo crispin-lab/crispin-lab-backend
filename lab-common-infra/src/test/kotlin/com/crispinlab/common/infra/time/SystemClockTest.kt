@@ -2,6 +2,7 @@ package com.crispinlab.common.infra.time
 
 import com.crispinlab.common.time.Clock
 import io.kotest.core.spec.style.DescribeSpec
+import io.kotest.matchers.comparables.shouldBeGreaterThanOrEqualTo
 import io.kotest.matchers.shouldBe
 import java.time.Instant
 import java.time.ZoneOffset
@@ -23,7 +24,7 @@ class SystemClockTest :
                 val first: Instant = clock.now()
                 val second: Instant = clock.now()
 
-                (second >= first) shouldBe true
+                second shouldBeGreaterThanOrEqualTo first
             }
         }
     })

@@ -16,5 +16,9 @@ interface CommentRepository {
         pageRequest: PageRequest
     ): PageResult<Comment>
 
+    /**
+     * 물리적 삭제 (관리자 영구 제거 등) 전용.
+     * 일반 사용자 흐름의 삭제는 `Comment.delete(occurredAt)` 으로 deletedAt 을 설정한 뒤 `save(comment)` 를 사용한다.
+     */
     fun delete(id: CommentId)
 }

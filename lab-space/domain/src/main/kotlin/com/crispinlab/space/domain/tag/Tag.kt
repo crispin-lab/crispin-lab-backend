@@ -13,16 +13,18 @@ class Tag(
         private set
 
     init {
-        require(name.matches(NAME_REGEX)) {
-            "태그 이름은 1~30자의 문자/숫자/-/_ 만 허용합니다."
-        }
+        validateName(name)
     }
 
     fun rename(name: String) {
+        validateName(name)
+        this.name = name
+    }
+
+    private fun validateName(name: String) {
         require(name.matches(NAME_REGEX)) {
             "태그 이름은 1~30자의 문자/숫자/-/_ 만 허용합니다."
         }
-        this.name = name
     }
 
     companion object {

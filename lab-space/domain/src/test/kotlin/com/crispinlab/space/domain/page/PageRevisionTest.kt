@@ -22,5 +22,11 @@ class PageRevisionTest :
                     basicPageRevision(title = "")
                 }
             }
+
+            it("title 이 ${Page.MAX_TITLE_LENGTH}자를 넘으면 실패한다") {
+                shouldThrow<IllegalArgumentException> {
+                    basicPageRevision(title = "a".repeat(Page.MAX_TITLE_LENGTH + 1))
+                }
+            }
         }
     })

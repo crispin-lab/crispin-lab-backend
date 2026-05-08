@@ -21,7 +21,10 @@ data class PageContent(
             }.toList()
 
     private fun classifyType(target: String): PageLink.Type =
-        if (target.startsWith("http://") || target.startsWith("https://")) {
+        if (
+            target.startsWith("http://", ignoreCase = true) ||
+            target.startsWith("https://", ignoreCase = true)
+        ) {
             PageLink.Type.EXTERNAL
         } else {
             PageLink.Type.INTERNAL

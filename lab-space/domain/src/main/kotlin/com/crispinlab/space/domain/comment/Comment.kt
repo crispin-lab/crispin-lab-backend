@@ -24,12 +24,7 @@ class Comment(
         get() = deletedAt != null
 
     init {
-        require(body.isNotBlank()) {
-            "댓글 내용을 입력해 주세요."
-        }
-        require(body.length <= MAX_BODY_LENGTH) {
-            "댓글은 ${MAX_BODY_LENGTH}자를 넘을 수 없습니다."
-        }
+        validateBody(body)
     }
 
     fun edit(
@@ -39,12 +34,7 @@ class Comment(
         check(!isDeleted) {
             "삭제된 댓글은 수정할 수 없습니다."
         }
-        require(body.isNotBlank()) {
-            "댓글 내용을 입력해 주세요."
-        }
-        require(body.length <= MAX_BODY_LENGTH) {
-            "댓글은 ${MAX_BODY_LENGTH}자를 넘을 수 없습니다."
-        }
+        validateBody(body)
         this.body = body
         this.updatedAt = occurredAt
     }
@@ -55,6 +45,15 @@ class Comment(
         }
         this.deletedAt = occurredAt
         this.updatedAt = occurredAt
+    }
+
+    private fun validateBody(body: String) {
+        require(body.isNotBlank()) {
+            "댓글 내용을 입력해 주세요."
+        }
+        require(body.length <= MAX_BODY_LENGTH) {
+            "댓글은 ${MAX_BODY_LENGTH}자를 넘을 수 없습니다."
+        }
     }
 
     companion object {

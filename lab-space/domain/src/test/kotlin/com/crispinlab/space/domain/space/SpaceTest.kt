@@ -59,5 +59,13 @@ class SpaceTest :
                     space.update(name = "", occurredAt = DUMMY_INSTANT.plusSeconds(60))
                 }
             }
+
+            it("변경 인자가 모두 null 이면 updatedAt 도 그대로 둔다") {
+                val space: Space = basicSpace()
+
+                space.update(occurredAt = DUMMY_INSTANT.plusSeconds(60))
+
+                space.updatedAt shouldBe DUMMY_INSTANT
+            }
         }
     })

@@ -5,5 +5,13 @@
 @rules/commit.md
 @rules/project-context.md
 @rules/architecture.md
+@rules/package-structure.md
 @rules/conventions.md
+@rules/entity.md
+@rules/usecase-request.md
+@rules/usecase-implementation.md
+@rules/repository.md
+@rules/controller.md
+@rules/error-messages.md
+@rules/test.md
 @rules/docs-style.md

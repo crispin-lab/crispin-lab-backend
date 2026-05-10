@@ -4,4 +4,5 @@ plugins {
     alias(libs.plugins.kotlin.plugin.spring) apply false
     alias(libs.plugins.kotlin.plugin.serialization) apply false
     alias(libs.plugins.spring.boot) apply false
+    alias(libs.plugins.restdocs.api.spec) apply false
 }

@@ -9,7 +9,7 @@ kotlin {
 dependencies {
     compileOnly(libs.kotlin.gradle.plugin)
     compileOnly(libs.restdocs.api.spec.gradle.plugin)
-    compileOnly("io.swagger.core.v3:swagger-models:2.2.25")
+    compileOnly(libs.swagger.models)
 }
 
 gradlePlugin {

@@ -9,11 +9,13 @@ exposed = "1.2.0"
 h2-database = "2.3.232"
 rest-assured = "5.5.1"
 restdocs-api-spec = "0.19.4"
+swagger-models = "2.2.25"
 
 [libraries]
 # build-logic
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin.jvm:org.jetbrains.kotlin.jvm.gradle.plugin", version.ref = "kotlin" }
 restdocs-api-spec-gradle-plugin = { module = "com.epages:restdocs-api-spec-gradle-plugin", version.ref = "restdocs-api-spec" }
+swagger-models = { module = "io.swagger.core.v3:swagger-models", version.ref = "swagger-models" }
 
 # kotlin
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }

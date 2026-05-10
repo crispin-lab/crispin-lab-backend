@@ -30,7 +30,7 @@
 - `crispinlab.kopring.service` — Spring Boot 라이브러리 (`spring-boot-starter` 포함)
 - `crispinlab.kopring.web` — Spring Boot 라이브러리 (`spring-boot-starter-web` + validation)
 - `crispinlab.kopring.exposed` — Exposed Spring Boot starter + h2
-- `crispinlab.snowflake`, `crispinlab.kotlin.serialization`, `crispinlab.rest-assured` — 선택적 mix-in
+- `crispinlab.snowflake`, `crispinlab.kotlin.serialization`, `crispinlab.rest-assured`, `crispinlab.restdocs` — 선택적 mix-in
 
 내부 building block (다른 컨벤션이 자동 적용):
 - `crispinlab.kotest`, `crispinlab.kopring.base`, `crispinlab.kopring.test`

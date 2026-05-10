@@ -8,6 +8,8 @@ kotlin {
 
 dependencies {
     compileOnly(libs.kotlin.gradle.plugin)
+    compileOnly(libs.restdocs.api.spec.gradle.plugin)
+    compileOnly(libs.swagger.models)
 }
 
 gradlePlugin {
@@ -40,6 +42,10 @@ gradlePlugin {
         register("restAssured") {
             id = "crispinlab.rest-assured"
             implementationClass = "RestAssuredConventionPlugin"
+        }
+        register("restdocs") {
+            id = "crispinlab.restdocs"
+            implementationClass = "RestdocsConventionPlugin"
         }
 
         // internal building blocks

@@ -4,6 +4,7 @@ import com.crispinlab.common.id.IdGenerator
 import com.crispinlab.space.application.port.incoming.space.SpaceRegistering.Request
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.domain.space.Space
+import com.crispinlab.space.domain.user.UserId
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -56,7 +57,7 @@ class SpaceRegisteringUseCaseTest :
         fun basicRequest(
             name: String = "팀 위키",
             description: String = "공유 공간",
-            currentUserId: String = "100"
+            currentUserId: UserId = UserId(100L)
         ): Request = Request(name = name, description = description, currentUserId = currentUserId)
     }
 }

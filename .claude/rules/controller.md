@@ -149,6 +149,8 @@ class PageEditingController(
 
 검증을 UseCase Request 의 `asUserId()` 변환에 미루지 않는 이유: 인증 게이트키퍼와 도메인 변환의 책임을 섞으면 응답 코드·메시지의 의도가 흐려진다. `AuthArgumentResolver` 에서 한 번에 닫는다.
 
+> 임시 헤더 인증 단계에서는 두 실패 모두 400(`IllegalArgumentException`) 으로 응답한다. 토큰 인증 도입 PR 에서 401(`Unauthorized`) 로 정정하고 controller 테스트의 `isBadRequest()` 단언도 함께 갱신할 것 — RFC 7235 정합.
+
 ## 자주 빠뜨리는 것
 
 - **Result 를 다시 감싸기** — `ApiResponse(data = result, message = "ok")` 같은 envelope 은 정말 필요할 때만 도입. 도입한다면 전 계층 일관되게.

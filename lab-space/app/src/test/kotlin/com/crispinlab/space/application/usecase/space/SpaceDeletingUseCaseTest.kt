@@ -4,6 +4,7 @@ import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.space.application.port.incoming.space.SpaceDeleting.Request
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.domain.space.SpaceId
+import com.crispinlab.space.domain.user.UserId
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicSpace
 import io.kotest.assertions.throwables.shouldThrow
@@ -47,7 +48,7 @@ class SpaceDeletingUseCaseTest :
     companion object {
         fun basicRequest(
             spaceId: String = "1",
-            currentUserId: String = "100"
+            currentUserId: UserId = UserId(100L)
         ): Request = Request(spaceId = spaceId, currentUserId = currentUserId)
     }
 }

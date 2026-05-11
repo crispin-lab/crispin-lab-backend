@@ -4,6 +4,7 @@ import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.space.application.port.incoming.space.SpaceEditing.Request
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.domain.space.Space
+import com.crispinlab.space.domain.user.UserId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicSpace
@@ -69,7 +70,7 @@ class SpaceEditingUseCaseTest :
             spaceId: String = "1",
             name: String? = null,
             description: String? = null,
-            currentUserId: String = "100"
+            currentUserId: UserId = UserId(100L)
         ): Request =
             Request(
                 spaceId = spaceId,

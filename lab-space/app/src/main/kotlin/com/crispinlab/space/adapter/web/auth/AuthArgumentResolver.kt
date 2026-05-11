@@ -1,5 +1,6 @@
 package com.crispinlab.space.adapter.web.auth
 
+import com.crispinlab.space.domain.user.UserId
 import org.springframework.core.MethodParameter
 import org.springframework.stereotype.Component
 import org.springframework.web.bind.support.WebDataBinderFactory
@@ -21,9 +22,10 @@ class AuthArgumentResolver : HandlerMethodArgumentResolver {
         val raw: String =
             webRequest.getHeader(USER_ID_HEADER)
                 ?: throw IllegalArgumentException("사용자 인증이 필요합니다.")
-        raw.toLongOrNull()
-            ?: throw IllegalArgumentException("사용자 인증이 필요합니다.")
-        return Auth(userId = raw)
+        val userId: Long =
+            raw.toLongOrNull()
+                ?: throw IllegalArgumentException("사용자 인증이 필요합니다.")
+        return Auth(userId = UserId(userId))
     }
 
     companion object {

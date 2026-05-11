@@ -4,6 +4,7 @@ import com.crispinlab.space.adapter.web.auth.Auth
 import com.crispinlab.space.application.port.incoming.space.SpaceRegistering
 import com.crispinlab.space.application.port.incoming.space.SpaceRegistering.Request
 import com.crispinlab.space.application.port.incoming.space.SpaceRegistering.Result
+import com.crispinlab.space.domain.user.UserId
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -30,7 +31,7 @@ class SpaceRegisteringController(
         val name: String,
         val description: String
     ) {
-        fun toRequestWith(userId: String): Request =
+        fun toRequestWith(userId: UserId): Request =
             Request(name = name, description = description, currentUserId = userId)
     }
 }

@@ -47,7 +47,7 @@ class PageGettingUseCase(
         }
 
     private fun Request.validate() {
-        // 외부 의존 검증이 필요할 때만 채운다. 없으면 함수 자체를 두지 않는다.
+        // 권한·존재 등 외부 의존 검증을 둘 자리 — 비어 있어도 perform 흐름 정렬을 위해 유지한다.
     }
 
     private fun Request.toEntity(): Page =

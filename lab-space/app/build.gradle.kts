@@ -9,4 +9,5 @@ dependencies {
     implementation(projects.labSpace.domain)
 
     testImplementation(testFixtures(projects.labSpace.domain))
+    testImplementation(projects.labApiSupport)
 }

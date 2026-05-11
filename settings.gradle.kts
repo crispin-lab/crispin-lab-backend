@@ -24,6 +24,7 @@ enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 include(
     ":lab-common",
     ":lab-common-infra",
+    ":lab-api-support",
     ":lab-space:domain",
     ":lab-space:app",
     ":app"

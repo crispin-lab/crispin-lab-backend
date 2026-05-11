@@ -1,6 +1,6 @@
 package com.crispinlab.space.application.port.incoming.space
 
-import com.crispinlab.space.application.port.incoming.UseCase
+import com.crispinlab.common.application.UseCase
 import com.crispinlab.space.application.port.incoming.space.SpaceDeleting.Request
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.space.SpaceId.Companion.asSpaceId

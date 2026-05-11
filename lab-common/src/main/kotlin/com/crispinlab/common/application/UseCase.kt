@@ -1,4 +1,4 @@
-package com.crispinlab.space.application.port.incoming
+package com.crispinlab.common.application
 
 interface UseCase<Request, Result> {
     fun perform(request: Request): Result

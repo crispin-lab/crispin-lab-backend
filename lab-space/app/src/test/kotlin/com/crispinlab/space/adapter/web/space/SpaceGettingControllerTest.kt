@@ -1,46 +1,28 @@
 package com.crispinlab.space.adapter.web.space
 
+import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder.Companion.responseFields
 import com.crispinlab.common.exception.NotFoundException
-import com.crispinlab.space.adapter.web.GlobalExceptionHandler
-import com.crispinlab.space.adapter.web.WebMvcConfig
-import com.crispinlab.space.adapter.web.auth.AuthArgumentResolver
 import com.crispinlab.space.application.port.incoming.space.SpaceGetting
 import com.crispinlab.space.application.port.incoming.space.SpaceGetting.Result
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
-import com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper
-import com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper.resourceDetails
-import com.ninjasquad.springmockk.MockkBean
-import io.kotest.core.spec.style.DescribeSpec
-import io.kotest.extensions.spring.SpringExtension
+import com.crispinlab.space.testsupport.SpaceControllerDescribeSpec
 import io.mockk.clearMocks
 import io.mockk.every
+import io.mockk.mockk
 import io.mockk.verify
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.restdocs.AutoConfigureRestDocs
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
-import org.springframework.context.annotation.Import
-import org.springframework.test.web.servlet.MockMvc
-import org.springframework.test.web.servlet.get
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
-@WebMvcTest(SpaceGettingController::class)
-@AutoConfigureRestDocs
-@Import(WebMvcConfig::class, AuthArgumentResolver::class, GlobalExceptionHandler::class)
-class SpaceGettingControllerTest : DescribeSpec() {
-    @Autowired
-    private lateinit var mockMvc: MockMvc
+class SpaceGettingControllerTest :
+    SpaceControllerDescribeSpec(tag = "Space", body = {
+        val useCase = mockk<SpaceGetting>()
+        val controller = SpaceGettingController(useCase)
 
-    @MockkBean
-    private lateinit var useCase: SpaceGetting
+        beforeEach { clearMocks(useCase) }
 
-    init {
-        extensions(SpringExtension())
-
-        beforeEach {
-            clearMocks(useCase)
-        }
-
-        describe("GET /v1/spaces/{spaceId}") {
-            it("스페이스가 존재하면 200 과 정보를 반환한다") {
+        describe("스페이스 단건 조회") {
+            it("존재하면 200 과 정보를 반환한다") {
                 every { useCase.perform(any()) } returns
                     Result(
                         spaceId = "1",
@@ -50,56 +32,49 @@ class SpaceGettingControllerTest : DescribeSpec() {
                         updatedAt = DUMMY_INSTANT
                     )
 
-                mockMvc
-                    .get("/v1/spaces/{spaceId}", 1) {
-                        header("X-User-Id", "100")
-                    }.andExpect {
-                        status { isOk() }
-                        jsonPath("$.spaceId") { value("1") }
-                        jsonPath("$.name") { value("팀 위키") }
-                    }.andDo {
-                        handle(
-                            MockMvcRestDocumentationWrapper.document(
-                                "space-get",
-                                resourceDetails()
-                                    .tag("Space")
-                                    .summary("스페이스 단건 조회")
-                                    .description("ID 로 단일 스페이스를 조회한다.")
-                            )
-                        )
-                    }
+                controller
+                    .`when`(
+                        get("/v1/spaces/{spaceId}", 1).withUserHeader()
+                    ).then(
+                        status().isOk,
+                        jsonPath("$.spaceId").value("1"),
+                        jsonPath("$.name").value("팀 위키")
+                    ).document(
+                        userHeaderRequired(),
+                        responseFields {
+                            "spaceId".string("스페이스 식별자")
+                            "name".string("이름")
+                            "description".string("설명")
+                            "createdAt".datetime("생성 시각")
+                            "updatedAt".datetime("최근 갱신 시각")
+                        }
+                    )
             }
 
-            it("스페이스가 없으면 404 를 반환한다") {
+            it("없으면 404 를 반환한다") {
                 every { useCase.perform(any()) } throws NotFoundException("스페이스를 찾을 수 없습니다.")
 
-                mockMvc
-                    .get("/v1/spaces/{spaceId}", 999) {
-                        header("X-User-Id", "100")
-                    }.andExpect {
-                        status { isNotFound() }
-                        jsonPath("$.message") { value("스페이스를 찾을 수 없습니다.") }
-                    }
+                controller
+                    .`when`(
+                        get("/v1/spaces/{spaceId}", 999).withUserHeader()
+                    ).then(
+                        status().isNotFound,
+                        jsonPath("$.message").value("스페이스를 찾을 수 없습니다.")
+                    )
             }
 
             it("X-User-Id 헤더가 없으면 400 을 반환한다") {
-                mockMvc
-                    .get("/v1/spaces/{spaceId}", 1)
-                    .andExpect {
-                        status { isBadRequest() }
-                    }
+                controller
+                    .`when`(get("/v1/spaces/{spaceId}", 1))
+                    .then(status().isBadRequest)
                 verify(exactly = 0) { useCase.perform(any()) }
             }
 
             it("X-User-Id 가 숫자가 아니면 400 을 반환한다") {
-                mockMvc
-                    .get("/v1/spaces/{spaceId}", 1) {
-                        header("X-User-Id", "not-a-number")
-                    }.andExpect {
-                        status { isBadRequest() }
-                    }
+                controller
+                    .`when`(get("/v1/spaces/{spaceId}", 1).withUserHeader(userId = "not-a-number"))
+                    .then(status().isBadRequest)
                 verify(exactly = 0) { useCase.perform(any()) }
             }
         }
-    }
-}
+    })

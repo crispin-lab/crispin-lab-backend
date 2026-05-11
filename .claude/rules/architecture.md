@@ -1,8 +1,9 @@
 # 아키텍처
 
 ## 모듈 레이아웃
-- `lab-common` — cross-cutting 전용 (snowflake ID, 예외, pagination, 트랜잭션 인터페이스 등). **도메인 로직·Spring 의존은 두지 않는다.**
+- `lab-common` — cross-cutting 전용 (snowflake ID, 예외, pagination, 트랜잭션 인터페이스, `UseCase<Req, Res>` 베이스 등). **도메인 로직·Spring 의존은 두지 않는다.**
 - `lab-common-infra` — `lab-common` 인터페이스의 Spring/인프라 어댑터 모음 (예: `TransactionProvider` 구현). Spring Boot auto-config 으로 노출 — `META-INF/spring/...AutoConfiguration.imports` 등록 + 클래스에 `@AutoConfiguration` (일반 `@Configuration` 금지). 두 표현이 어긋나면 ordering 메타데이터(`@AutoConfigureAfter` 등)가 누락된다.
+- `lab-api-support` — 컨트롤러 테스트 공용 도구 (`ControllerDescribeSpec` + `FieldBuilder` DSL, restdocs-api-spec wrapper). 다른 도메인 `app` 모듈이 `testImplementation(projects.labApiSupport)` 로 받는다. main source 가 테스트 도구라서 외부 `kotest`, `mockk`, `spring-restdocs`, `restdocs-api-spec` 의존을 `api(...)` 로 노출한다.
 - `lab-space/domain` — 순수 도메인. **Spring / Exposed / HTTP import 금지.**
 - `lab-space/app` — Spring + Exposed 어댑터: controller, repository 구현, search 어댑터.
 - `app` — `@SpringBootApplication`이 있는 실행 가능 모듈. 이 모듈만 `bootJar`를 활성화한다. 진입 클래스는 `com.crispinlab.app.Application` (루트 `com.crispinlab` 에 두면 default scan 이 `lab-common-infra` 의 auto-config 패스와 같은 패키지를 이중으로 훑게 된다).

@@ -1,6 +1,6 @@
 package com.crispinlab.space.application.port.incoming.space
 
-import com.crispinlab.space.application.port.incoming.UseCase
+import com.crispinlab.common.application.UseCase
 import com.crispinlab.space.application.port.incoming.space.SpaceRegistering.Request
 import com.crispinlab.space.application.port.incoming.space.SpaceRegistering.Result
 import com.crispinlab.space.domain.user.UserId

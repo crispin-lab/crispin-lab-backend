@@ -10,6 +10,7 @@ class KopringTestConventionPlugin : Plugin<Project> {
             dependencies {
                 add("testImplementation", libs.findLibrary("spring.boot.starter.test").get())
                 add("testImplementation", libs.findLibrary("kotest.extensions.spring").get())
+                add("testImplementation", libs.findLibrary("springmockk").get())
             }
         }
     }

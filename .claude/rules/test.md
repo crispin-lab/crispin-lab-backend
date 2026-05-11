@@ -14,21 +14,22 @@
 ## 디렉토리·이름
 
 ```
-src/test/kotlin/
-├── com/crispinlab/space/
-│   ├── application/usecase/page/
-│   │   └── PageGettingUseCaseTest.kt        # UseCase 테스트
-│   ├── adapter/web/page/
-│   │   └── PageGettingControllerTest.kt     # Controller 테스트
-│   └── adapter/persistence/page/
-│       └── ExposedPageRepositoryTest.kt     # Repository 테스트
-└── com/crispinlab/space/testsupport/
-    ├── Fixtures.kt                          # basicXxx() 함수 모음
-    └── Dummies.kt                           # 상수 (DUMMY_INSTANT 등)
+lab-space/
+├── domain/
+│   ├── src/test/kotlin/com/crispinlab/space/domain/...        # entity 단위 테스트
+│   └── src/testFixtures/kotlin/com/crispinlab/space/testsupport/
+│       ├── Fixtures.kt                                          # basicXxx() entity 생성기
+│       └── Dummies.kt                                           # 상수 (DUMMY_INSTANT 등)
+└── app/src/test/kotlin/com/crispinlab/space/
+    ├── application/usecase/page/PageGettingUseCaseTest.kt       # UseCase 테스트
+    ├── adapter/web/page/PageGettingControllerTest.kt            # Controller 테스트
+    ├── adapter/persistence/page/ExposedPageRepositoryTest.kt    # Repository 테스트
+    └── testsupport/DummyTransactionProvider.kt                  # UseCase 단위 테스트 도구
 ```
 
 - 테스트 클래스 이름: 대상 + `Test` (단수). Spec 마다 한 대상.
-- `testsupport` 패키지에 Fixture / Dummy 를 모은다 — 흩어지면 같은 객체가 여러 모양으로 만들어짐.
+- entity / VO 생성 헬퍼는 **`lab-space/domain/src/testFixtures`** 에. `java-test-fixtures` 플러그인이 적용되어 있고, app 모듈은 `testImplementation(testFixtures(projects.labSpace.domain))` 로 받는다.
+- UseCase 단위 테스트 도구(`DummyTransactionProvider` 등) 는 **`lab-space/app/src/test/.../testsupport`** 에. app 모듈에서만 의미가 있어 testFixtures 로 노출하지 않는다.
 
 ## Fixture / Dummy
 

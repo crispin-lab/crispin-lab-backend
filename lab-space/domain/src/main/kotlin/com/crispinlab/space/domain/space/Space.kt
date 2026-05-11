@@ -1,12 +1,13 @@
 package com.crispinlab.space.domain.space
 
 import java.time.Instant
+import java.time.Instant.now
 
 class Space(
     val id: SpaceId,
     name: String,
     description: String,
-    val createdAt: Instant,
+    val createdAt: Instant = now(),
     updatedAt: Instant = createdAt
 ) {
     var name: String = name
@@ -21,25 +22,19 @@ class Space(
         validateDescription(description)
     }
 
-    fun update(
+    fun edit(
         name: String? = null,
-        description: String? = null,
-        occurredAt: Instant
+        description: String? = null
     ) {
-        var changed = false
         name?.also {
             validateName(it)
             this.name = it
-            changed = true
         }
         description?.also {
             validateDescription(it)
             this.description = it
-            changed = true
         }
-        if (changed) {
-            this.updatedAt = occurredAt
-        }
+        updatedAt = now()
     }
 
     private fun validateName(name: String) {

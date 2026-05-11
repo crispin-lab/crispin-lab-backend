@@ -5,6 +5,7 @@ import com.crispinlab.space.testsupport.Fixtures.basicSpace
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 
 class SpaceTest :
     DescribeSpec({
@@ -29,43 +30,41 @@ class SpaceTest :
             }
         }
 
-        describe("update") {
-            it("이름과 설명, updatedAt 이 모두 갱신된다") {
+        describe("이름·설명 수정") {
+            it("모두 변경하면 updatedAt 도 새 값으로 바뀐다") {
                 val space: Space = basicSpace()
-                val occurredAt = DUMMY_INSTANT.plusSeconds(60)
 
-                space.update(name = "공지사항", description = "공식 공지", occurredAt = occurredAt)
+                space.edit(name = "공지사항", description = "공식 공지")
 
                 space.name shouldBe "공지사항"
                 space.description shouldBe "공식 공지"
-                space.updatedAt shouldBe occurredAt
+                space.updatedAt shouldNotBe DUMMY_INSTANT
             }
 
-            it("이름만 넘기면 설명은 그대로 두고 updatedAt 만 갱신된다") {
+            it("이름만 넘기면 설명은 그대로 유지된다") {
                 val space: Space = basicSpace()
-                val occurredAt = DUMMY_INSTANT.plusSeconds(60)
 
-                space.update(name = "공지사항", occurredAt = occurredAt)
+                space.edit(name = "공지사항")
 
                 space.name shouldBe "공지사항"
                 space.description shouldBe "기본 설명"
-                space.updatedAt shouldBe occurredAt
+                space.updatedAt shouldNotBe DUMMY_INSTANT
             }
 
             it("새 이름이 비어 있으면 실패한다") {
                 val space: Space = basicSpace()
 
                 shouldThrow<IllegalArgumentException> {
-                    space.update(name = "", occurredAt = DUMMY_INSTANT.plusSeconds(60))
+                    space.edit(name = "")
                 }
             }
 
-            it("변경 인자가 모두 null 이면 updatedAt 도 그대로 둔다") {
+            it("변경 인자가 모두 null 이어도 호출이 일어났으면 updatedAt 이 갱신된다") {
                 val space: Space = basicSpace()
 
-                space.update(occurredAt = DUMMY_INSTANT.plusSeconds(60))
+                space.edit()
 
-                space.updatedAt shouldBe DUMMY_INSTANT
+                space.updatedAt shouldNotBe DUMMY_INSTANT
             }
         }
     })

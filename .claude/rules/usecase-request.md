@@ -19,7 +19,7 @@
 ```kotlin
 package com.crispinlab.space.application.port.incoming.page
 
-import com.crispinlab.space.application.port.incoming.UseCase
+import com.crispinlab.common.application.UseCase
 import com.crispinlab.space.application.port.incoming.page.PageEditing.Request
 import com.crispinlab.space.application.port.incoming.page.PageEditing.Result
 import com.crispinlab.space.domain.page.PageId

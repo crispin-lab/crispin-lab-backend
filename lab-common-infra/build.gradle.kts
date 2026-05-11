@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.crispinlab.kopring.service)
+    alias(libs.plugins.crispinlab.snowflake)
 }
 
 dependencies {

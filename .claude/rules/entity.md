@@ -104,6 +104,7 @@ class Page(
 - 부분 변경 메서드(`edit`) 는 `null = no change` 로 받는다. 이렇게 두면 호출 측에서 부분 업데이트가 자연스러움.
 - 상태 전이(`publish`, `archive`) 는 별도 메서드 — `check` 로 상태 가드.
 - `updatedAt` 은 변경이 일어난 메서드 안에서 직접 갱신 (자동 콜백 신뢰 X).
+- 갱신은 **메서드 끝에 무조건 `updatedAt = now()` 한 줄**. 인자가 모두 null 이라 실제 필드 변경이 없어도 호출 자체가 일어났으면 갱신 — `if (changed)` 같은 조건부 가드는 두지 않는다. 호출 의도 자체를 audit 시점으로 본다.
 
 ## 값 객체 (Value Object)
 

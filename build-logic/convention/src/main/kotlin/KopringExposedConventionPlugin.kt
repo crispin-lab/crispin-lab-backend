@@ -9,6 +9,7 @@ class KopringExposedConventionPlugin : Plugin<Project> {
         with(target) {
             dependencies {
                 add("implementation", libs.findLibrary("exposed.spring.boot.starter").get())
+                add("implementation", libs.findLibrary("exposed.java.time").get())
                 add("runtimeOnly", libs.findLibrary("h2.database").get())
             }
         }

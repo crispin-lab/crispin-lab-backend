@@ -2,7 +2,7 @@
 kotlin = "2.3.21"
 kotest = "6.1.6"
 kotlinter = "5.4.2"
-spring-boot = "4.0.6"
+spring-boot = "3.5.14"
 kotlin-snowflake = "1.0.1"
 kotlin-serialization = "1.8.0"
 exposed = "1.2.0"
@@ -10,6 +10,7 @@ h2-database = "2.3.232"
 rest-assured = "5.5.1"
 restdocs-api-spec = "0.19.4"
 swagger-models = "2.2.25"
+springmockk = "4.0.2"
 
 [libraries]
 # build-logic
@@ -32,6 +33,7 @@ spring-jdbc = { module = "org.springframework:spring-jdbc" }
 
 # database
 exposed-spring-boot-starter = { module = "org.jetbrains.exposed:exposed-spring-boot-starter", version.ref = "exposed" }
+exposed-java-time = { module = "org.jetbrains.exposed:exposed-java-time", version.ref = "exposed" }
 h2-database = { module = "com.h2database:h2", version.ref = "h2-database" }
 
 # test
@@ -44,6 +46,7 @@ rest-assured = { module = "io.rest-assured:rest-assured", version.ref = "rest-as
 rest-assured-kotlin-extensions = { module = "io.rest-assured:kotlin-extensions", version.ref = "rest-assured" }
 spring-restdocs-mockmvc = { module = "org.springframework.restdocs:spring-restdocs-mockmvc" }
 restdocs-api-spec-mockmvc = { module = "com.epages:restdocs-api-spec-mockmvc", version.ref = "restdocs-api-spec" }
+springmockk = { module = "com.ninja-squad:springmockk", version.ref = "springmockk" }
 
 [plugins]
 # external

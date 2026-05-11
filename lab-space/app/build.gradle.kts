@@ -7,4 +7,6 @@ plugins {
 dependencies {
     implementation(projects.labCommon)
     implementation(projects.labSpace.domain)
+
+    testImplementation(testFixtures(projects.labSpace.domain))
 }

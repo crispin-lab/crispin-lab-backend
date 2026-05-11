@@ -35,10 +35,7 @@ class SpaceRegisteringUseCaseTest :
                 val saved = slot<Space>()
                 every { spaceRepository.save(capture(saved)) } answers { saved.captured }
 
-                val result =
-                    useCase.perform(
-                        Request(name = "팀 위키", description = "공유 공간", currentUserId = "100")
-                    )
+                val result = useCase.perform(basicRequest())
 
                 result.spaceId shouldBe "42"
                 saved.captured.name shouldBe "팀 위키"
@@ -50,8 +47,16 @@ class SpaceRegisteringUseCaseTest :
                 every { idGenerator.next() } returns 1L
 
                 shouldThrow<IllegalArgumentException> {
-                    useCase.perform(Request(name = "", description = "", currentUserId = "100"))
+                    useCase.perform(basicRequest(name = "", description = ""))
                 }
             }
         }
-    })
+    }) {
+    companion object {
+        fun basicRequest(
+            name: String = "팀 위키",
+            description: String = "공유 공간",
+            currentUserId: String = "100"
+        ): Request = Request(name = name, description = description, currentUserId = currentUserId)
+    }
+}

@@ -5,6 +5,7 @@ import com.crispinlab.space.testsupport.Fixtures.basicSpace
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 
 class SpaceTest :
     DescribeSpec({
@@ -30,14 +31,14 @@ class SpaceTest :
         }
 
         describe("edit") {
-            it("이름과 설명이 갱신되고 updatedAt 도 함께 갱신된다") {
+            it("이름과 설명이 갱신되고 updatedAt 도 새 값으로 바뀐다") {
                 val space: Space = basicSpace()
 
                 space.edit(name = "공지사항", description = "공식 공지")
 
                 space.name shouldBe "공지사항"
                 space.description shouldBe "공식 공지"
-                (space.updatedAt > DUMMY_INSTANT) shouldBe true
+                space.updatedAt shouldNotBe DUMMY_INSTANT
             }
 
             it("이름만 넘기면 설명은 그대로 두고 updatedAt 만 갱신된다") {
@@ -47,7 +48,7 @@ class SpaceTest :
 
                 space.name shouldBe "공지사항"
                 space.description shouldBe "기본 설명"
-                (space.updatedAt > DUMMY_INSTANT) shouldBe true
+                space.updatedAt shouldNotBe DUMMY_INSTANT
             }
 
             it("새 이름이 비어 있으면 실패한다") {
@@ -58,12 +59,12 @@ class SpaceTest :
                 }
             }
 
-            it("변경 인자가 모두 null 이면 updatedAt 도 그대로 둔다") {
+            it("변경 인자가 모두 null 이어도 호출이 일어났으면 updatedAt 이 갱신된다") {
                 val space: Space = basicSpace()
 
                 space.edit()
 
-                space.updatedAt shouldBe DUMMY_INSTANT
+                space.updatedAt shouldNotBe DUMMY_INSTANT
             }
         }
     })

@@ -29,7 +29,7 @@ class SpaceDeletingUseCaseTest :
                 every { spaceRepository.findBy(space.id) } returns space
                 justRun { spaceRepository.delete(space.id) }
 
-                useCase.perform(Request(spaceId = "1", currentUserId = "100"))
+                useCase.perform(basicRequest())
 
                 verify(exactly = 1) { spaceRepository.delete(SpaceId(1L)) }
             }
@@ -38,9 +38,16 @@ class SpaceDeletingUseCaseTest :
                 every { spaceRepository.findBy(any()) } returns null
 
                 shouldThrow<NotFoundException> {
-                    useCase.perform(Request(spaceId = "1", currentUserId = "100"))
+                    useCase.perform(basicRequest())
                 }
                 verify(exactly = 0) { spaceRepository.delete(any()) }
             }
         }
-    })
+    }) {
+    companion object {
+        fun basicRequest(
+            spaceId: String = "1",
+            currentUserId: String = "100"
+        ): Request = Request(spaceId = spaceId, currentUserId = currentUserId)
+    }
+}

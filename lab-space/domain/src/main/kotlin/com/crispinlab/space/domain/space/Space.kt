@@ -26,20 +26,15 @@ class Space(
         name: String? = null,
         description: String? = null
     ) {
-        var changed = false
         name?.also {
             validateName(it)
             this.name = it
-            changed = true
         }
         description?.also {
             validateDescription(it)
             this.description = it
-            changed = true
         }
-        if (changed) {
-            this.updatedAt = now()
-        }
+        updatedAt = now()
     }
 
     private fun validateName(name: String) {

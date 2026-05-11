@@ -97,7 +97,7 @@ class PageRegisteringUseCase(
 
     private fun Request.toEntity(): Page =
         Page(
-            id = idGenerator.generate().asPageId(),
+            id = idGenerator.next().asPageId(),
             title = title,
             body = body,
             visibility = visibility,

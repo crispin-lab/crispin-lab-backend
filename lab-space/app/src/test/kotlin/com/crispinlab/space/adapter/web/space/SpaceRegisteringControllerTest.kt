@@ -62,6 +62,17 @@ class SpaceRegisteringControllerTest : DescribeSpec() {
                         status { isBadRequest() }
                     }
             }
+
+            it("X-User-Id 가 숫자가 아니면 400 을 반환한다") {
+                mockMvc
+                    .post("/v1/spaces") {
+                        header("X-User-Id", "not-a-number")
+                        contentType = MediaType.APPLICATION_JSON
+                        content = """{"name":"팀 위키","description":""}"""
+                    }.andExpect {
+                        status { isBadRequest() }
+                    }
+            }
         }
     }
 }

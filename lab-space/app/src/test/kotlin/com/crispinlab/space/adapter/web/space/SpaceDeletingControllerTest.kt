@@ -57,6 +57,15 @@ class SpaceDeletingControllerTest : DescribeSpec() {
                         status { isBadRequest() }
                     }
             }
+
+            it("X-User-Id 가 숫자가 아니면 400 을 반환한다") {
+                mockMvc
+                    .delete("/v1/spaces/1") {
+                        header("X-User-Id", "not-a-number")
+                    }.andExpect {
+                        status { isBadRequest() }
+                    }
+            }
         }
     }
 }

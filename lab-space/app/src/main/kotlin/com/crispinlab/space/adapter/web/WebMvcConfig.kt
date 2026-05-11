@@ -1,4 +1,4 @@
-package com.crispinlab.space.config
+package com.crispinlab.space.adapter.web
 
 import com.crispinlab.space.adapter.web.auth.AuthArgumentResolver
 import org.springframework.context.annotation.Configuration

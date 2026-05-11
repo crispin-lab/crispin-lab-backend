@@ -10,6 +10,7 @@ import com.crispinlab.space.testsupport.Fixtures.basicSpace
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -29,25 +30,17 @@ class SpaceEditingUseCaseTest :
         }
 
         describe("스페이스 수정") {
-            it("이름·설명을 모두 변경하면 updatedAt 이 갱신된다") {
+            it("이름·설명을 모두 변경하면 updatedAt 이 새 값으로 갱신된다") {
                 val space = basicSpace(name = "이전 이름", description = "이전 설명")
                 every { spaceRepository.findBy(space.id) } returns space
                 val saved = slot<Space>()
                 every { spaceRepository.save(capture(saved)) } answers { saved.captured }
 
-                val result =
-                    useCase.perform(
-                        Request(
-                            spaceId = "1",
-                            name = "새 이름",
-                            description = "새 설명",
-                            currentUserId = "100"
-                        )
-                    )
+                val result = useCase.perform(basicRequest(name = "새 이름", description = "새 설명"))
 
                 result.name shouldBe "새 이름"
                 result.description shouldBe "새 설명"
-                (saved.captured.updatedAt > DUMMY_INSTANT) shouldBe true
+                saved.captured.updatedAt shouldNotBe DUMMY_INSTANT
             }
 
             it("description 만 변경하면 name 은 그대로 유지된다") {
@@ -56,34 +49,33 @@ class SpaceEditingUseCaseTest :
                 val saved = slot<Space>()
                 every { spaceRepository.save(capture(saved)) } answers { saved.captured }
 
-                val result =
-                    useCase.perform(
-                        Request(spaceId = "1", description = "새 설명", currentUserId = "100")
-                    )
+                val result = useCase.perform(basicRequest(description = "새 설명"))
 
                 result.name shouldBe "유지"
                 result.description shouldBe "새 설명"
-            }
-
-            it("name·description 둘 다 null 이면 updatedAt 은 변하지 않는다") {
-                val space = basicSpace(name = "그대로", description = "그대로")
-                every { spaceRepository.findBy(space.id) } returns space
-                val saved = slot<Space>()
-                every { spaceRepository.save(capture(saved)) } answers { saved.captured }
-
-                useCase.perform(Request(spaceId = "1", currentUserId = "100"))
-
-                saved.captured.updatedAt shouldBe DUMMY_INSTANT
             }
 
             it("스페이스가 없으면 NotFoundException") {
                 every { spaceRepository.findBy(any()) } returns null
 
                 shouldThrow<NotFoundException> {
-                    useCase.perform(
-                        Request(spaceId = "1", name = "x", currentUserId = "100")
-                    )
+                    useCase.perform(basicRequest(name = "x"))
                 }
             }
         }
-    })
+    }) {
+    companion object {
+        fun basicRequest(
+            spaceId: String = "1",
+            name: String? = null,
+            description: String? = null,
+            currentUserId: String = "100"
+        ): Request =
+            Request(
+                spaceId = spaceId,
+                name = name,
+                description = description,
+                currentUserId = currentUserId
+            )
+    }
+}

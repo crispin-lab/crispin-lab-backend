@@ -5,6 +5,7 @@ import com.crispinlab.common.transaction.TransactionProvider
 import com.crispinlab.space.application.port.incoming.space.SpaceDeleting
 import com.crispinlab.space.application.port.incoming.space.SpaceDeleting.Request
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
+import com.crispinlab.space.domain.space.Space
 import org.springframework.stereotype.Service
 
 @Service
@@ -14,9 +15,13 @@ class SpaceDeletingUseCase(
 ) : SpaceDeleting {
     override fun perform(request: Request) {
         transactionProvider.transactional {
-            spaceRepository.findBy(request.spaceId)
-                ?: throw NotFoundException("스페이스를 찾을 수 없습니다.")
-            spaceRepository.delete(request.spaceId)
+            request
+                .toEntity()
+                .let { spaceRepository.delete(it.id) }
         }
     }
+
+    private fun Request.toEntity(): Space =
+        spaceRepository.findBy(spaceId)
+            ?: throw NotFoundException("스페이스를 찾을 수 없습니다.")
 }

@@ -27,7 +27,7 @@ class SpaceGettingUseCase(
 
     private fun Space.toResult(): Result =
         Result(
-            spaceId = id.value,
+            spaceId = id.value.toString(),
             name = name,
             description = description,
             createdAt = createdAt,

@@ -28,11 +28,6 @@ class ExposedSpaceRepository : SpaceRepository {
             .firstOrNull()
             ?.toEntity()
 
-    override fun findAll(): List<Space> =
-        Spaces
-            .selectAll()
-            .map { it.toEntity() }
-
     override fun delete(id: SpaceId) {
         Spaces.deleteWhere { Spaces.id eq id.value }
     }

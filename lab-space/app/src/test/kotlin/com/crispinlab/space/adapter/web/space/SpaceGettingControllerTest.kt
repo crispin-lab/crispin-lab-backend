@@ -1,16 +1,17 @@
 package com.crispinlab.space.adapter.web.space
 
 import com.crispinlab.common.exception.NotFoundException
+import com.crispinlab.space.adapter.web.GlobalExceptionHandler
+import com.crispinlab.space.adapter.web.WebMvcConfig
 import com.crispinlab.space.adapter.web.auth.AuthArgumentResolver
 import com.crispinlab.space.application.port.incoming.space.SpaceGetting
 import com.crispinlab.space.application.port.incoming.space.SpaceGetting.Result
-import com.crispinlab.space.config.GlobalExceptionHandler
-import com.crispinlab.space.config.WebMvcConfig
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper
 import com.ninjasquad.springmockk.MockkBean
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.extensions.spring.SpringExtension
+import io.mockk.clearMocks
 import io.mockk.every
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.restdocs.AutoConfigureRestDocs
@@ -32,11 +33,15 @@ class SpaceGettingControllerTest : DescribeSpec() {
     init {
         extensions(SpringExtension())
 
+        beforeEach {
+            clearMocks(useCase)
+        }
+
         describe("GET /v1/spaces/{spaceId}") {
             it("스페이스가 존재하면 200 과 정보를 반환한다") {
                 every { useCase.perform(any()) } returns
                     Result(
-                        spaceId = 1L,
+                        spaceId = "1",
                         name = "팀 위키",
                         description = "공유 공간",
                         createdAt = DUMMY_INSTANT,
@@ -48,7 +53,7 @@ class SpaceGettingControllerTest : DescribeSpec() {
                         header("X-User-Id", "100")
                     }.andExpect {
                         status { isOk() }
-                        jsonPath("$.spaceId") { value(1) }
+                        jsonPath("$.spaceId") { value("1") }
                         jsonPath("$.name") { value("팀 위키") }
                     }.andDo {
                         handle(MockMvcRestDocumentationWrapper.document("space-get"))
@@ -64,6 +69,14 @@ class SpaceGettingControllerTest : DescribeSpec() {
                     }.andExpect {
                         status { isNotFound() }
                         jsonPath("$.message") { value("스페이스를 찾을 수 없습니다.") }
+                    }
+            }
+
+            it("X-User-Id 헤더가 없으면 400 을 반환한다") {
+                mockMvc
+                    .get("/v1/spaces/1")
+                    .andExpect {
+                        status { isBadRequest() }
                     }
             }
         }

@@ -2,6 +2,7 @@ package com.crispinlab.common.infra.id
 
 import com.crispinlab.Snowflake
 import com.crispinlab.common.id.IdGenerator
+import java.time.Instant
 
 class SnowflakeIdGenerator(
     nodeId: Long = DEFAULT_NODE_ID,
@@ -13,8 +14,7 @@ class SnowflakeIdGenerator(
 
     companion object {
         private const val DEFAULT_NODE_ID: Long = 0L
-
-        // 2025-01-01T00:00:00Z
-        private const val DEFAULT_EPOCH_MILLIS: Long = 1_735_689_600_000L
+        private val DEFAULT_EPOCH_MILLIS: Long =
+            Instant.parse("2025-01-01T00:00:00Z").toEpochMilli()
     }
 }

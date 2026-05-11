@@ -29,41 +29,39 @@ class SpaceTest :
             }
         }
 
-        describe("update") {
-            it("이름과 설명, updatedAt 이 모두 갱신된다") {
+        describe("edit") {
+            it("이름과 설명이 갱신되고 updatedAt 도 함께 갱신된다") {
                 val space: Space = basicSpace()
-                val occurredAt = DUMMY_INSTANT.plusSeconds(60)
 
-                space.update(name = "공지사항", description = "공식 공지", occurredAt = occurredAt)
+                space.edit(name = "공지사항", description = "공식 공지")
 
                 space.name shouldBe "공지사항"
                 space.description shouldBe "공식 공지"
-                space.updatedAt shouldBe occurredAt
+                (space.updatedAt > DUMMY_INSTANT) shouldBe true
             }
 
             it("이름만 넘기면 설명은 그대로 두고 updatedAt 만 갱신된다") {
                 val space: Space = basicSpace()
-                val occurredAt = DUMMY_INSTANT.plusSeconds(60)
 
-                space.update(name = "공지사항", occurredAt = occurredAt)
+                space.edit(name = "공지사항")
 
                 space.name shouldBe "공지사항"
                 space.description shouldBe "기본 설명"
-                space.updatedAt shouldBe occurredAt
+                (space.updatedAt > DUMMY_INSTANT) shouldBe true
             }
 
             it("새 이름이 비어 있으면 실패한다") {
                 val space: Space = basicSpace()
 
                 shouldThrow<IllegalArgumentException> {
-                    space.update(name = "", occurredAt = DUMMY_INSTANT.plusSeconds(60))
+                    space.edit(name = "")
                 }
             }
 
             it("변경 인자가 모두 null 이면 updatedAt 도 그대로 둔다") {
                 val space: Space = basicSpace()
 
-                space.update(occurredAt = DUMMY_INSTANT.plusSeconds(60))
+                space.edit()
 
                 space.updatedAt shouldBe DUMMY_INSTANT
             }

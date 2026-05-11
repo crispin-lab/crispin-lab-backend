@@ -1,15 +1,16 @@
 package com.crispinlab.space.adapter.web.space
 
+import com.crispinlab.space.adapter.web.GlobalExceptionHandler
+import com.crispinlab.space.adapter.web.WebMvcConfig
 import com.crispinlab.space.adapter.web.auth.AuthArgumentResolver
 import com.crispinlab.space.application.port.incoming.space.SpaceEditing
 import com.crispinlab.space.application.port.incoming.space.SpaceEditing.Result
-import com.crispinlab.space.config.GlobalExceptionHandler
-import com.crispinlab.space.config.WebMvcConfig
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper
 import com.ninjasquad.springmockk.MockkBean
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.extensions.spring.SpringExtension
+import io.mockk.clearMocks
 import io.mockk.every
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.restdocs.AutoConfigureRestDocs
@@ -32,11 +33,15 @@ class SpaceEditingControllerTest : DescribeSpec() {
     init {
         extensions(SpringExtension())
 
+        beforeEach {
+            clearMocks(useCase)
+        }
+
         describe("PUT /v1/spaces/{spaceId}") {
             it("이름·설명 변경에 성공하면 200 과 갱신 결과를 반환한다") {
                 every { useCase.perform(any()) } returns
                     Result(
-                        spaceId = 1L,
+                        spaceId = "1",
                         name = "새 이름",
                         description = "새 설명",
                         updatedAt = DUMMY_INSTANT
@@ -49,10 +54,21 @@ class SpaceEditingControllerTest : DescribeSpec() {
                         content = """{"name":"새 이름","description":"새 설명"}"""
                     }.andExpect {
                         status { isOk() }
+                        jsonPath("$.spaceId") { value("1") }
                         jsonPath("$.name") { value("새 이름") }
                         jsonPath("$.description") { value("새 설명") }
                     }.andDo {
                         handle(MockMvcRestDocumentationWrapper.document("space-edit"))
+                    }
+            }
+
+            it("X-User-Id 헤더가 없으면 400 을 반환한다") {
+                mockMvc
+                    .put("/v1/spaces/1") {
+                        contentType = MediaType.APPLICATION_JSON
+                        content = """{"name":"x"}"""
+                    }.andExpect {
+                        status { isBadRequest() }
                     }
             }
         }

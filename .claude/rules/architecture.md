@@ -20,7 +20,7 @@
 
 ## auto-config ordering
 
-`lab-common-infra` 의 `@AutoConfiguration` 이 다른 auto-config 빈에 의존할 때 (예: `@ConditionalOnBean(PlatformTransactionManager)`), ordering 을 `afterName = ["..."]` 로 명시한다. 외부 starter 의 `@AutoConfigureAfter` 메타가 깨져 있어도(예: 클래스 패키지 이동) 우리 ordering 은 보장된다.
+`lab-common-infra` 의 `@AutoConfiguration` 이 다른 auto-config 빈에 의존할 때 (예: `@ConditionalOnBean(PlatformTransactionManager)`), ordering 을 `afterName = ["..."]` 로 명시한다. 외부 starter 가 메이저 업그레이드를 거치면서 클래스 패키지가 이동하면 (예: `exposed-spring-boot-starter 1.x` 가 `org.jetbrains.exposed.v1.*` 로 옮긴 사례) 기존 `@AutoConfigureAfter` 메타데이터가 깨질 수 있어, `afterName` 으로 FQCN 을 직접 강제한다. Spring Boot 버전과 무관하게 외부 의존성 패키지 변경에 안전.
 
 ## 컨벤션 플러그인
 `build-logic/convention/` 안의 `crispinlab.*` 네임스페이스에 위치.

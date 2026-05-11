@@ -1,14 +1,15 @@
 package com.crispinlab.space.adapter.web.space
 
+import com.crispinlab.space.adapter.web.GlobalExceptionHandler
+import com.crispinlab.space.adapter.web.WebMvcConfig
 import com.crispinlab.space.adapter.web.auth.AuthArgumentResolver
 import com.crispinlab.space.application.port.incoming.space.SpaceRegistering
 import com.crispinlab.space.application.port.incoming.space.SpaceRegistering.Result
-import com.crispinlab.space.config.GlobalExceptionHandler
-import com.crispinlab.space.config.WebMvcConfig
 import com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper
 import com.ninjasquad.springmockk.MockkBean
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.extensions.spring.SpringExtension
+import io.mockk.clearMocks
 import io.mockk.every
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.restdocs.AutoConfigureRestDocs
@@ -31,9 +32,13 @@ class SpaceRegisteringControllerTest : DescribeSpec() {
     init {
         extensions(SpringExtension())
 
+        beforeEach {
+            clearMocks(useCase)
+        }
+
         describe("POST /v1/spaces") {
             it("스페이스 생성에 성공하면 201 과 spaceId 를 반환한다") {
-                every { useCase.perform(any()) } returns Result(spaceId = 42L)
+                every { useCase.perform(any()) } returns Result(spaceId = "42")
 
                 mockMvc
                     .post("/v1/spaces") {
@@ -42,7 +47,7 @@ class SpaceRegisteringControllerTest : DescribeSpec() {
                         content = """{"name":"팀 위키","description":"공유 공간"}"""
                     }.andExpect {
                         status { isCreated() }
-                        jsonPath("$.spaceId") { value(42) }
+                        jsonPath("$.spaceId") { value("42") }
                     }.andDo {
                         handle(MockMvcRestDocumentationWrapper.document("space-register"))
                     }

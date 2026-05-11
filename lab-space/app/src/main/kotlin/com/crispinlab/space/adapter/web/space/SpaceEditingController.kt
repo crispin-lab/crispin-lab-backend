@@ -22,14 +22,22 @@ class SpaceEditingController(
         auth: Auth
     ): Result =
         body
-            .toRequestWith(spaceId = spaceId)
+            .toRequestWith(spaceId = spaceId, userId = auth.userId)
             .let { useCase.perform(it) }
 
     data class Body(
         val name: String? = null,
         val description: String? = null
     ) {
-        fun toRequestWith(spaceId: String): Request =
-            Request(spaceId = spaceId, name = name, description = description)
+        fun toRequestWith(
+            spaceId: String,
+            userId: String
+        ): Request =
+            Request(
+                spaceId = spaceId,
+                name = name,
+                description = description,
+                currentUserId = userId
+            )
     }
 }

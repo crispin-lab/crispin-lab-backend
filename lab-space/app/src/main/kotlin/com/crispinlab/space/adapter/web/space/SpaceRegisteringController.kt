@@ -23,13 +23,14 @@ class SpaceRegisteringController(
         auth: Auth
     ): Result =
         body
-            .toRequest()
+            .toRequestWith(userId = auth.userId)
             .let { useCase.perform(it) }
 
     data class Body(
         val name: String,
         val description: String
     ) {
-        fun toRequest(): Request = Request(name = name, description = description)
+        fun toRequestWith(userId: String): Request =
+            Request(name = name, description = description, currentUserId = userId)
     }
 }

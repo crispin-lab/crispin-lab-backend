@@ -34,6 +34,7 @@ interface PageRepository {
 
 - 단건 조회는 `findBy(id)` — `OrNull` suffix 금지 (`conventions.md` "nullable 반환과 메서드명").
 - `save` 는 신규/수정 모두 처리 (Exposed 의 `insertOrUpdate` 또는 `id` 존재 분기). 호출부에서 신경 안 쓰게.
+  - **race 주의**: SELECT → INSERT 분기 패턴은 같은 ID 의 동시 호출이 들어오면 unique constraint 위반으로 깨진다. snowflake ID 단건 PK 는 충돌 확률이 매우 낮지만, slug 같은 unique 컬럼 기반 분기에는 동일 패턴을 복제하지 말고 `upsert` 로 한 번에 처리한다.
 - 삭제는 `delete(id: PageId)`. soft delete 가 필요하면 `archive` 같은 도메인 메서드로 entity 상태를 바꾸고 `save` 하는 방식이 자연스럽다 — port 시그니처에 `softDelete` 류는 두지 않는다.
 
 ## Exposed 테이블 객체

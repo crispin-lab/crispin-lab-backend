@@ -1,7 +1,6 @@
 package com.crispinlab.space.application.usecase.space
 
 import com.crispinlab.common.exception.NotFoundException
-import com.crispinlab.common.time.Clock
 import com.crispinlab.common.transaction.TransactionProvider
 import com.crispinlab.space.application.port.incoming.space.SpaceEditing
 import com.crispinlab.space.application.port.incoming.space.SpaceEditing.Request
@@ -13,7 +12,6 @@ import org.springframework.stereotype.Service
 @Service
 class SpaceEditingUseCase(
     private val spaceRepository: SpaceRepository,
-    private val clock: Clock,
     private val transactionProvider: TransactionProvider
 ) : SpaceEditing {
     override fun perform(request: Request): Result =
@@ -31,16 +29,12 @@ class SpaceEditingUseCase(
 
     private fun Space.editWith(request: Request): Space =
         apply {
-            update(
-                name = request.name,
-                description = request.description,
-                occurredAt = clock.now()
-            )
+            edit(name = request.name, description = request.description)
         }
 
     private fun Space.toResult(): Result =
         Result(
-            spaceId = id.value,
+            spaceId = id.value.toString(),
             name = name,
             description = description,
             updatedAt = updatedAt

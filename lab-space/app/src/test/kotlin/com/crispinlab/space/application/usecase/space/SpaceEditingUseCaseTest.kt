@@ -1,10 +1,10 @@
 package com.crispinlab.space.application.usecase.space
 
 import com.crispinlab.common.exception.NotFoundException
-import com.crispinlab.common.time.Clock
 import com.crispinlab.space.application.port.incoming.space.SpaceEditing.Request
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.domain.space.Space
+import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicSpace
 import io.kotest.assertions.throwables.shouldThrow
@@ -14,48 +14,75 @@ import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
-import java.time.Instant
 
 class SpaceEditingUseCaseTest :
     DescribeSpec({
         val spaceRepository = mockk<SpaceRepository>()
-        val clock = mockk<Clock>()
         val useCase =
             SpaceEditingUseCase(
                 spaceRepository = spaceRepository,
-                clock = clock,
                 transactionProvider = DummyTransactionProvider()
             )
 
         beforeEach {
-            clearMocks(spaceRepository, clock)
+            clearMocks(spaceRepository)
         }
 
         describe("스페이스 수정") {
-            it("이름·설명을 변경하고 변경 시점으로 updatedAt 이 갱신된다") {
-                val occurredAt = Instant.parse("2026-02-02T00:00:00Z")
+            it("이름·설명을 모두 변경하면 updatedAt 이 갱신된다") {
                 val space = basicSpace(name = "이전 이름", description = "이전 설명")
                 every { spaceRepository.findBy(space.id) } returns space
-                every { clock.now() } returns occurredAt
                 val saved = slot<Space>()
                 every { spaceRepository.save(capture(saved)) } answers { saved.captured }
 
                 val result =
                     useCase.perform(
-                        Request(spaceId = "1", name = "새 이름", description = "새 설명")
+                        Request(
+                            spaceId = "1",
+                            name = "새 이름",
+                            description = "새 설명",
+                            currentUserId = "100"
+                        )
                     )
 
                 result.name shouldBe "새 이름"
                 result.description shouldBe "새 설명"
-                result.updatedAt shouldBe occurredAt
-                saved.captured.updatedAt shouldBe occurredAt
+                (saved.captured.updatedAt > DUMMY_INSTANT) shouldBe true
+            }
+
+            it("description 만 변경하면 name 은 그대로 유지된다") {
+                val space = basicSpace(name = "유지", description = "이전 설명")
+                every { spaceRepository.findBy(space.id) } returns space
+                val saved = slot<Space>()
+                every { spaceRepository.save(capture(saved)) } answers { saved.captured }
+
+                val result =
+                    useCase.perform(
+                        Request(spaceId = "1", description = "새 설명", currentUserId = "100")
+                    )
+
+                result.name shouldBe "유지"
+                result.description shouldBe "새 설명"
+            }
+
+            it("name·description 둘 다 null 이면 updatedAt 은 변하지 않는다") {
+                val space = basicSpace(name = "그대로", description = "그대로")
+                every { spaceRepository.findBy(space.id) } returns space
+                val saved = slot<Space>()
+                every { spaceRepository.save(capture(saved)) } answers { saved.captured }
+
+                useCase.perform(Request(spaceId = "1", currentUserId = "100"))
+
+                saved.captured.updatedAt shouldBe DUMMY_INSTANT
             }
 
             it("스페이스가 없으면 NotFoundException") {
                 every { spaceRepository.findBy(any()) } returns null
 
                 shouldThrow<NotFoundException> {
-                    useCase.perform(Request(spaceId = "1", name = "x"))
+                    useCase.perform(
+                        Request(spaceId = "1", name = "x", currentUserId = "100")
+                    )
                 }
             }
         }

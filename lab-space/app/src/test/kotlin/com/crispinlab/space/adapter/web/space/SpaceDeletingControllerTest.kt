@@ -1,13 +1,14 @@
 package com.crispinlab.space.adapter.web.space
 
+import com.crispinlab.space.adapter.web.GlobalExceptionHandler
+import com.crispinlab.space.adapter.web.WebMvcConfig
 import com.crispinlab.space.adapter.web.auth.AuthArgumentResolver
 import com.crispinlab.space.application.port.incoming.space.SpaceDeleting
-import com.crispinlab.space.config.GlobalExceptionHandler
-import com.crispinlab.space.config.WebMvcConfig
 import com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper
 import com.ninjasquad.springmockk.MockkBean
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.extensions.spring.SpringExtension
+import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.just
 import io.mockk.runs
@@ -31,6 +32,10 @@ class SpaceDeletingControllerTest : DescribeSpec() {
     init {
         extensions(SpringExtension())
 
+        beforeEach {
+            clearMocks(useCase)
+        }
+
         describe("DELETE /v1/spaces/{spaceId}") {
             it("삭제에 성공하면 204 를 반환한다") {
                 every { useCase.perform(any()) } just runs
@@ -42,6 +47,14 @@ class SpaceDeletingControllerTest : DescribeSpec() {
                         status { isNoContent() }
                     }.andDo {
                         handle(MockMvcRestDocumentationWrapper.document("space-delete"))
+                    }
+            }
+
+            it("X-User-Id 헤더가 없으면 400 을 반환한다") {
+                mockMvc
+                    .delete("/v1/spaces/1")
+                    .andExpect {
+                        status { isBadRequest() }
                     }
             }
         }

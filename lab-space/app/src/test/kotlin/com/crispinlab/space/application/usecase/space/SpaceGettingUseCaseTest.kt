@@ -26,9 +26,9 @@ class SpaceGettingUseCaseTest :
                 val space = basicSpace(name = "팀 위키")
                 every { spaceRepository.findBy(space.id) } returns space
 
-                val result = useCase.perform(Request(spaceId = "1"))
+                val result = useCase.perform(Request(spaceId = "1", currentUserId = "100"))
 
-                result.spaceId shouldBe 1L
+                result.spaceId shouldBe "1"
                 result.name shouldBe "팀 위키"
             }
 
@@ -36,13 +36,13 @@ class SpaceGettingUseCaseTest :
                 every { spaceRepository.findBy(any()) } returns null
 
                 shouldThrow<NotFoundException> {
-                    useCase.perform(Request(spaceId = "1"))
+                    useCase.perform(Request(spaceId = "1", currentUserId = "100"))
                 }
             }
 
             it("ID 형식이 올바르지 않으면 Request 생성에서 실패한다") {
                 shouldThrow<IllegalArgumentException> {
-                    Request(spaceId = "not-a-number")
+                    Request(spaceId = "not-a-number", currentUserId = "100")
                 }
             }
         }

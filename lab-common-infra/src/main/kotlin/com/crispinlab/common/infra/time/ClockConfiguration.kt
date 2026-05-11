@@ -1,11 +1,11 @@
 package com.crispinlab.common.infra.time
 
 import com.crispinlab.common.time.Clock
+import org.springframework.boot.autoconfigure.AutoConfiguration
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Configuration
 
-@Configuration(proxyBeanMethods = false)
+@AutoConfiguration
 class ClockConfiguration {
     @Bean
     @ConditionalOnMissingBean(Clock::class)

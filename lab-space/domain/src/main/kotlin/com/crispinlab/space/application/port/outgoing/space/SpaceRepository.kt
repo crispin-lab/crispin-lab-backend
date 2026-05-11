@@ -8,7 +8,5 @@ interface SpaceRepository {
 
     fun findBy(id: SpaceId): Space?
 
-    fun findAll(): List<Space>
-
     fun delete(id: SpaceId)
 }

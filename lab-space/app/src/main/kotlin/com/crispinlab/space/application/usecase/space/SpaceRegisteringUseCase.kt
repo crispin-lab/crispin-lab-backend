@@ -1,7 +1,6 @@
 package com.crispinlab.space.application.usecase.space
 
 import com.crispinlab.common.id.IdGenerator
-import com.crispinlab.common.time.Clock
 import com.crispinlab.common.transaction.TransactionProvider
 import com.crispinlab.space.application.port.incoming.space.SpaceRegistering
 import com.crispinlab.space.application.port.incoming.space.SpaceRegistering.Request
@@ -15,7 +14,6 @@ import org.springframework.stereotype.Service
 class SpaceRegisteringUseCase(
     private val spaceRepository: SpaceRepository,
     private val idGenerator: IdGenerator,
-    private val clock: Clock,
     private val transactionProvider: TransactionProvider
 ) : SpaceRegistering {
     override fun perform(request: Request): Result =
@@ -26,16 +24,12 @@ class SpaceRegisteringUseCase(
                 .toResult()
         }
 
-    private fun Request.toEntity(): Space {
-        val now = clock.now()
-        return Space(
+    private fun Request.toEntity(): Space =
+        Space(
             id = SpaceId(idGenerator.next()),
             name = name,
-            description = description,
-            createdAt = now,
-            updatedAt = now
+            description = description
         )
-    }
 
-    private fun Space.toResult(): Result = Result(spaceId = id.value)
+    private fun Space.toResult(): Result = Result(spaceId = id.value.toString())
 }

@@ -19,7 +19,7 @@ class AuthArgumentResolver : HandlerMethodArgumentResolver {
         binderFactory: WebDataBinderFactory?
     ): Auth =
         webRequest.getHeader(USER_ID_HEADER)?.let { Auth(userId = it) }
-            ?: throw IllegalArgumentException("$USER_ID_HEADER 헤더가 필요합니다.")
+            ?: throw IllegalArgumentException("사용자 인증이 필요합니다.")
 
     companion object {
         const val USER_ID_HEADER: String = "X-User-Id"

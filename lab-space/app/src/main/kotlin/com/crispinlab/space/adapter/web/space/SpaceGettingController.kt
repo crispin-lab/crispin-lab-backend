@@ -19,6 +19,6 @@ class SpaceGettingController(
         @PathVariable spaceId: String,
         auth: Auth
     ): Result =
-        Request(spaceId = spaceId)
+        Request(spaceId = spaceId, currentUserId = auth.userId)
             .let { useCase.perform(it) }
 }

@@ -6,6 +6,7 @@ import com.crispinlab.space.adapter.web.auth.AuthArgumentResolver
 import com.crispinlab.space.application.port.incoming.space.SpaceRegistering
 import com.crispinlab.space.application.port.incoming.space.SpaceRegistering.Result
 import com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper
+import com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper.resourceDetails
 import com.ninjasquad.springmockk.MockkBean
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.extensions.spring.SpringExtension
@@ -58,7 +59,15 @@ class SpaceRegisteringControllerTest : DescribeSpec() {
                         status { isCreated() }
                         jsonPath("$.spaceId") { value("42") }
                     }.andDo {
-                        handle(MockMvcRestDocumentationWrapper.document("space-register"))
+                        handle(
+                            MockMvcRestDocumentationWrapper.document(
+                                "space-register",
+                                resourceDetails()
+                                    .tag("Space")
+                                    .summary("스페이스 생성")
+                                    .description("새 스페이스를 생성하고 식별자를 반환한다.")
+                            )
+                        )
                     }
             }
 

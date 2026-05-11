@@ -5,6 +5,7 @@ import com.crispinlab.space.adapter.web.WebMvcConfig
 import com.crispinlab.space.adapter.web.auth.AuthArgumentResolver
 import com.crispinlab.space.application.port.incoming.space.SpaceDeleting
 import com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper
+import com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper.resourceDetails
 import com.ninjasquad.springmockk.MockkBean
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.extensions.spring.SpringExtension
@@ -42,18 +43,26 @@ class SpaceDeletingControllerTest : DescribeSpec() {
                 every { useCase.perform(any()) } just runs
 
                 mockMvc
-                    .delete("/v1/spaces/1") {
+                    .delete("/v1/spaces/{spaceId}", 1) {
                         header("X-User-Id", "100")
                     }.andExpect {
                         status { isNoContent() }
                     }.andDo {
-                        handle(MockMvcRestDocumentationWrapper.document("space-delete"))
+                        handle(
+                            MockMvcRestDocumentationWrapper.document(
+                                "space-delete",
+                                resourceDetails()
+                                    .tag("Space")
+                                    .summary("스페이스 삭제")
+                                    .description("스페이스를 영구 삭제한다.")
+                            )
+                        )
                     }
             }
 
             it("X-User-Id 헤더가 없으면 400 을 반환한다") {
                 mockMvc
-                    .delete("/v1/spaces/1")
+                    .delete("/v1/spaces/{spaceId}", 1)
                     .andExpect {
                         status { isBadRequest() }
                     }
@@ -62,7 +71,7 @@ class SpaceDeletingControllerTest : DescribeSpec() {
 
             it("X-User-Id 가 숫자가 아니면 400 을 반환한다") {
                 mockMvc
-                    .delete("/v1/spaces/1") {
+                    .delete("/v1/spaces/{spaceId}", 1) {
                         header("X-User-Id", "not-a-number")
                     }.andExpect {
                         status { isBadRequest() }

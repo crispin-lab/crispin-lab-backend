@@ -8,6 +8,7 @@ import com.crispinlab.space.application.port.incoming.space.SpaceGetting
 import com.crispinlab.space.application.port.incoming.space.SpaceGetting.Result
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper
+import com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper.resourceDetails
 import com.ninjasquad.springmockk.MockkBean
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.extensions.spring.SpringExtension
@@ -50,14 +51,22 @@ class SpaceGettingControllerTest : DescribeSpec() {
                     )
 
                 mockMvc
-                    .get("/v1/spaces/1") {
+                    .get("/v1/spaces/{spaceId}", 1) {
                         header("X-User-Id", "100")
                     }.andExpect {
                         status { isOk() }
                         jsonPath("$.spaceId") { value("1") }
                         jsonPath("$.name") { value("팀 위키") }
                     }.andDo {
-                        handle(MockMvcRestDocumentationWrapper.document("space-get"))
+                        handle(
+                            MockMvcRestDocumentationWrapper.document(
+                                "space-get",
+                                resourceDetails()
+                                    .tag("Space")
+                                    .summary("스페이스 단건 조회")
+                                    .description("ID 로 단일 스페이스를 조회한다.")
+                            )
+                        )
                     }
             }
 
@@ -65,7 +74,7 @@ class SpaceGettingControllerTest : DescribeSpec() {
                 every { useCase.perform(any()) } throws NotFoundException("스페이스를 찾을 수 없습니다.")
 
                 mockMvc
-                    .get("/v1/spaces/999") {
+                    .get("/v1/spaces/{spaceId}", 999) {
                         header("X-User-Id", "100")
                     }.andExpect {
                         status { isNotFound() }
@@ -75,7 +84,7 @@ class SpaceGettingControllerTest : DescribeSpec() {
 
             it("X-User-Id 헤더가 없으면 400 을 반환한다") {
                 mockMvc
-                    .get("/v1/spaces/1")
+                    .get("/v1/spaces/{spaceId}", 1)
                     .andExpect {
                         status { isBadRequest() }
                     }
@@ -84,7 +93,7 @@ class SpaceGettingControllerTest : DescribeSpec() {
 
             it("X-User-Id 가 숫자가 아니면 400 을 반환한다") {
                 mockMvc
-                    .get("/v1/spaces/1") {
+                    .get("/v1/spaces/{spaceId}", 1) {
                         header("X-User-Id", "not-a-number")
                     }.andExpect {
                         status { isBadRequest() }

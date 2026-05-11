@@ -13,7 +13,6 @@ class KopringWebConventionPlugin : Plugin<Project> {
             dependencies {
                 add("implementation", libs.findLibrary("spring.boot.starter.web").get())
                 add("implementation", libs.findLibrary("spring.boot.starter.validation").get())
-                add("testImplementation", libs.findLibrary("spring.boot.webmvc.test").get())
             }
         }
     }

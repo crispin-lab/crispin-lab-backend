@@ -7,13 +7,14 @@ import com.crispinlab.space.application.port.incoming.space.SpaceGetting.Result
 import com.crispinlab.space.config.GlobalExceptionHandler
 import com.crispinlab.space.config.WebMvcConfig
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
+import com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper
 import com.ninjasquad.springmockk.MockkBean
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.extensions.spring.SpringExtension
 import io.mockk.every
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.restdocs.test.autoconfigure.AutoConfigureRestDocs
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
+import org.springframework.boot.test.autoconfigure.restdocs.AutoConfigureRestDocs
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.context.annotation.Import
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
@@ -49,6 +50,8 @@ class SpaceGettingControllerTest : DescribeSpec() {
                         status { isOk() }
                         jsonPath("$.spaceId") { value(1) }
                         jsonPath("$.name") { value("팀 위키") }
+                    }.andDo {
+                        handle(MockMvcRestDocumentationWrapper.document("space-get"))
                     }
             }
 

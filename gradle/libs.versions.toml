@@ -2,7 +2,7 @@
 kotlin = "2.3.21"
 kotest = "6.1.6"
 kotlinter = "5.4.2"
-spring-boot = "4.0.6"
+spring-boot = "3.5.14"
 kotlin-snowflake = "1.0.1"
 kotlin-serialization = "1.8.0"
 exposed = "1.2.0"
@@ -30,8 +30,6 @@ spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-start
 spring-boot-starter-validation = { module = "org.springframework.boot:spring-boot-starter-validation" }
 spring-tx = { module = "org.springframework:spring-tx" }
 spring-jdbc = { module = "org.springframework:spring-jdbc" }
-spring-boot-webmvc-test = { module = "org.springframework.boot:spring-boot-webmvc-test" }
-spring-boot-restdocs = { module = "org.springframework.boot:spring-boot-restdocs" }
 
 # database
 exposed-spring-boot-starter = { module = "org.jetbrains.exposed:exposed-spring-boot-starter", version.ref = "exposed" }

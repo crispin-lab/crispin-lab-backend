@@ -16,7 +16,6 @@ class RestdocsConventionPlugin : Plugin<Project> {
             dependencies {
                 add("testImplementation", libs.findLibrary("spring.restdocs.mockmvc").get())
                 add("testImplementation", libs.findLibrary("restdocs.api.spec.mockmvc").get())
-                add("testImplementation", libs.findLibrary("spring.boot.restdocs").get())
             }
 
             extensions.configure<OpenApi3Extension>("openapi3") {

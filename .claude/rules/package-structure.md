@@ -22,10 +22,11 @@ Port **인터페이스** 는 pure Kotlin 으로 작성 가능하므로 domain �
 
 ```
 com.crispinlab.space.domain.{aggregate}                    # Entity, EntityId, Value Object
-com.crispinlab.space.application.port.incoming             # UseCase 베이스 인터페이스
 com.crispinlab.space.application.port.incoming.{aggregate} # 개별 UseCase 인터페이스 (PageGetting, PageEditing)
 com.crispinlab.space.application.port.outgoing.{aggregate} # Repository / Search 인터페이스
 ```
+
+UseCase 베이스 인터페이스(`com.crispinlab.common.application.UseCase`) 는 cross-cutting 위치라 `lab-common` 에 있다 — `architecture.md` 의 모듈 레이아웃 참조.
 
 여기 들어가는 코드는 **Spring / Exposed / Spring Web import 0 개**. 이 룰을 깨면 모듈 경계 자체가 무너진다 (`architecture.md`).
 

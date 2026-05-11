@@ -59,12 +59,12 @@ com.crispinlab.space.config                                # Spring config, Bean
 - [ ] `adapter/persistence/comment/ExposedCommentRepository.kt` — Repository 구현체
 - [ ] `adapter/web/comment/CommentRegisteringController.kt` — Controller
 
-### 테스트 (lab-space/app/src/test)
+### 테스트
 
-- [ ] `testsupport/Fixtures.kt` 에 `basicComment(...)` 추가
-- [ ] `application/usecase/comment/CommentRegisteringUseCaseTest.kt`
-- [ ] `adapter/web/comment/CommentRegisteringControllerTest.kt`
-- [ ] `adapter/persistence/comment/ExposedCommentRepositoryTest.kt`
+- [ ] `lab-space/domain/src/testFixtures/.../testsupport/Fixtures.kt` 에 `basicComment(...)` 추가 — entity·VO 생성 헬퍼는 domain testFixtures.
+- [ ] `lab-space/app/src/test/.../application/usecase/comment/CommentRegisteringUseCaseTest.kt`
+- [ ] `lab-space/app/src/test/.../adapter/web/comment/CommentRegisteringControllerTest.kt`
+- [ ] `lab-space/app/src/test/.../adapter/persistence/comment/ExposedCommentRepositoryTest.kt`
 
 ### Bean 등록
 
@@ -82,9 +82,12 @@ UseCase 는 **비즈니스 의도** 를 표현하는 계약이다. `interface Pa
 
 ### Q3. testsupport 는 어느 모듈?
 
-지금은 **`lab-space/app/src/test/kotlin/com/crispinlab/space/testsupport`** 한 곳. UseCase / Controller / Repository 테스트가 모두 app 모듈에서 돌고, entity 단위 테스트가 본격 쌓이기 전까지 cross-module 공유가 필요 없음.
+**책임으로 가른다.**
 
-domain 모듈에 entity 테스트가 늘어나 Fixture 공유 필요가 생기면 — Gradle `java-test-fixtures` 플러그인 도입 시점.
+- **`lab-space/domain/src/testFixtures/kotlin/com/crispinlab/space/testsupport`** — entity·VO 생성기 (`Fixtures.basicSpace`, `Dummies.DUMMY_INSTANT` 등). domain 모듈의 entity 테스트와 app 모듈의 UseCase·Controller·Repository 테스트가 모두 같은 fixture 를 공유해 default 값이 어긋나지 않도록. `java-test-fixtures` 플러그인이 적용되어 있고, `lab-space/app/build.gradle.kts` 가 `testImplementation(testFixtures(projects.labSpace.domain))` 로 받는다.
+- **`lab-space/app/src/test/kotlin/com/crispinlab/space/testsupport`** — UseCase 단위 테스트 도구 (`DummyTransactionProvider` 등). app 모듈에서만 의미가 있는 헬퍼는 여기.
+
+새 도메인을 추가할 때도 같은 분할 — entity Fixture 는 domain testFixtures, UseCase 도구는 app testsupport.
 
 ### Q4. `application` 과 `adapter` 가 같은 패키지 prefix 를 갖는 이유?
 

@@ -19,10 +19,15 @@ class SpaceRegisteringUseCase(
     override fun perform(request: Request): Result =
         transactionProvider.transactional {
             request
+                .also { it.validate() }
                 .toEntity()
                 .let { spaceRepository.save(it) }
                 .toResult()
         }
+
+    private fun Request.validate() {
+        // 외부 의존성이 필요한 검증을 둘 자리 — 권한·중복 등이 도입될 때 채운다.
+    }
 
     private fun Request.toEntity(): Space =
         Space(

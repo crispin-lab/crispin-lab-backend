@@ -3,6 +3,7 @@ package com.crispinlab.space.domain.page
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.user.UserId
 import java.time.Instant
+import java.time.Instant.now
 
 class Page(
     val id: PageId,
@@ -13,7 +14,7 @@ class Page(
     content: PageContent,
     visibility: Visibility,
     currentVersion: Int,
-    val createdAt: Instant,
+    val createdAt: Instant = now(),
     updatedAt: Instant = createdAt
 ) {
     var parentPageId: PageId? = parentPageId
@@ -39,22 +40,22 @@ class Page(
         }
     }
 
-    fun update(
+    fun edit(
         title: String,
-        content: String,
-        occurredAt: Instant
-    ): UpdateResult {
+        content: String
+    ): EditResult {
         validateTitle(title)
         val newContent: PageContent = PageContent(content)
         val newVersion: Int = currentVersion + 1
         val newWikiLinks: List<ExtractedWikiLink> = newContent.extractLinks()
+        val occurredAt: Instant = now()
 
         this.title = title
         this.content = newContent
         this.currentVersion = newVersion
         this.updatedAt = occurredAt
 
-        return UpdateResult(
+        return EditResult(
             version = newVersion,
             title = title,
             content = newContent,
@@ -67,23 +68,17 @@ class Page(
      * 부모 페이지를 옮긴다. 자기 자신을 부모로 두는 케이스만 막는다.
      * 자손 페이지 밑으로의 순환 이동 검증은 repository 조회가 필요하므로 UseCase 책임이다.
      */
-    fun move(
-        parentPageId: PageId?,
-        occurredAt: Instant
-    ) {
+    fun move(parentPageId: PageId?) {
         require(parentPageId != id) {
             "자기 자신을 부모로 설정할 수 없습니다."
         }
         this.parentPageId = parentPageId
-        this.updatedAt = occurredAt
+        this.updatedAt = now()
     }
 
-    fun changeVisibility(
-        visibility: Visibility,
-        occurredAt: Instant
-    ) {
+    fun changeVisibility(visibility: Visibility) {
         this.visibility = visibility
-        this.updatedAt = occurredAt
+        this.updatedAt = now()
     }
 
     private fun validateTitle(title: String) {
@@ -95,7 +90,7 @@ class Page(
         }
     }
 
-    data class UpdateResult(
+    data class EditResult(
         val version: Int,
         val title: String,
         val content: PageContent,

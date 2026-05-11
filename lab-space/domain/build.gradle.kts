@@ -5,6 +5,4 @@ plugins {
 
 dependencies {
     implementation(projects.labCommon)
-
-    testFixturesImplementation(projects.labCommon)
 }

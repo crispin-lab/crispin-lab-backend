@@ -30,8 +30,8 @@ class SpaceTest :
             }
         }
 
-        describe("edit") {
-            it("이름과 설명이 갱신되고 updatedAt 도 새 값으로 바뀐다") {
+        describe("이름·설명 수정") {
+            it("모두 변경하면 updatedAt 도 새 값으로 바뀐다") {
                 val space: Space = basicSpace()
 
                 space.edit(name = "공지사항", description = "공식 공지")
@@ -41,7 +41,7 @@ class SpaceTest :
                 space.updatedAt shouldNotBe DUMMY_INSTANT
             }
 
-            it("이름만 넘기면 설명은 그대로 두고 updatedAt 만 갱신된다") {
+            it("이름만 넘기면 설명은 그대로 유지된다") {
                 val space: Space = basicSpace()
 
                 space.edit(name = "공지사항")

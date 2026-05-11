@@ -17,9 +17,14 @@ class AuthArgumentResolver : HandlerMethodArgumentResolver {
         mavContainer: ModelAndViewContainer?,
         webRequest: NativeWebRequest,
         binderFactory: WebDataBinderFactory?
-    ): Auth =
-        webRequest.getHeader(USER_ID_HEADER)?.let { Auth(userId = it) }
+    ): Auth {
+        val raw: String =
+            webRequest.getHeader(USER_ID_HEADER)
+                ?: throw IllegalArgumentException("사용자 인증이 필요합니다.")
+        raw.toLongOrNull()
             ?: throw IllegalArgumentException("사용자 인증이 필요합니다.")
+        return Auth(userId = raw)
+    }
 
     companion object {
         const val USER_ID_HEADER: String = "X-User-Id"

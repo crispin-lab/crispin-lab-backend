@@ -57,6 +57,7 @@ class SpaceEditingControllerTest : DescribeSpec() {
                         jsonPath("$.spaceId") { value("1") }
                         jsonPath("$.name") { value("새 이름") }
                         jsonPath("$.description") { value("새 설명") }
+                        jsonPath("$.updatedAt") { exists() }
                     }.andDo {
                         handle(MockMvcRestDocumentationWrapper.document("space-edit"))
                     }

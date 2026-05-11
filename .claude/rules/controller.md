@@ -140,6 +140,15 @@ class PageEditingController(
 }
 ```
 
+## Auth 인증 컨텍스트 추출
+
+`adapter/web/auth/AuthArgumentResolver` 가 `X-User-Id` 헤더를 받아 `Auth(userId)` 로 변환한다 (현재 임시 — 토큰 기반 인증 도입 시 같은 ArgumentResolver 만 갈아끼운다). 두 가지 책임을 어댑터 경계에서 끝낸다:
+
+1. **헤더 존재 확인** — 없으면 `IllegalArgumentException("사용자 인증이 필요합니다.")` → 400.
+2. **형식 검증** — `toLongOrNull()` 로 숫자 변환 가능 여부만 확인. 실패 시 같은 메시지로 400.
+
+검증을 UseCase Request 의 `asUserId()` 변환에 미루지 않는 이유: 인증 게이트키퍼와 도메인 변환의 책임을 섞으면 응답 코드·메시지의 의도가 흐려진다. `AuthArgumentResolver` 에서 한 번에 닫는다.
+
 ## 자주 빠뜨리는 것
 
 - **Result 를 다시 감싸기** — `ApiResponse(data = result, message = "ok")` 같은 envelope 은 정말 필요할 때만 도입. 도입한다면 전 계층 일관되게.

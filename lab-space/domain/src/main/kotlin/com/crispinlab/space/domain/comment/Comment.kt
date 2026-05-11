@@ -3,13 +3,14 @@ package com.crispinlab.space.domain.comment
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.user.UserId
 import java.time.Instant
+import java.time.Instant.now
 
 class Comment(
     val id: CommentId,
     val pageId: PageId,
     val authorId: UserId,
     body: String,
-    val createdAt: Instant,
+    val createdAt: Instant = now(),
     updatedAt: Instant = createdAt,
     deletedAt: Instant? = null
 ) {
@@ -27,22 +28,20 @@ class Comment(
         validateBody(body)
     }
 
-    fun edit(
-        body: String,
-        occurredAt: Instant
-    ) {
+    fun edit(body: String) {
         check(!isDeleted) {
             "삭제된 댓글은 수정할 수 없습니다."
         }
         validateBody(body)
         this.body = body
-        this.updatedAt = occurredAt
+        this.updatedAt = now()
     }
 
-    fun delete(occurredAt: Instant) {
+    fun delete() {
         check(!isDeleted) {
             "이미 삭제된 댓글입니다."
         }
+        val occurredAt: Instant = now()
         this.deletedAt = occurredAt
         this.updatedAt = occurredAt
     }

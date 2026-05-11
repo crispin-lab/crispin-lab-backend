@@ -17,6 +17,12 @@ interface SpaceEditing : UseCase<Request, Result> {
         val currentUserId: UserId
     ) {
         val spaceId: SpaceId = spaceId.asSpaceId()
+
+        init {
+            require(name != null || description != null) {
+                "수정할 필드를 최소 1개 이상 입력해 주세요."
+            }
+        }
     }
 
     data class Result(

@@ -26,13 +26,13 @@ class SpaceDeletingUseCaseTest :
 
         describe("스페이스 삭제") {
             it("존재하면 삭제한다") {
-                val space = basicSpace()
+                val space = basicSpace(id = SpaceId(1L))
                 every { spaceRepository.findBy(space.id) } returns space
                 justRun { spaceRepository.delete(space.id) }
 
-                useCase.perform(basicRequest())
+                useCase.perform(basicRequest(spaceId = space.id.value.toString()))
 
-                verify(exactly = 1) { spaceRepository.delete(SpaceId(1L)) }
+                verify(exactly = 1) { spaceRepository.delete(space.id) }
             }
 
             it("스페이스가 없으면 NotFoundException 을 던지고 delete 호출이 발생하지 않는다") {

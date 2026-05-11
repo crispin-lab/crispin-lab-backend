@@ -12,6 +12,7 @@ import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.extensions.spring.SpringExtension
 import io.mockk.clearMocks
 import io.mockk.every
+import io.mockk.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.restdocs.AutoConfigureRestDocs
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
@@ -67,10 +68,11 @@ class SpaceEditingControllerTest : DescribeSpec() {
                 mockMvc
                     .put("/v1/spaces/1") {
                         contentType = MediaType.APPLICATION_JSON
-                        content = """{"name":"x"}"""
+                        content = """{"name":"새 이름","description":"새 설명"}"""
                     }.andExpect {
                         status { isBadRequest() }
                     }
+                verify(exactly = 0) { useCase.perform(any()) }
             }
 
             it("X-User-Id 가 숫자가 아니면 400 을 반환한다") {
@@ -78,10 +80,11 @@ class SpaceEditingControllerTest : DescribeSpec() {
                     .put("/v1/spaces/1") {
                         header("X-User-Id", "not-a-number")
                         contentType = MediaType.APPLICATION_JSON
-                        content = """{"name":"x"}"""
+                        content = """{"name":"새 이름","description":"새 설명"}"""
                     }.andExpect {
                         status { isBadRequest() }
                     }
+                verify(exactly = 0) { useCase.perform(any()) }
             }
         }
     }

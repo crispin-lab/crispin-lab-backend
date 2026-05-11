@@ -12,6 +12,7 @@ import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.just
 import io.mockk.runs
+import io.mockk.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.restdocs.AutoConfigureRestDocs
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
@@ -56,6 +57,7 @@ class SpaceDeletingControllerTest : DescribeSpec() {
                     .andExpect {
                         status { isBadRequest() }
                     }
+                verify(exactly = 0) { useCase.perform(any()) }
             }
 
             it("X-User-Id 가 숫자가 아니면 400 을 반환한다") {
@@ -65,6 +67,7 @@ class SpaceDeletingControllerTest : DescribeSpec() {
                     }.andExpect {
                         status { isBadRequest() }
                     }
+                verify(exactly = 0) { useCase.perform(any()) }
             }
         }
     }

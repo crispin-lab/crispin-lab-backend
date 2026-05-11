@@ -11,6 +11,7 @@ import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.extensions.spring.SpringExtension
 import io.mockk.clearMocks
 import io.mockk.every
+import io.mockk.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.restdocs.AutoConfigureRestDocs
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
@@ -38,7 +39,15 @@ class SpaceRegisteringControllerTest : DescribeSpec() {
 
         describe("POST /v1/spaces") {
             it("스페이스 생성에 성공하면 201 과 spaceId 를 반환한다") {
-                every { useCase.perform(any()) } returns Result(spaceId = "42")
+                every {
+                    useCase.perform(
+                        match {
+                            it.name == "팀 위키" &&
+                                it.description == "공유 공간" &&
+                                it.currentUserId.value == 100L
+                        }
+                    )
+                } returns Result(spaceId = "42")
 
                 mockMvc
                     .post("/v1/spaces") {
@@ -57,10 +66,11 @@ class SpaceRegisteringControllerTest : DescribeSpec() {
                 mockMvc
                     .post("/v1/spaces") {
                         contentType = MediaType.APPLICATION_JSON
-                        content = """{"name":"팀 위키","description":""}"""
+                        content = """{"name":"팀 위키","description":"공유 공간"}"""
                     }.andExpect {
                         status { isBadRequest() }
                     }
+                verify(exactly = 0) { useCase.perform(any()) }
             }
 
             it("X-User-Id 가 숫자가 아니면 400 을 반환한다") {
@@ -68,10 +78,11 @@ class SpaceRegisteringControllerTest : DescribeSpec() {
                     .post("/v1/spaces") {
                         header("X-User-Id", "not-a-number")
                         contentType = MediaType.APPLICATION_JSON
-                        content = """{"name":"팀 위키","description":""}"""
+                        content = """{"name":"팀 위키","description":"공유 공간"}"""
                     }.andExpect {
                         status { isBadRequest() }
                     }
+                verify(exactly = 0) { useCase.perform(any()) }
             }
         }
     }

@@ -44,12 +44,13 @@ class SpaceRegisteringUseCaseTest :
                 verify(exactly = 1) { spaceRepository.save(any()) }
             }
 
-            it("이름이 비어 있으면 IllegalArgumentException") {
+            it("이름이 비어 있으면 IllegalArgumentException 이 발생하고 저장이 일어나지 않는다") {
                 every { idGenerator.next() } returns 1L
 
                 shouldThrow<IllegalArgumentException> {
                     useCase.perform(basicRequest(name = "", description = ""))
                 }
+                verify(exactly = 0) { spaceRepository.save(any()) }
             }
         }
     }) {

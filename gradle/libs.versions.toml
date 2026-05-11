@@ -1,6 +1,6 @@
 [versions]
 kotlin = "2.3.21"
-kotest = "6.1.6"
+kotest = "6.1.11"
 kotlinter = "5.4.2"
 spring-boot = "3.5.14"
 kotlin-snowflake = "1.0.1"

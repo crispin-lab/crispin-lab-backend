@@ -1,10 +1,6 @@
-import com.crispinlab.applySpringBootBom
-
 plugins {
-    alias(libs.plugins.crispinlab.jvm)
+    alias(libs.plugins.crispinlab.kopring.library)
 }
-
-applySpringBootBom("api")
 
 dependencies {
     api(projects.labCommon)

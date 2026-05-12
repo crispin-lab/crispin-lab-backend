@@ -67,6 +67,7 @@ restdocs-api-spec = { id = "com.epages.restdocs-api-spec", version.ref = "restdo
 crispinlab-jvm = { id = "crispinlab.jvm" }
 crispinlab-kopring-service = { id = "crispinlab.kopring.service" }
 crispinlab-kopring-web = { id = "crispinlab.kopring.web" }
+crispinlab-kopring-library = { id = "crispinlab.kopring.library" }
 crispinlab-kopring-exposed = { id = "crispinlab.kopring.exposed" }
 crispinlab-snowflake = { id = "crispinlab.snowflake" }
 crispinlab-kotlin-serialization = { id = "crispinlab.kotlin.serialization" }

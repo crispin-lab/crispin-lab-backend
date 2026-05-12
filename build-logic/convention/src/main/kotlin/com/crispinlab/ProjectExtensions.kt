@@ -34,7 +34,7 @@ internal fun Project.configureTestTask() {
     }
 }
 
-fun Project.applySpringBootBom(configuration: String = "implementation") {
+internal fun Project.applySpringBootBom(configuration: String = "implementation") {
     dependencies {
         add(configuration, platform(libs.findLibrary("spring.boot.bom").get()))
     }

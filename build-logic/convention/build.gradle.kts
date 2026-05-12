@@ -27,6 +27,10 @@ gradlePlugin {
             id = "crispinlab.kopring.web"
             implementationClass = "KopringWebConventionPlugin"
         }
+        register("kopringLibrary") {
+            id = "crispinlab.kopring.library"
+            implementationClass = "KopringLibraryConventionPlugin"
+        }
         register("kopringExposed") {
             id = "crispinlab.kopring.exposed"
             implementationClass = "KopringExposedConventionPlugin"

@@ -47,7 +47,12 @@ class PageGettingUseCase(
         }
 
     private fun Request.validate() {
-        // 권한·존재 등 외부 의존 검증을 둘 자리 — 비어 있어도 perform 흐름 정렬을 위해 유지한다.
+        /*
+        todo    :: 권한·존재 등 외부 의존 검증을 둘 자리. 비어 있어도 perform 흐름 정렬을 위해 유지.
+         author :: <사람 이름>
+         date   :: YYYY-MM-DDTHH:mm:ssKST
+         ticket :: LAB-N
+         */
     }
 
     private fun Request.toEntity(): Page =
@@ -92,7 +97,12 @@ class PageRegisteringUseCase(
     }
 
     private fun Request.validate() {
-        // 권한, 상위 페이지 존재 여부 등 외부 의존 검증
+        /*
+        todo    :: 권한, 상위 페이지 존재 여부 등 외부 의존 검증.
+         author :: <사람 이름>
+         date   :: YYYY-MM-DDTHH:mm:ssKST
+         ticket :: LAB-N
+         */
     }
 
     private fun Request.toEntity(): Page =

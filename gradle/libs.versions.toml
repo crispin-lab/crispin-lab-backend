@@ -11,6 +11,7 @@ rest-assured = "6.0.0"
 restdocs-api-spec = "0.19.4"
 swagger-models = "2.2.49"
 springmockk = "4.0.2"
+mockk = "1.14.9"
 
 [libraries]
 # build-logic
@@ -30,6 +31,10 @@ spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-start
 spring-boot-starter-validation = { module = "org.springframework.boot:spring-boot-starter-validation" }
 spring-tx = { module = "org.springframework:spring-tx" }
 spring-jdbc = { module = "org.springframework:spring-jdbc" }
+spring-webmvc = { module = "org.springframework:spring-webmvc" }
+spring-test = { module = "org.springframework:spring-test" }
+jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind" }
+jackson-module-kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin" }
 
 # database
 exposed-spring-boot-starter = { module = "org.jetbrains.exposed:exposed-spring-boot-starter", version.ref = "exposed" }
@@ -47,6 +52,7 @@ rest-assured-kotlin-extensions = { module = "io.rest-assured:kotlin-extensions",
 spring-restdocs-mockmvc = { module = "org.springframework.restdocs:spring-restdocs-mockmvc" }
 restdocs-api-spec-mockmvc = { module = "com.epages:restdocs-api-spec-mockmvc", version.ref = "restdocs-api-spec" }
 springmockk = { module = "com.ninja-squad:springmockk", version.ref = "springmockk" }
+mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 
 [plugins]
 # external
@@ -61,6 +67,7 @@ restdocs-api-spec = { id = "com.epages.restdocs-api-spec", version.ref = "restdo
 crispinlab-jvm = { id = "crispinlab.jvm" }
 crispinlab-kopring-service = { id = "crispinlab.kopring.service" }
 crispinlab-kopring-web = { id = "crispinlab.kopring.web" }
+crispinlab-kopring-library = { id = "crispinlab.kopring.library" }
 crispinlab-kopring-exposed = { id = "crispinlab.kopring.exposed" }
 crispinlab-snowflake = { id = "crispinlab.snowflake" }
 crispinlab-kotlin-serialization = { id = "crispinlab.kotlin.serialization" }

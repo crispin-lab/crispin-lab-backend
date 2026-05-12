@@ -30,6 +30,7 @@
 - `crispinlab.jvm` — Kotlin JVM 베이스 (kotlinter, kotest, JUnit Platform, git hooks)
 - `crispinlab.kopring.service` — Spring Boot 라이브러리 (`spring-boot-starter` 포함)
 - `crispinlab.kopring.web` — Spring Boot 라이브러리 (`spring-boot-starter-web` + validation)
+- `crispinlab.kopring.library` — Spring 환경에서 사용되는 일반 라이브러리 (Spring Boot BOM 을 `api` configuration 으로 노출). `spring-boot-starter-*` 가 필요 없고, 소비 모듈에 BOM-managed 의존을 `api` 로 전파해야 하는 테스트 도구·헬퍼 라이브러리에 적용. 예: `lab-api-support`.
 - `crispinlab.kopring.exposed` — Exposed Spring Boot starter + h2
 - `crispinlab.snowflake`, `crispinlab.kotlin.serialization`, `crispinlab.rest-assured`, `crispinlab.restdocs` — 선택적 mix-in
 

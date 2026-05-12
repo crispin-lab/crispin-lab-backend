@@ -25,7 +25,12 @@ class SpaceEditingUseCase(
         }
 
     private fun Request.validate() {
-        // 외부 의존성이 필요한 검증을 둘 자리 — 권한 등이 도입될 때 채운다.
+        /*
+        todo    :: 외부 의존성이 필요한 검증을 둘 자리. 권한 등이 도입될 때 채운다.
+         author :: heechoel shin
+         date   :: 2026-05-11T14:04:49KST
+         ticket :: LAB-21
+         */
     }
 
     private fun Request.toEntity(): Space =

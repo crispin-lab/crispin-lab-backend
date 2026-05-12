@@ -92,7 +92,6 @@ abstract class ControllerDescribeSpec(
             documentation.afterTest()
         }
 
-        @Suppress("UNUSED_EXPRESSION")
         body()
     }
 
@@ -139,6 +138,12 @@ abstract class ControllerDescribeSpec(
             .characterEncoding(UTF_8)
     }
 
+    /*
+    todo    :: 페이징·쿼리·쿠키 헬퍼. LAB-22 Page 작업에서 사용처 생기면 유지, 아니면 제거.
+     author :: heechoel shin
+     date   :: 2026-05-11T14:47:23KST
+     ticket :: LAB-31
+     */
     infix fun String.isParameterFor(description: String): ParameterDescriptor =
         parameterWithName(this).description(description)
 
@@ -434,6 +439,12 @@ abstract class ControllerDescribeSpec(
     companion object {
         const val USER_ID_HEADER: String = "X-User-Id"
 
+        /*
+        todo    :: PageResult 응답 표준 필드. 첫 페이징 컨트롤러에서 채택, 그때까지 미사용이면 제거.
+         author :: heechoel shin
+         date   :: 2026-05-11T14:47:23KST
+         ticket :: LAB-31
+         */
         @JvmStatic
         protected fun FieldBuilder.importPaging(
             pageOptional: Boolean = false,
@@ -444,6 +455,12 @@ abstract class ControllerDescribeSpec(
             "size".number("페이지당 항목 수", optional = sizeOptional)
         }
 
+        /*
+        todo    :: UseCase mock 보일러플레이트 축약 헬퍼. 첫 컨트롤러 테스트에서 채택, 미사용이면 제거.
+         author :: heechoel shin
+         date   :: 2026-05-11T14:47:23KST
+         ticket :: LAB-31
+         */
         inline fun <reified T : UseCase<R, Unit>, reified R : Any> successfulUseCase(): T {
             val mock: T = mockk()
             every { mock.perform(any<R>()) } returns Unit

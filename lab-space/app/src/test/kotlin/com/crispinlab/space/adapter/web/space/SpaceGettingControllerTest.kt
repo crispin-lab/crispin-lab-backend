@@ -4,6 +4,7 @@ import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder
 import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.space.application.port.incoming.space.SpaceGetting
 import com.crispinlab.space.application.port.incoming.space.SpaceGetting.Result
+import com.crispinlab.space.domain.space.SpaceErrorCode
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
 import io.mockk.clearMocks
@@ -52,13 +53,15 @@ class SpaceGettingControllerTest :
             }
 
             it("없으면 404 를 반환한다") {
-                every { useCase.perform(any()) } throws NotFoundException("스페이스를 찾을 수 없습니다.")
+                every { useCase.perform(any()) } throws
+                    NotFoundException(SpaceErrorCode.SPACE_NOT_FOUND)
 
                 controller
                     .`when`(
                         get("/v1/spaces/{spaceId}", 999).withUserHeader()
                     ).then(
                         status().isNotFound,
+                        jsonPath("$.code").value("SPACE_NOT_FOUND"),
                         jsonPath("$.message").value("스페이스를 찾을 수 없습니다.")
                     )
             }

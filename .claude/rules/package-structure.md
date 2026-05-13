@@ -44,12 +44,13 @@ com.crispinlab.space.config                                # Spring config, Bean
 
 ## 새 aggregate 추가 체크리스트
 
-`Comment` 를 추가한다고 가정. 만들어야 하는 7 개 패키지·파일:
+`Comment` 를 추가한다고 가정. 만들어야 하는 패키지·파일:
 
 ### domain 모듈
 
 - [ ] `domain/comment/Comment.kt` — Entity
 - [ ] `domain/comment/CommentId.kt` — EntityId (`value class`)
+- [ ] `domain/comment/CommentErrorCode.kt` — `ErrorCode` enum (throw 케이스를 항목화. `error-messages.md` 참조)
 - [ ] `application/port/incoming/comment/CommentRegistering.kt` — UseCase 인터페이스
 - [ ] `application/port/outgoing/comment/CommentRepository.kt` — Repository 인터페이스
 

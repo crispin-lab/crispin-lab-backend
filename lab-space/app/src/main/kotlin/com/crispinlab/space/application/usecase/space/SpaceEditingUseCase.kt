@@ -7,6 +7,7 @@ import com.crispinlab.space.application.port.incoming.space.SpaceEditing.Request
 import com.crispinlab.space.application.port.incoming.space.SpaceEditing.Result
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.domain.space.Space
+import com.crispinlab.space.domain.space.SpaceErrorCode
 import org.springframework.stereotype.Service
 
 @Service
@@ -35,7 +36,7 @@ class SpaceEditingUseCase(
 
     private fun Request.toEntity(): Space =
         spaceRepository.findBy(spaceId)
-            ?: throw NotFoundException("스페이스를 찾을 수 없습니다.")
+            ?: throw NotFoundException(SpaceErrorCode.SPACE_NOT_FOUND)
 
     private fun Space.editWith(request: Request): Space =
         apply {

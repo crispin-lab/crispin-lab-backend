@@ -12,11 +12,13 @@ import com.crispinlab.space.application.port.outgoing.page.PageRevisionRepositor
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageContent
+import com.crispinlab.space.domain.page.PageErrorCode
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.PageLink
 import com.crispinlab.space.domain.page.PageLinkId
 import com.crispinlab.space.domain.page.PageRevision
 import com.crispinlab.space.domain.page.PageRevisionId
+import com.crispinlab.space.domain.space.SpaceErrorCode
 import org.springframework.stereotype.Service
 
 @Service
@@ -42,13 +44,13 @@ class PageRegisteringUseCase(
 
     private fun Request.validate() {
         spaceRepository.findBy(spaceId)
-            ?: throw NotFoundException("스페이스를 찾을 수 없습니다.")
+            ?: throw NotFoundException(SpaceErrorCode.SPACE_NOT_FOUND)
         parentPageId?.let { parentId ->
             pageRepository
                 .findBy(parentId)
                 ?.takeIf {
                     it.spaceId == spaceId
-                } ?: throw NotFoundException("부모 페이지를 찾을 수 없습니다.")
+                } ?: throw NotFoundException(PageErrorCode.PARENT_PAGE_NOT_FOUND)
         }
     }
 

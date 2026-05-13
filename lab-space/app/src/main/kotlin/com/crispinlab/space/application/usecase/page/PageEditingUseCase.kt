@@ -10,6 +10,7 @@ import com.crispinlab.space.application.port.outgoing.page.PageLinkRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRevisionRepository
 import com.crispinlab.space.domain.page.Page
+import com.crispinlab.space.domain.page.PageErrorCode
 import com.crispinlab.space.domain.page.PageLink
 import com.crispinlab.space.domain.page.PageLinkId
 import com.crispinlab.space.domain.page.PageRevision
@@ -37,7 +38,7 @@ class PageEditingUseCase(
             .findBy(pageId)
             ?.takeIf {
                 it.authorId == currentUserId
-            } ?: throw NotFoundException("페이지를 찾을 수 없습니다.")
+            } ?: throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
 
     private fun Page.applyEditWith(request: Request): Page =
         apply {

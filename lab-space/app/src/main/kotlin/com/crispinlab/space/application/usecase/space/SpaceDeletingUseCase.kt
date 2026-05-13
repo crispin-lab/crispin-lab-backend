@@ -6,6 +6,7 @@ import com.crispinlab.space.application.port.incoming.space.SpaceDeleting
 import com.crispinlab.space.application.port.incoming.space.SpaceDeleting.Request
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.domain.space.Space
+import com.crispinlab.space.domain.space.SpaceErrorCode
 import org.springframework.stereotype.Service
 
 @Service
@@ -33,5 +34,5 @@ class SpaceDeletingUseCase(
 
     private fun Request.toEntity(): Space =
         spaceRepository.findBy(spaceId)
-            ?: throw NotFoundException("스페이스를 찾을 수 없습니다.")
+            ?: throw NotFoundException(SpaceErrorCode.SPACE_NOT_FOUND)
 }

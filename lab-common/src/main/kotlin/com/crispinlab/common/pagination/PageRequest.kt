@@ -5,8 +5,12 @@ data class PageRequest(
     val size: Int
 ) {
     init {
-        require(page >= 0) { "page must be >= 0, was $page" }
-        require(size in 1..MAX_SIZE) { "size must be in 1..$MAX_SIZE, was $size" }
+        require(page >= 0) {
+            "페이지 번호는 0 이상이어야 합니다."
+        }
+        require(size in 1..MAX_SIZE) {
+            "페이지 크기는 1 이상 ${MAX_SIZE} 이하여야 합니다."
+        }
     }
 
     val offset: Long

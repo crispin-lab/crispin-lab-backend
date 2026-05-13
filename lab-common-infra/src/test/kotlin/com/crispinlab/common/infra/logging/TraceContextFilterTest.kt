@@ -83,7 +83,8 @@ class TraceContextFilterTest :
                 mockMvc.perform(get("/ping")).andExpect(status().isOk)
 
                 accessLogAppender.list shouldHaveSize 1
-                accessLogAppender.list[0].formattedMessage shouldBe "status=200 durationMs=0"
+                accessLogAppender.list[0].formattedMessage shouldMatch
+                    Regex("""^status=200 durationMs=\d+$""")
             }
 
             it("4xx 응답에서도 동일하게 status 가 access log 로 흐른다") {

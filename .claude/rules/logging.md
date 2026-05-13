@@ -82,7 +82,7 @@ accessLog.info(
 
 access log 가 `request.requestURI` 를 그대로 로그/MDC 에 흘리므로, path 자체에 이메일·토큰·내부 키 같은 sensitive 값이 들어오면 그대로 노출된다. 이런 식별자는 path variable 이 아니라 request body 또는 별도 헤더로 받는다 (요청 본문은 본 시스템이 로그에 쓰지 않는다).
 
-```
+```text
 // BAD
 GET /v1/users/by-email/foo@example.com
 GET /v1/sessions/abc123secret/refresh

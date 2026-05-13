@@ -1,0 +1,32 @@
+package com.crispinlab.space.application.usecase.page
+
+import com.crispinlab.common.exception.NotFoundException
+import com.crispinlab.common.transaction.TransactionProvider
+import com.crispinlab.space.application.port.incoming.page.PageDeleting
+import com.crispinlab.space.application.port.incoming.page.PageDeleting.Request
+import com.crispinlab.space.application.port.outgoing.page.PageRepository
+import com.crispinlab.space.domain.page.Page
+import org.springframework.stereotype.Service
+
+@Service
+class PageDeletingUseCase(
+    private val pageRepository: PageRepository,
+    private val transactionProvider: TransactionProvider
+) : PageDeleting {
+    override fun perform(request: Request) {
+        transactionProvider.transactional {
+            request
+                .toEntity()
+                .let {
+                    pageRepository.delete(it.id)
+                }
+        }
+    }
+
+    private fun Request.toEntity(): Page =
+        pageRepository
+            .findBy(pageId)
+            ?.takeIf {
+                it.authorId == currentUserId
+            } ?: throw NotFoundException("페이지를 찾을 수 없습니다.")
+}

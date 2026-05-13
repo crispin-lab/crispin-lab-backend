@@ -4,7 +4,7 @@ import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec
 import com.crispinlab.space.adapter.web.GlobalExceptionHandler
 import com.crispinlab.space.adapter.web.auth.AuthArgumentResolver
 
-abstract class SpaceControllerDescribeSpec(
+abstract class SpaceAppControllerDescribeSpec(
     tag: String,
     body: ControllerDescribeSpec.() -> Unit
 ) : ControllerDescribeSpec(

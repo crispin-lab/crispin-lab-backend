@@ -5,7 +5,7 @@ import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.space.application.port.incoming.space.SpaceGetting
 import com.crispinlab.space.application.port.incoming.space.SpaceGetting.Result
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
-import com.crispinlab.space.testsupport.SpaceControllerDescribeSpec
+import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -15,7 +15,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPat
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
 class SpaceGettingControllerTest :
-    SpaceControllerDescribeSpec(tag = "Space", body = {
+    SpaceAppControllerDescribeSpec(tag = "Space", body = {
         val useCase = mockk<SpaceGetting>()
         val controller = SpaceGettingController(useCase)
 

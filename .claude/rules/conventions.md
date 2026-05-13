@@ -496,6 +496,28 @@ PageRequest(page = 0, size = 20)
 firstPage(size = 50)
 ```
 
+### 인자가 2개 이상이면 호출도 개행
+
+named 인자가 2개 이상이면 — 한 줄에 들어간다 해도 — 한 인자/한 줄 + 닫는 괄호 새 줄로 개행한다. 인자 이름이 시각적으로 정렬돼 누락·순서 오류가 잡히고, diff 가 줄 단위로 떨어진다.
+
+```kotlin
+// GOOD
+Request(
+    pageId = pageId,
+    currentUserId = auth.userId
+)
+
+Body.toRequestWith(
+    pageId = pageId,
+    userId = auth.userId
+)
+
+// BAD
+Request(pageId = pageId, currentUserId = auth.userId)
+```
+
+인자가 하나인 단순 호출(`PageId(idGenerator.next())`, `useCase.perform(it)`) 은 한 줄 유지.
+
 ### 람다 블록 시작/끝은 반드시 개행
 
 블록 경계를 명시적으로 드러내기 위함. `check`, `require` 메시지 람다도 예외 없이 적용.
@@ -515,6 +537,8 @@ require(title.isNotBlank()) {
 request.also { it.validate() }.toResult()
 require(title.isNotBlank()) { "제목을 입력해 주세요." }
 ```
+
+`map`/`filter`/`flatMap` 처럼 컬렉션을 **변환만** 하는 람다는 한 줄로 둔다 (`items.map { it.toResult() }`) — 변환은 흐름의 한 단계가 아니라 값의 모양 그 자체라, 개행하면 오히려 시선이 끊긴다. 같은 식 안에서 변환과 부수효과(`also`/`let` 등) 가 섞이면 부수효과 람다부터 개행한다.
 
 ### 블록 변수 vs `it`
 

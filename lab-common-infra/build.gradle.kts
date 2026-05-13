@@ -6,7 +6,11 @@ plugins {
 dependencies {
     implementation(projects.labCommon)
     implementation(libs.spring.tx)
+    compileOnly(libs.spring.web)
+    compileOnly(libs.jakarta.servlet.api)
 
     testImplementation(libs.spring.jdbc)
+    testImplementation(libs.spring.webmvc)
+    testImplementation(libs.jakarta.servlet.api)
     testRuntimeOnly(libs.h2.database)
 }

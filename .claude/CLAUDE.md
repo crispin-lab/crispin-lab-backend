@@ -12,6 +12,7 @@
 @rules/usecase-implementation.md
 @rules/repository.md
 @rules/controller.md
+@rules/logging.md
 @rules/error-messages.md
 @rules/test.md
 @rules/docs-style.md

@@ -6,6 +6,7 @@ import com.crispinlab.space.application.port.incoming.page.PageDeleting
 import com.crispinlab.space.application.port.incoming.page.PageDeleting.Request
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.domain.page.Page
+import com.crispinlab.space.domain.page.PageErrorCode
 import org.springframework.stereotype.Service
 
 @Service
@@ -28,5 +29,5 @@ class PageDeletingUseCase(
             .findBy(pageId)
             ?.takeIf {
                 it.authorId == currentUserId
-            } ?: throw NotFoundException("페이지를 찾을 수 없습니다.")
+            } ?: throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
 }

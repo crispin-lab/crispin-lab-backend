@@ -1,13 +1,7 @@
 package com.crispinlab.common.exception
 
 class NotFoundException(
-    message: String,
+    errorCode: ErrorCode,
+    message: String = errorCode.defaultMessage,
     cause: Throwable? = null
-) : DomainException(message, cause) {
-    companion object {
-        fun of(
-            entity: String,
-            identifier: Any
-        ): NotFoundException = NotFoundException("$entity not found: $identifier")
-    }
-}
+) : DomainException(errorCode, message, cause)

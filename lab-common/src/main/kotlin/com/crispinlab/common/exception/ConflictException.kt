@@ -1,6 +1,7 @@
 package com.crispinlab.common.exception
 
 class ConflictException(
-    message: String,
+    errorCode: ErrorCode,
+    message: String = errorCode.defaultMessage,
     cause: Throwable? = null
-) : DomainException(message, cause)
+) : DomainException(errorCode, message, cause)

@@ -4,6 +4,7 @@ import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder
 import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.space.application.port.incoming.page.PageGetting
 import com.crispinlab.space.application.port.incoming.page.PageGetting.Result
+import com.crispinlab.space.domain.page.PageErrorCode
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
 import io.mockk.clearMocks
@@ -63,13 +64,15 @@ class PageGettingControllerTest :
             }
 
             it("없으면 404 를 반환한다") {
-                every { useCase.perform(any()) } throws NotFoundException("페이지를 찾을 수 없습니다.")
+                every { useCase.perform(any()) } throws
+                    NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
 
                 controller
                     .`when`(
                         get("/v1/pages/{pageId}", 999).withUserHeader()
                     ).then(
                         status().isNotFound,
+                        jsonPath("$.code").value("PAGE_NOT_FOUND"),
                         jsonPath("$.message").value("페이지를 찾을 수 없습니다.")
                     )
             }

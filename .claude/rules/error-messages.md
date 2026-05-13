@@ -25,7 +25,68 @@
 | 잘못된 입력 | `IllegalArgumentException` (`require` 결과) | "{필드}이(가) {문제}합니다." | "제목을 입력해 주세요." |
 | 도메인 규칙 위반 | `DomainException` 하위 (필요 시 신규 정의) | 도메인 용어 그대로 | "비공개 페이지는 댓글을 받을 수 없습니다." |
 
-`NotFoundException.of(entity, identifier)` 팩토리는 **메시지에 식별자를 포함**한다 — 사용자 응답으로 그대로 흘리면 ID 가 노출된다. 사용자 응답용으로는 식별자를 빼고 직접 생성한다 (아래 "정보 노출 방지" 참조).
+호출은 한 줄로 — `throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)`. ErrorCode 가 응답 `code` 와 default 메시지를 같이 운반한다. 자세한 시그니처/네이밍은 아래 "ErrorCode 시스템" 참조.
+
+## ErrorCode 시스템
+
+`code` (응답 식별자) 와 `defaultMessage` (사용자 메시지) 를 묶어 도메인별로 enum 으로 항목화한다. hhplus 의 거대 단일 ErrorCode enum + 도메인별 예외 클래스 9 개 같은 패턴을 피한다.
+
+### 시그니처와 위치
+
+- `lab-common/.../exception/ErrorCode.kt` — `interface ErrorCode { val code; val defaultMessage }`. **Spring 의존 금지** (HTTP status 는 ErrorCode 가 아니라 예외 타입이 결정).
+- 도메인 enum 은 `lab-{domain}/domain` 의 해당 aggregate 패키지(예: `com.crispinlab.space.domain.page.PageErrorCode`).
+- enum 이름이 곧 응답 `code` (`PAGE_NOT_FOUND`). 구현은 `override val code: String get() = name`.
+
+```kotlin
+enum class PageErrorCode(
+    override val defaultMessage: String
+) : ErrorCode {
+    PAGE_NOT_FOUND("페이지를 찾을 수 없습니다."),
+    PARENT_PAGE_NOT_FOUND("부모 페이지를 찾을 수 없습니다.")
+    ;
+
+    override val code: String get() = name
+}
+```
+
+### 네이밍
+
+- enum 클래스: `<Aggregate>ErrorCode` — `PageErrorCode`, `SpaceErrorCode`.
+- 항목명: `<AGGREGATE>_<상태>` SCREAMING_SNAKE. 동사 금지 (`PAGE_NOT_FOUND` ⭕, `PAGE_RETRIEVE_FAILED` ❌).
+
+### Cross-aggregate
+
+같은 user-facing 의미면 같은 code 를 재사용한다. 예: `PageRegisteringUseCase.validate()` 에서 부모 스페이스가 없을 때 `SpaceErrorCode.SPACE_NOT_FOUND` 를 import 해서 throw — Page UseCase 가 Space 의 enum 을 참조해도 같은 모듈(`lab-space`) 안이므로 자연스럽다. 같은 메시지를 두 개의 code (`SPACE_NOT_FOUND` vs `PAGE_FAILED_TO_LOAD_SPACE`) 로 갈라 두지 않는다.
+
+### HTTP status 결정
+
+ErrorCode 는 식별자만 운반한다. status 는 **예외 타입** 이 결정:
+
+| 예외 | status |
+|------|--------|
+| `NotFoundException` | 404 |
+| `ConflictException` | 409 |
+| `DomainException` (fallback) | 422 |
+
+이 분리로 `lab-common` 이 Spring 에 의존하지 않는다 — ErrorCode enum 도 같이 Spring-free.
+
+### IllegalArgumentException 의 placeholder code
+
+`require` 결과의 `IllegalArgumentException` 은 도메인 ErrorCode 가 붙지 않는다. 핸들러가 placeholder code `"INVALID_REQUEST"` 로 400 응답, 메시지는 `require` 의 람다 결과 그대로. require 메시지는 도메인 용어로 작성되어 있다고 가정.
+
+### Spring validation 어노테이션
+
+`@Valid` / `jakarta.validation.constraints.*` 를 도입할 때는 어노테이션의 `message` 를 **한국어로 명시**한다. 미명시 시 default 메시지(`@NotBlank` → "must not be blank") 가 그대로 응답으로 흘러 룰(존댓말·한국어)과 충돌한다.
+
+```kotlin
+// BAD
+data class Body(@field:NotBlank val title: String)
+
+// GOOD
+data class Body(@field:NotBlank(message = "제목을 입력해 주세요.") val title: String)
+```
+
+`MethodArgumentNotValidException` 핸들러는 첫 필드 오류의 `defaultMessage` 를 그대로 응답에 노출하므로, 어노테이션 message 가 사용자 응답이 된다.
 
 ## 예외 발생 위치별 사용
 
@@ -40,12 +101,14 @@
 
 ### 식별자·경로 숨김
 
+ErrorCode 의 `defaultMessage` 에 식별자를 박지 않는다. 메시지 override 가 필요하더라도 ID 는 빼고 작성한다.
+
 ```kotlin
 // BAD: ID 노출
-throw NotFoundException("페이지 ${pageId.value}을(를) 찾을 수 없습니다.")
+throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND, "페이지 ${pageId.value}을(를) 찾을 수 없습니다.")
 
-// GOOD: 식별자 없이
-throw NotFoundException("페이지를 찾을 수 없습니다.")
+// GOOD
+throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
 ```
 
 ### "없음" 과 "권한 없음" 구분 노출 금지
@@ -55,25 +118,25 @@ throw NotFoundException("페이지를 찾을 수 없습니다.")
 ```kotlin
 // BAD: 다른 사용자의 페이지 존재 여부가 노출됨
 val page = pageRepository.findBy(pageId)
-    ?: throw NotFoundException("페이지를 찾을 수 없습니다.")
+    ?: throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
 if (page.authorId != currentUserId) {
-    throw ForbiddenException("접근 권한이 없습니다.")
+    throw ForbiddenException(...)
 }
 
 // GOOD: 존재 + 권한을 같은 응답으로
 val page = pageRepository.findBy(pageId)
     ?.takeIf { it.authorId == currentUserId }
-    ?: throw NotFoundException("페이지를 찾을 수 없습니다.")
+    ?: throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
 ```
 
 ### 인증 실패는 사용자/비밀번호를 구분하지 않는다
 
 ```kotlin
 // BAD: 사용자 존재 여부 노출 (계정 enumeration)
-throw NotFoundException("등록되지 않은 이메일입니다.")
+throw NotFoundException(UserErrorCode.USER_NOT_FOUND)
 
-// GOOD
-throw DomainException("이메일 또는 비밀번호가 올바르지 않습니다.")
+// GOOD: 인증용 ErrorCode 로 통합 (예: AUTH_INVALID_CREDENTIALS)
+throw AuthenticationException(AuthErrorCode.INVALID_CREDENTIALS)
 ```
 
 ### 금지 사항
@@ -83,18 +146,17 @@ throw DomainException("이메일 또는 비밀번호가 올바르지 않습니�
 - 시크릿(token, key, password) 은 메시지·로그에 절대 포함하지 않는다.
 - DB 에러(unique constraint 메시지 등) 를 그대로 흘리지 않는다 — 도메인 메시지로 감싼다.
 
-## 예외 정의 시 기본 메시지
+## 신규 예외 정의
 
-신규 예외는 기본 메시지를 가지고, 호출 측이 별도 메시지를 줄 일이 거의 없도록 한다.
+기존 `NotFoundException` / `ConflictException` 으로 충분하면 새 클래스를 만들지 않는다 — ErrorCode 항목 하나만 추가하면 된다.
 
 ```kotlin
-class PageNotFoundException(
-    message: String = "페이지를 찾을 수 없습니다.",
-) : DomainException(message)
+// 신규 예외 클래스 불필요
+throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
 ```
 
-상황별로 메시지를 바꿔야 하면 별도 예외로 분리하는 편이 호출부가 더 깔끔하다.
+`DomainException` 의 새 하위 타입이 필요할 때만 추가 (예: `UnauthorizedException` 같은 새 status 분기). 이때도 메시지는 ErrorCode 의 `defaultMessage` 가 default — 호출 측이 메시지를 매번 지정하지 않게.
 
 ## 한 줄 요약
 
-- `lab-common` 예외 우선, 도메인 메시지로 감싸고, ID·경로·존재 여부를 응답에 흘리지 않는다.
+- ErrorCode enum 으로 응답 code/메시지를 묶고, `lab-common` 예외 시그니처로 throw. ID·경로·존재 여부는 응답에 흘리지 않는다.

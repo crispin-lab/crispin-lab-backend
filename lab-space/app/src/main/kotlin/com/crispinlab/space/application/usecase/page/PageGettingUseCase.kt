@@ -7,6 +7,7 @@ import com.crispinlab.space.application.port.incoming.page.PageGetting.Request
 import com.crispinlab.space.application.port.incoming.page.PageGetting.Result
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.domain.page.Page
+import com.crispinlab.space.domain.page.PageErrorCode
 import org.springframework.stereotype.Service
 
 @Service
@@ -34,7 +35,7 @@ class PageGettingUseCase(
 
     private fun Request.toEntity(): Page =
         pageRepository.findBy(pageId)
-            ?: throw NotFoundException("페이지를 찾을 수 없습니다.")
+            ?: throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
 
     private fun Page.toResult(): Result =
         Result(

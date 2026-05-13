@@ -153,11 +153,11 @@ class PageEditingController(
 
 ## 컨트롤러 테스트 — `ControllerDescribeSpec` 기반
 
-본 프로젝트의 컨트롤러 테스트는 `lab-api-support` 의 `ControllerDescribeSpec` 을 상속한다. 영역마다 `<Domain>ControllerDescribeSpec` (예: `SpaceControllerDescribeSpec`) 을 두어 `argumentResolvers`·`controllerAdvices` 를 wiring 한 뒤, 각 컨트롤러 spec 이 그 베이스를 상속해 `when` / `then` / `document` DSL 로 작성한다.
+본 프로젝트의 컨트롤러 테스트는 `lab-api-support` 의 `ControllerDescribeSpec` 을 상속한다. 모듈 단위의 베이스 한 개(예: `SpaceAppControllerDescribeSpec`) 를 두어 `argumentResolvers`·`controllerAdvices` 를 wiring 하고, 각 컨트롤러 spec 이 그 베이스를 상속해 `when` / `then` / `document` DSL 로 작성한다. 도메인별로 wiring 차이(인증 게이트, advice)가 실제로 생기기 전까지는 한 베이스를 공유한다 — `<Domain>ControllerDescribeSpec` 류의 alias 두 개를 두면 변경 비용만 늘어난다.
 
 ```kotlin
 class SpaceRegisteringControllerTest :
-    SpaceControllerDescribeSpec(tag = "Space", body = {
+    SpaceAppControllerDescribeSpec(tag = "Space", body = {
         val useCase = mockk<SpaceRegistering>()
         val controller = SpaceRegisteringController(useCase)
 

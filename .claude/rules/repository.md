@@ -124,13 +124,19 @@ class ExposedPageRepository : PageRepository {
             }
         }
 
+    private fun decodeVisibility(stored: String): Visibility =
+        runCatching { stored.asVisibility() }
+            .getOrElse { cause ->
+                throw IllegalStateException("저장된 visibility 값을 해석할 수 없습니다.", cause)
+            }
+
     private fun ResultRow.toEntity(): Page =
         Page(
             id = PageId(this[Pages.id]),
             authorId = UserId(this[Pages.authorId]),
             title = this[Pages.title],
             body = this[Pages.body],
-            visibility = this[Pages.visibility].asVisibility(),
+            visibility = decodeVisibility(this[Pages.visibility]),
             createdAt = this[Pages.createdAt],
             updatedAt = this[Pages.updatedAt],
         )
@@ -142,6 +148,7 @@ class ExposedPageRepository : PageRepository {
 - 어댑터 클래스명 prefix 는 **기술 스택**(`Exposed`) 으로. `MySql`, `Redis` 등도 같은 결.
 - 매핑 함수 이름은 `ResultRow.toEntity()` — `from`, `mapToPage` 등 흩뿌리지 말 것. 한 어댑터 안에서 일관.
 - enum 은 컬럼에 `name` 으로 저장하고 읽을 때 `asXxx()` 로 복원. 인덱스가 필요하면 별도 정수 컬럼 고려.
+- **DB 손상 enum 매핑은 `IllegalStateException` 으로 래핑** — `asVisibility()` 가 `IllegalArgumentException` 을 던지지만, 어댑터에서 그대로 흘리면 `GlobalExceptionHandler` 가 400 으로 매핑한다. DB 에 깨진 값이 들어 있는 건 외부 입력 오류가 아니라 운영 결함이므로 `decodeXxx` 헬퍼로 래핑해 500 으로 응답되게 한다 (`error-messages.md` 의 "외부 입력 / 내부 상태" 구분과 정합).
 - `updatedAt` 은 어댑터에서 갱신하지 않는다 — entity 메서드가 이미 갱신했음 (`entity.md` "`updatedAt` 갱신 누락" 참조).
 
 ## Search / Retriever (보조 조회)

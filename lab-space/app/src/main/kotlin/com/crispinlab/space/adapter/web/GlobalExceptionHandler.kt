@@ -3,6 +3,7 @@ package com.crispinlab.space.adapter.web
 import com.crispinlab.common.exception.ConflictException
 import com.crispinlab.common.exception.DomainException
 import com.crispinlab.common.exception.NotFoundException
+import com.crispinlab.common.logging.LogContext.Field
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -94,10 +95,14 @@ class GlobalExceptionHandler {
     ): ResponseEntity<ErrorPayload> {
         val responseMessage: String = message ?: DEFAULT_MESSAGE
         log.warn(
-            "클라이언트 오류 status={} code={} message={} cause={}",
+            "클라이언트 오류 {}={} {}={} {}={} {}={}",
+            Field.STATUS,
             status.value(),
+            Field.CODE,
             code,
+            Field.MESSAGE,
             responseMessage,
+            Field.CAUSE,
             cause?.message ?: "-"
         )
         return ResponseEntity

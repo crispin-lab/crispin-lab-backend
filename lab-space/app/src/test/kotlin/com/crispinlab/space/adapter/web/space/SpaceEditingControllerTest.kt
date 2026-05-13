@@ -5,7 +5,7 @@ import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder
 import com.crispinlab.space.application.port.incoming.space.SpaceEditing
 import com.crispinlab.space.application.port.incoming.space.SpaceEditing.Result
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
-import com.crispinlab.space.testsupport.SpaceControllerDescribeSpec
+import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -15,7 +15,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPat
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
 class SpaceEditingControllerTest :
-    SpaceControllerDescribeSpec(tag = "Space", body = {
+    SpaceAppControllerDescribeSpec(tag = "Space", body = {
         val useCase = mockk<SpaceEditing>()
         val controller = SpaceEditingController(useCase)
 

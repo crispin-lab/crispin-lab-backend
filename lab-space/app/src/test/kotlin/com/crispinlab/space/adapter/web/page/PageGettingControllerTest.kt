@@ -1,0 +1,91 @@
+package com.crispinlab.space.adapter.web.page
+
+import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder.Companion.responseFields
+import com.crispinlab.common.exception.NotFoundException
+import com.crispinlab.space.application.port.incoming.page.PageGetting
+import com.crispinlab.space.application.port.incoming.page.PageGetting.Result
+import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
+import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
+import io.mockk.clearMocks
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+
+class PageGettingControllerTest :
+    SpaceAppControllerDescribeSpec(tag = "Page", body = {
+        val useCase = mockk<PageGetting>()
+        val controller = PageGettingController(useCase)
+
+        beforeEach { clearMocks(useCase) }
+
+        describe("페이지 단건 조회") {
+            it("존재하면 200 과 정보를 반환한다") {
+                every { useCase.perform(any()) } returns
+                    Result(
+                        pageId = "1",
+                        spaceId = "10",
+                        parentPageId = null,
+                        authorId = "100",
+                        title = "오늘의 회고",
+                        content = "본문",
+                        visibility = "DRAFT",
+                        currentVersion = 1,
+                        createdAt = DUMMY_INSTANT,
+                        updatedAt = DUMMY_INSTANT
+                    )
+
+                controller
+                    .`when`(
+                        get("/v1/pages/{pageId}", 1).withUserHeader()
+                    ).then(
+                        status().isOk,
+                        jsonPath("$.pageId").value("1"),
+                        jsonPath("$.title").value("오늘의 회고"),
+                        jsonPath("$.visibility").value("DRAFT")
+                    ).document(
+                        userHeaderRequired(),
+                        responseFields {
+                            "pageId".string("페이지 식별자")
+                            "spaceId".string("소속 스페이스 식별자")
+                            "parentPageId".string("부모 페이지 식별자", optional = true)
+                            "authorId".string("작성자 식별자")
+                            "title".string("제목")
+                            "content".string("본문")
+                            "visibility".string("공개 범위")
+                            "currentVersion".number("현재 버전")
+                            "createdAt".datetime("생성 시각")
+                            "updatedAt".datetime("최근 갱신 시각")
+                        }
+                    )
+            }
+
+            it("없으면 404 를 반환한다") {
+                every { useCase.perform(any()) } throws NotFoundException("페이지를 찾을 수 없습니다.")
+
+                controller
+                    .`when`(
+                        get("/v1/pages/{pageId}", 999).withUserHeader()
+                    ).then(
+                        status().isNotFound,
+                        jsonPath("$.message").value("페이지를 찾을 수 없습니다.")
+                    )
+            }
+
+            it("X-User-Id 헤더가 없으면 400 을 반환한다") {
+                controller
+                    .`when`(get("/v1/pages/{pageId}", 1))
+                    .then(status().isBadRequest)
+                verify(exactly = 0) { useCase.perform(any()) }
+            }
+
+            it("pageId 형식이 숫자가 아니면 400 을 반환한다") {
+                controller
+                    .`when`(get("/v1/pages/{pageId}", "not-a-number").withUserHeader())
+                    .then(status().isBadRequest)
+                verify(exactly = 0) { useCase.perform(any()) }
+            }
+        }
+    })

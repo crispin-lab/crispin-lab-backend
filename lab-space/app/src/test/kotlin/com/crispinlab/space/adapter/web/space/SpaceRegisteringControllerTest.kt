@@ -4,7 +4,7 @@ import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder
 import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder.Companion.responseFields
 import com.crispinlab.space.application.port.incoming.space.SpaceRegistering
 import com.crispinlab.space.application.port.incoming.space.SpaceRegistering.Result
-import com.crispinlab.space.testsupport.SpaceControllerDescribeSpec
+import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -14,7 +14,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPat
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
 class SpaceRegisteringControllerTest :
-    SpaceControllerDescribeSpec(tag = "Space", body = {
+    SpaceAppControllerDescribeSpec(tag = "Space", body = {
         val useCase = mockk<SpaceRegistering>()
         val controller = SpaceRegisteringController(useCase)
 

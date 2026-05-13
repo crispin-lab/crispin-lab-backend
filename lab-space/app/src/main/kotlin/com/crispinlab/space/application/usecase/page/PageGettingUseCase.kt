@@ -17,8 +17,9 @@ class PageGettingUseCase(
     override fun perform(request: Request): Result =
         transactionProvider.transactional(readOnly = true) {
             request
-                .also { it.validate() }
-                .toEntity()
+                .also {
+                    it.validate()
+                }.toEntity()
                 .toResult()
         }
 

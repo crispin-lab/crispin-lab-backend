@@ -19,6 +19,10 @@ class PageGettingController(
         @PathVariable pageId: String,
         auth: Auth
     ): Result =
-        Request(pageId = pageId, currentUserId = auth.userId)
-            .let { useCase.perform(it) }
+        Request(
+            pageId = pageId,
+            currentUserId = auth.userId
+        ).let {
+            useCase.perform(it)
+        }
 }

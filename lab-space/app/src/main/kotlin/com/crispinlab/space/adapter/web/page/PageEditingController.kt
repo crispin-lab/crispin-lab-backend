@@ -23,8 +23,12 @@ class PageEditingController(
         auth: Auth
     ): Result =
         body
-            .toRequestWith(pageId = pageId, userId = auth.userId)
-            .let { useCase.perform(it) }
+            .toRequestWith(
+                pageId = pageId,
+                userId = auth.userId
+            ).let {
+                useCase.perform(it)
+            }
 
     data class Body(
         val title: String,

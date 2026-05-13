@@ -25,7 +25,9 @@ class PageRegisteringController(
     ): Result =
         body
             .toRequestWith(userId = auth.userId)
-            .let { useCase.perform(it) }
+            .let {
+                useCase.perform(it)
+            }
 
     data class Body(
         val spaceId: String,

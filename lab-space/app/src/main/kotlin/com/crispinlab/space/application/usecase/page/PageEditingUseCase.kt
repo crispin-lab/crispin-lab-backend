@@ -26,21 +26,29 @@ class PageEditingUseCase(
 ) : PageEditing {
     override fun perform(request: Request): Result =
         transactionProvider.transactional {
-            val page: Page = request.toEntity()
-            val editResult: Page.EditResult = page.editWith(request)
-            pageRepository.save(page)
-            page.saveRevisionAndLinksWith(editResult)
-            editResult.toResult(page)
+            request
+                .toEntity()
+                .applyEditWith(request)
+                .toResult()
         }
 
     private fun Request.toEntity(): Page =
         pageRepository
             .findBy(pageId)
-            ?.takeIf { it.authorId == currentUserId }
-            ?: throw NotFoundException("페이지를 찾을 수 없습니다.")
+            ?.takeIf {
+                it.authorId == currentUserId
+            } ?: throw NotFoundException("페이지를 찾을 수 없습니다.")
 
-    private fun Page.editWith(request: Request): Page.EditResult =
-        edit(title = request.title, content = request.content)
+    private fun Page.applyEditWith(request: Request): Page =
+        apply {
+            val editResult: Page.EditResult =
+                edit(
+                    title = request.title,
+                    content = request.content
+                )
+            pageRepository.save(this)
+            saveRevisionAndLinksWith(editResult)
+        }
 
     private fun Page.saveRevisionAndLinksWith(editResult: Page.EditResult) {
         val revision: PageRevision = saveRevisionWith(editResult)
@@ -56,7 +64,9 @@ class PageEditingUseCase(
             content = editResult.content,
             authorId = authorId,
             createdAt = editResult.occurredAt
-        ).let { pageRevisionRepository.save(it) }
+        ).let {
+            pageRevisionRepository.save(it)
+        }
 
     private fun Page.saveLinksWith(
         editResult: Page.EditResult,
@@ -72,14 +82,16 @@ class PageEditingUseCase(
                     type = extracted.type,
                     createdAt = editResult.occurredAt
                 )
-            }.let { pageLinkRepository.saveAll(it) }
+            }.let {
+                pageLinkRepository.saveAll(it)
+            }
     }
 
-    private fun Page.EditResult.toResult(page: Page): Result =
+    private fun Page.toResult(): Result =
         Result(
-            pageId = page.id.value.toString(),
+            pageId = id.value.toString(),
             title = title,
-            version = version,
-            updatedAt = occurredAt
+            version = currentVersion,
+            updatedAt = updatedAt
         )
 }

@@ -31,10 +31,12 @@ class PageRegisteringUseCase(
     override fun perform(request: Request): Result =
         transactionProvider.transactional {
             request
-                .also { it.validate() }
-                .toEntity()
-                .let { pageRepository.save(it) }
-                .saveInitialRevisionAndLinks()
+                .also {
+                    it.validate()
+                }.toEntity()
+                .let {
+                    pageRepository.save(it)
+                }.saveInitialRevisionAndLinks()
                 .toResult()
         }
 
@@ -44,8 +46,9 @@ class PageRegisteringUseCase(
         parentPageId?.let { parentId ->
             pageRepository
                 .findBy(parentId)
-                ?.takeIf { it.spaceId == spaceId }
-                ?: throw NotFoundException("부모 페이지를 찾을 수 없습니다.")
+                ?.takeIf {
+                    it.spaceId == spaceId
+                } ?: throw NotFoundException("부모 페이지를 찾을 수 없습니다.")
         }
     }
 
@@ -76,7 +79,9 @@ class PageRegisteringUseCase(
             content = content,
             authorId = authorId,
             createdAt = createdAt
-        ).let { pageRevisionRepository.save(it) }
+        ).let {
+            pageRevisionRepository.save(it)
+        }
 
     private fun Page.saveInitialLinksWith(revisionId: PageRevisionId) {
         content
@@ -90,7 +95,9 @@ class PageRegisteringUseCase(
                     type = extracted.type,
                     createdAt = createdAt
                 )
-            }.let { pageLinkRepository.saveAll(it) }
+            }.let {
+                pageLinkRepository.saveAll(it)
+            }
     }
 
     private fun Page.toResult(): Result = Result(pageId = id.value.toString())

@@ -17,13 +17,16 @@ class PageDeletingUseCase(
         transactionProvider.transactional {
             request
                 .toEntity()
-                .let { pageRepository.delete(it.id) }
+                .let {
+                    pageRepository.delete(it.id)
+                }
         }
     }
 
     private fun Request.toEntity(): Page =
         pageRepository
             .findBy(pageId)
-            ?.takeIf { it.authorId == currentUserId }
-            ?: throw NotFoundException("페이지를 찾을 수 없습니다.")
+            ?.takeIf {
+                it.authorId == currentUserId
+            } ?: throw NotFoundException("페이지를 찾을 수 없습니다.")
 }

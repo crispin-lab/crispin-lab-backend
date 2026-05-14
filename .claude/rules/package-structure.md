@@ -120,6 +120,8 @@ lab-user/app      → com.crispinlab.user.application.usecase.*
 
 새 도메인 모듈은 `app` 모듈의 `@SpringBootApplication(scanBasePackageClasses = [...])` 에 marker 클래스 한 줄 추가가 필요 (`architecture.md` "component scan 범위" 참조).
 
+또한 `app/Dockerfile` 의 builder 단계가 의존성 캐시를 위해 서브모듈 `build.gradle.kts` 경로를 하드코딩한다 — 새 도메인 모듈을 추가하면 `COPY lab-<domain>/domain/build.gradle.kts ...` / `COPY lab-<domain>/app/build.gradle.kts ...` 두 줄을 같이 추가한다. 누락 시 docker 이미지 빌드는 풀-소스 복사 뒤 단계에서 결국 성공하지만 캐시 효율이 깨진다 (`dev-infra.md` 참조).
+
 ## `app` 모듈 패키지 구조
 
 ```

@@ -223,6 +223,7 @@ class ApplicationTest : DescribeSpec() {
 - `SpringExtension` 은 kotest 6 부터 일반 `class` — `extensions(SpringExtension())` 처럼 인스턴스화해서 등록 (`SpringExtension` 단일 object 호출 금지).
 - 단언하고 싶은 빈은 `lateinit @Autowired` 필드로 받고 `init { }` 블록에서 spec 본문을 구성. **생성자 주입은 금지** — SpringExtension 은 spec 인스턴스화 *후* 적용되므로 생성자 인자 자리에 빈을 채워주지 못해 `SpecInstantiationException` 이 난다.
 - 테스트 클래스 패키지는 진입 클래스(`com.crispinlab.app`) 와 같거나 그 하위에 둔다. `@SpringBootTest` 의 `SpringBootConfiguration` 자동 검색이 테스트 패키지부터 위로만 올라가므로, 다른 패키지에 있으면 `@SpringBootTest(classes = Application::class)` 를 명시해야 한다.
+- **datasource 같은 환경 의존 키는 `app/src/test/resources/application.yml` 로 override** — main 의 `application.yml` 이 외부 서비스(Postgres 등) 를 가리킬 때, test classpath 의 동명 파일이 그 위를 덮어 H2 in-memory 로 부팅한다 (`@ActiveProfiles` 휴리스틱 없이 자동 적용). 단, main 에 새 키가 추가될 때 test 의 동명 파일이 그 키를 같이 커버해야 — main 은 로드되지 않으므로 test 파일이 모든 필요 키를 가진다 (`dev-infra.md` "회귀 방지" 참조).
 
 ## 자주 빠뜨리는 것
 

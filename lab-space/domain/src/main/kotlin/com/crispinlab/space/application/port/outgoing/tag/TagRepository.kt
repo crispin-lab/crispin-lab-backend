@@ -13,6 +13,11 @@ interface TagRepository {
 
     fun findBySpaceId(spaceId: SpaceId): List<Tag>
 
+    fun existsByNameAndSpaceId(
+        spaceId: SpaceId,
+        name: String
+    ): Boolean
+
     fun delete(id: TagId)
 
     fun attach(pageTag: PageTag)

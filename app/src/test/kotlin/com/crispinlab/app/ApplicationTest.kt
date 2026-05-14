@@ -6,10 +6,8 @@ import io.kotest.extensions.spring.SpringExtension
 import io.kotest.matchers.shouldBe
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.test.context.ActiveProfiles
 
 @SpringBootTest
-@ActiveProfiles("local")
 class ApplicationTest : DescribeSpec() {
     @Autowired
     private lateinit var transactionProvider: TransactionProvider

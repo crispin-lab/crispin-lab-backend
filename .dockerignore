@@ -1,0 +1,15 @@
+.git
+.gradle
+**/build
+**/out
+**/bin
+.idea
+*.iml
+*.log
+.DS_Store
+tmp
+.env
+.env.*
+!.env.example
+docker
+compose.yaml

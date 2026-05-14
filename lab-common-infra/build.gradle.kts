@@ -12,5 +12,6 @@ dependencies {
     testImplementation(libs.spring.jdbc)
     testImplementation(libs.spring.webmvc)
     testImplementation(libs.jakarta.servlet.api)
-    testRuntimeOnly(libs.h2.database)
+    testImplementation(libs.testcontainers.postgresql)
+    testRuntimeOnly(libs.postgresql)
 }

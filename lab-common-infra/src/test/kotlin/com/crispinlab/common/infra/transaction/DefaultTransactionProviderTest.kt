@@ -13,6 +13,7 @@ import org.springframework.jdbc.datasource.DataSourceTransactionManager
 import org.springframework.jdbc.datasource.DriverManagerDataSource
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionSynchronizationManager.isCurrentTransactionReadOnly
+import org.testcontainers.containers.PostgreSQLContainer
 
 class DefaultTransactionProviderTest :
     DescribeSpec({
@@ -27,6 +28,7 @@ class DefaultTransactionProviderTest :
         }
         afterSpec {
             context.close()
+            postgresContainer.stop()
         }
         beforeEach {
             jdbcTemplate.update("UPDATE counter SET amount = 0 WHERE id = 1")
@@ -79,9 +81,9 @@ class DefaultTransactionProviderTest :
         @Bean
         fun dataSource(): DataSource =
             DriverManagerDataSource(
-                "jdbc:h2:mem:tx-provider-test;DB_CLOSE_DELAY=-1",
-                "sa",
-                ""
+                postgresContainer.jdbcUrl,
+                postgresContainer.username,
+                postgresContainer.password
             )
 
         @Bean
@@ -98,6 +100,12 @@ class DefaultTransactionProviderTest :
     }
 
     companion object {
+        private val postgresContainer: PostgreSQLContainer<*> =
+            PostgreSQLContainer<Nothing>("postgres:16")
+                .apply {
+                    start()
+                }
+
         private fun currentValue(jdbcTemplate: JdbcTemplate): Int =
             jdbcTemplate.queryForObject("SELECT amount FROM counter WHERE id = 1", Int::class.java)
                 ?: error("counter row missing")

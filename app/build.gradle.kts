@@ -9,6 +9,11 @@ dependencies {
     implementation(projects.labSpace.app)
 
     runtimeOnly(libs.postgresql)
+    runtimeOnly(libs.flyway.core)
+    runtimeOnly(libs.flyway.database.postgresql)
+
+    testImplementation(libs.spring.boot.testcontainers)
+    testImplementation(libs.testcontainers.postgresql)
 }
 
 tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {

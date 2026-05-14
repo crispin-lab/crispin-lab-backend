@@ -142,5 +142,34 @@ class SpaceListingControllerTest :
                     )
                 verify(exactly = 0) { useCase.perform(any()) }
             }
+
+            it("size 가 허용 범위를 벗어나면 400 과 한국어 메시지를 반환한다") {
+                listOf("-1", "0", "201").forEach { invalidSize ->
+                    controller
+                        .`when`(
+                            get("/v1/spaces")
+                                .withUserHeader()
+                                .param("size", invalidSize)
+                        ).then(
+                            status().isBadRequest,
+                            jsonPath("$.code").value("INVALID_REQUEST"),
+                            jsonPath("$.message").value("페이지 크기는 1 이상 200 이하여야 합니다.")
+                        )
+                }
+                verify(exactly = 0) { useCase.perform(any()) }
+            }
+
+            it("size 가 숫자가 아니면 400 을 반환한다") {
+                controller
+                    .`when`(
+                        get("/v1/spaces")
+                            .withUserHeader()
+                            .param("size", "abc")
+                    ).then(
+                        status().isBadRequest,
+                        jsonPath("$.code").value("INVALID_REQUEST")
+                    )
+                verify(exactly = 0) { useCase.perform(any()) }
+            }
         }
     })

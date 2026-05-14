@@ -166,5 +166,44 @@ class ExposedSpaceRepositoryTest :
                     result.totalElements shouldBe 0L
                 }
             }
+
+            it("findPage 는 createdAt 이 동일하면 id DESC 로 결정적으로 정렬한다") {
+                transaction(database) {
+                    repository.save(
+                        basicSpace(
+                            id = SpaceId(31L),
+                            name = "첫번째",
+                            createdAt = DUMMY_INSTANT
+                        )
+                    )
+                    repository.save(
+                        basicSpace(
+                            id = SpaceId(32L),
+                            name = "두번째",
+                            createdAt = DUMMY_INSTANT
+                        )
+                    )
+                    repository.save(
+                        basicSpace(
+                            id = SpaceId(33L),
+                            name = "세번째",
+                            createdAt = DUMMY_INSTANT
+                        )
+                    )
+                }
+
+                transaction(database) {
+                    val result =
+                        repository.findPage(
+                            PageRequest(
+                                page = 0,
+                                size = 10
+                            )
+                        )
+
+                    result.items.map { it.id } shouldBe
+                        listOf(SpaceId(33L), SpaceId(32L), SpaceId(31L))
+                }
+            }
         }
     })

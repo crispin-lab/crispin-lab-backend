@@ -16,10 +16,11 @@
 ## 최초 셋업
 
 ```bash
-cp .env.example .env          # 환경변수 파일 생성 (값은 default 그대로 사용 가능)
-docker compose up -d          # postgres + redis 백그라운드 기동
-docker compose ps             # 두 서비스 모두 healthy 인지 확인
-./gradlew :app:bootRun        # app 부팅 (POSTGRES_USER / POSTGRES_PASSWORD env 필요)
+cp .env.example .env             # 환경변수 파일 생성 (값은 default 그대로 사용 가능)
+docker compose up -d             # postgres + redis 백그라운드 기동
+docker compose ps                # 두 서비스 모두 healthy 인지 확인
+set -a && source .env && set +a  # 현재 셸에 .env 값을 export — bootRun 의 placeholder 해석에 필요
+./gradlew :app:bootRun           # app 부팅
 ```
 
 `.env` 는 `.gitignore` 처리되어 있으니 로컬 값을 자유롭게 바꿔도 된다. `.env.example` 만 추적된다.

@@ -4,6 +4,7 @@ build/
 
 ### Local env ###
 .env
+.env.*
 !.env.example
 
 !gradle/wrapper/gradle-wrapper.jar

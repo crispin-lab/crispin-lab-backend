@@ -17,3 +17,4 @@
 @rules/test.md
 @rules/docs-style.md
 @rules/dev-infra.md
+@rules/migration.md

@@ -6,8 +6,10 @@ import io.kotest.extensions.spring.SpringExtension
 import io.kotest.matchers.shouldBe
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.context.annotation.Import
 
 @SpringBootTest
+@Import(TestcontainersConfig::class)
 class ApplicationTest : DescribeSpec() {
     @Autowired
     private lateinit var transactionProvider: TransactionProvider

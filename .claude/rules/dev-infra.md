@@ -105,11 +105,12 @@ docker run --rm \
 
 ## 회귀 방지
 
-- 테스트는 `app/src/test/resources/application.yml` 의 H2 in-memory 로 동작 (`MODE=PostgreSQL` 호환 모드) — Postgres 가 떠 있지 않아도 `./gradlew :app:test` 가 통과해야 한다. test classpath 의 `application.yml` 이 main 의 동명 파일을 override 하므로 어노테이션 (`@ActiveProfiles`) 없이도 자동 적용 — 새 `@SpringBootTest` 가 추가될 때 사람이 매번 profile 을 적어야 하는 휴리스틱이 없다.
+- 테스트는 Testcontainers 가 띄우는 Postgres 컨테이너에서 동작한다 — 로컬 호스트의 `compose.yaml` Postgres 가 떠 있지 않아도 `./gradlew test` 가 통과한다 (`migration.md` 참조). `@SpringBootTest` 는 `@Import(TestcontainersConfig::class)` 로 `@ServiceConnection PostgreSQLContainer<*>` 빈을 받아 datasource 가 자동 wiring 된다.
+- `app/src/test/resources/application.yml` 의 datasource 값은 `@ServiceConnection` 이 런타임에 override 한다 — 본 placeholder 는 main yml 의 `${POSTGRES_*}` resolution 실패만 막기 위한 stub.
 - `compose.yaml` 의 service 이름 / 환경변수 키를 바꾸면 `application.yml` 의 placeholder 와 본 문서의 표가 같이 갱신되어야 한다.
 
 ## 스코프 외
 
-- **Flyway / SQL 마이그레이션** — 별도 티켓. 현재 스키마 변경은 Exposed 의 `SchemaUtils.create` 또는 수동 (개발 초기).
+- **Flyway / SQL 마이그레이션** — `migration.md` 가 책임. 위치(`lab-{domain}/app/src/main/resources/db/migration/`), 네이밍, 테스트 전략(Testcontainers + Flyway) 은 모두 거기 명시.
 - **Pinpoint APM** — 별도 티켓.
 - **운영 배포 (CI/CD, Helm 등)** — 별도 티켓. Dockerfile 만 사전 정의.

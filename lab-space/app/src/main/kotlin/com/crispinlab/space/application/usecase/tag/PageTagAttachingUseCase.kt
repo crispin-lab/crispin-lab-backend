@@ -31,6 +31,12 @@ class PageTagAttachingUseCase(
     }
 
     private fun Request.validate() {
+        /*
+        todo    :: 권한 모델 도입 시 currentUserId 기반 페이지 편집 권한 검증 추가.
+         author :: heechoel shin
+         date   :: 2026-05-15T09:00:00KST
+         ticket :: LAB-24
+         */
         val page =
             pageRepository.findBy(pageId)
                 ?: throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)

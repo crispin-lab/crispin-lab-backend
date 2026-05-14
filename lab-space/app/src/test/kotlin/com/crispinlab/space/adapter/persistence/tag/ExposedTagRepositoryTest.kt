@@ -1,8 +1,10 @@
 package com.crispinlab.space.adapter.persistence.tag
 
+import com.crispinlab.space.adapter.persistence.page.ExposedPageRepository
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.tag.TagId
+import com.crispinlab.space.testsupport.Fixtures.basicPage
 import com.crispinlab.space.testsupport.Fixtures.basicPageTag
 import com.crispinlab.space.testsupport.Fixtures.basicTag
 import com.crispinlab.space.testsupport.PostgresTestContext
@@ -21,6 +23,13 @@ class ExposedTagRepositoryTest :
     DescribeSpec({
         val database = PostgresTestContext.database
         val repository = ExposedTagRepository()
+        val pageRepository = ExposedPageRepository()
+
+        fun ensurePages(vararg ids: Long) {
+            ids.forEach { id ->
+                pageRepository.save(basicPage(id = PageId(id)))
+            }
+        }
 
         afterEach {
             PostgresTestContext.truncateAll()
@@ -110,6 +119,7 @@ class ExposedTagRepositoryTest :
 
             it("delete 는 tags 와 연관된 page_tags 매핑을 함께 삭제한다") {
                 transaction(database) {
+                    ensurePages(1000L, 1001L)
                     repository.save(basicTag(id = TagId(30L), spaceId = SpaceId(400L)))
                     repository.attach(basicPageTag(pageId = PageId(1000L), tagId = TagId(30L)))
                     repository.attach(basicPageTag(pageId = PageId(1001L), tagId = TagId(30L)))
@@ -125,8 +135,27 @@ class ExposedTagRepositoryTest :
                 }
             }
 
+            it("page 삭제 시 page_tags 매핑이 FK CASCADE 로 함께 정리된다") {
+                transaction(database) {
+                    ensurePages(1500L)
+                    repository.save(basicTag(id = TagId(35L)))
+                    repository.attach(basicPageTag(pageId = PageId(1500L), tagId = TagId(35L)))
+                }
+
+                transaction(database) {
+                    pageRepository.delete(PageId(1500L))
+                }
+
+                transaction(database) {
+                    repository.findTagsByPageId(PageId(1500L)).shouldBeEmpty()
+                    repository.findPageIdsByTagId(TagId(35L)).shouldBeEmpty()
+                    repository.findBy(TagId(35L)).shouldNotBeNull()
+                }
+            }
+
             it("attach 는 같은 (pageId, tagId) 로 다시 호출해도 멱등이다") {
                 transaction(database) {
+                    ensurePages(2000L)
                     repository.save(basicTag(id = TagId(40L)))
                 }
 
@@ -142,6 +171,7 @@ class ExposedTagRepositoryTest :
 
             it("detach 후에는 해당 매핑만 사라지고 다른 매핑은 보존된다") {
                 transaction(database) {
+                    ensurePages(3000L, 3001L)
                     repository.save(basicTag(id = TagId(50L)))
                     repository.attach(basicPageTag(pageId = PageId(3000L), tagId = TagId(50L)))
                     repository.attach(basicPageTag(pageId = PageId(3001L), tagId = TagId(50L)))
@@ -165,6 +195,7 @@ class ExposedTagRepositoryTest :
 
             it("findTagsByPageId 는 page 에 매핑된 모든 tag 를 반환한다") {
                 transaction(database) {
+                    ensurePages(4000L, 4001L)
                     repository.save(basicTag(id = TagId(60L), name = "a"))
                     repository.save(basicTag(id = TagId(61L), name = "b"))
                     repository.save(basicTag(id = TagId(62L), name = "c"))

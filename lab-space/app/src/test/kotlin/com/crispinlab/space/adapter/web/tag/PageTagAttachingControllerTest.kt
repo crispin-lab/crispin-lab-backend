@@ -72,5 +72,15 @@ class PageTagAttachingControllerTest :
                     ).then(status().isBadRequest)
                 verify(exactly = 0) { useCase.perform(any()) }
             }
+
+            it("tagId 형식이 숫자가 아니면 400 을 반환한다") {
+                controller
+                    .`when`(
+                        post("/v1/pages/{pageId}/tags", 10)
+                            .withUserHeader()
+                            .body(mapOf("tagId" to "not-a-number"))
+                    ).then(status().isBadRequest)
+                verify(exactly = 0) { useCase.perform(any()) }
+            }
         }
     })

@@ -62,6 +62,16 @@ class CommentGettingControllerTest :
                             "deletedAt".datetime("삭제 시각 (soft delete)", optional = true)
                         }
                     )
+
+                verify(exactly = 1) {
+                    useCase.perform(
+                        match {
+                            it.pageId.value == 10L &&
+                                it.commentId.value == 7L &&
+                                it.currentUserId.value == 100L
+                        }
+                    )
+                }
             }
 
             it("없으면 404 를 반환한다") {

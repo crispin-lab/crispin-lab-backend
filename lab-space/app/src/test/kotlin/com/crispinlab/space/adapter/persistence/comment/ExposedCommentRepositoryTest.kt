@@ -12,6 +12,7 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 class ExposedCommentRepositoryTest :
@@ -59,11 +60,14 @@ class ExposedCommentRepositoryTest :
                     )
                 }
 
-                transaction(database) {
-                    val original = repository.findBy(CommentId(2L)).shouldNotBeNull()
-                    original.edit(body = "수정됨")
-                    repository.save(original)
-                }
+                val originalUpdatedAt =
+                    transaction(database) {
+                        val original = repository.findBy(CommentId(2L)).shouldNotBeNull()
+                        val capturedUpdatedAt = original.updatedAt
+                        original.edit(body = "수정됨")
+                        repository.save(original)
+                        capturedUpdatedAt
+                    }
 
                 transaction(database) {
                     val updated = repository.findBy(CommentId(2L)).shouldNotBeNull()
@@ -71,6 +75,7 @@ class ExposedCommentRepositoryTest :
                     updated.pageId shouldBe PageId(50L)
                     updated.authorId shouldBe UserId(500L)
                     updated.createdAt shouldBe DUMMY_INSTANT
+                    updated.updatedAt shouldNotBe originalUpdatedAt
                 }
             }
 

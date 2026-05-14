@@ -59,6 +59,17 @@ class CommentEditingControllerTest :
                             "updatedAt".datetime("갱신 시각")
                         }
                     )
+
+                verify(exactly = 1) {
+                    useCase.perform(
+                        match {
+                            it.pageId.value == 10L &&
+                                it.commentId.value == 7L &&
+                                it.body == "수정된 댓글" &&
+                                it.currentUserId.value == 100L
+                        }
+                    )
+                }
             }
 
             it("X-User-Id 헤더가 없으면 400 을 반환한다") {

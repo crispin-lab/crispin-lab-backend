@@ -35,6 +35,16 @@ class CommentDeletingControllerTest :
                         delete("/v1/pages/{pageId}/comments/{commentId}", 10, 7).withUserHeader()
                     ).then(status().isNoContent)
                     .document(userHeaderRequired())
+
+                verify(exactly = 1) {
+                    useCase.perform(
+                        match {
+                            it.pageId.value == 10L &&
+                                it.commentId.value == 7L &&
+                                it.currentUserId.value == 100L
+                        }
+                    )
+                }
             }
 
             it("X-User-Id 헤더가 없으면 400 을 반환한다") {

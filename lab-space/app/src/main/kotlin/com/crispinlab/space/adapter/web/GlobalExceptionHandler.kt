@@ -12,6 +12,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.MissingServletRequestParameterException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
@@ -76,6 +77,17 @@ class GlobalExceptionHandler {
             status = HttpStatus.BAD_REQUEST,
             code = INVALID_REQUEST,
             message = "필수 파라미터가 누락되었습니다.",
+            cause = exception
+        )
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException::class)
+    fun handleTypeMismatch(
+        exception: MethodArgumentTypeMismatchException
+    ): ResponseEntity<ErrorPayload> =
+        respondClientError(
+            status = HttpStatus.BAD_REQUEST,
+            code = INVALID_REQUEST,
+            message = "요청 파라미터 형식이 올바르지 않습니다.",
             cause = exception
         )
 

@@ -20,10 +20,6 @@ object PostgresTestContext {
             password = container.password
         )
 
-    /**
-     * Flyway migrate 가 객체 초기화 시점에 실행되며, 실패 시 ExceptionInInitializerError 가
-     * 다른 spec 의 첫 참조 시점에 표면화된다. 진단성을 위해 명시적 IllegalStateException 으로 래핑.
-     */
     private val userTables: String =
         run {
             migrate()

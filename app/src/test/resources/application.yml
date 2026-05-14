@@ -1,6 +1,4 @@
-# 본 파일은 main yml 의 datasource 설정을 test classpath 에서 shadow 한다 (머지 아님).
-# datasource url/username/password 는 다시 @ServiceConnection (TestcontainersConfig) 가
-# 런타임에 실제 Testcontainers 컨테이너 값으로 override 한다.
+# datasource 는 main yml 을 shadow 한 뒤 @ServiceConnection 가 컨테이너 값으로 다시 override.
 spring:
   application:
     name: crispin-lab

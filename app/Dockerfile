@@ -15,6 +15,7 @@ COPY lab-common-infra/build.gradle.kts lab-common-infra/build.gradle.kts
 COPY lab-api-support/build.gradle.kts lab-api-support/build.gradle.kts
 COPY lab-space/domain/build.gradle.kts lab-space/domain/build.gradle.kts
 COPY lab-space/app/build.gradle.kts lab-space/app/build.gradle.kts
+COPY lab-user/domain/build.gradle.kts lab-user/domain/build.gradle.kts
 
 RUN --mount=type=cache,target=/root/.gradle \
     ./gradlew --no-daemon :app:dependencies -q

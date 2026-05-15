@@ -69,6 +69,7 @@ class ExposedPageSearchAdapter : PageSearchPort {
         PageTags
             .select(PageTags.pageId)
             .where { PageTags.tagId inList tagIds.map { it.value } }
+            .withDistinct()
             .map { it[PageTags.pageId] }
 
     private fun baseQuery(

@@ -199,6 +199,28 @@ class ExposedPageSearchAdapterTest :
                 result.totalElements shouldBe 2L
             }
 
+            it("한 페이지가 검색에 들어가는 여러 태그를 모두 가져도 결과에 한 번만 나온다") {
+                transaction(database) {
+                    pageRepository.save(publicPage(id = PageId(1L)))
+                    attachTag(pageId = 1L, tagId = 100L)
+                    attachTag(pageId = 1L, tagId = 200L)
+                    attachTag(pageId = 1L, tagId = 300L)
+                }
+
+                val result =
+                    transaction(database) {
+                        adapter.search(
+                            keyword = null,
+                            spaceId = null,
+                            tagIds = listOf(TagId(100L), TagId(200L), TagId(300L)),
+                            pageRequest = PageRequest.firstPage()
+                        )
+                    }
+
+                result.items.map { it.id } shouldBe listOf(PageId(1L))
+                result.totalElements shouldBe 1L
+            }
+
             it("매칭되는 태그가 하나도 없으면 빈 결과를 반환한다") {
                 transaction(database) {
                     pageRepository.save(publicPage(id = PageId(1L)))

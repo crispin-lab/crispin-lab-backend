@@ -27,5 +27,6 @@ include(
     ":lab-api-support",
     ":lab-space:domain",
     ":lab-space:app",
+    ":lab-user:domain",
     ":app"
 )

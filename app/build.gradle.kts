@@ -50,12 +50,18 @@ run {
                             "먼저 ./docker/pinpoint/agent/download.sh 를 실행해 주세요."
                     )
                 val jarFile = File(jar)
-                val resolvedJar = (if (jarFile.isAbsolute) jarFile else File(projectRoot, jar)).absolutePath
+                val resolvedJar = (if (jarFile.isAbsolute) jarFile else File(projectRoot, jar))
+                if (!resolvedJar.isFile || !resolvedJar.canRead()) {
+                    throw GradleException(
+                        "PINPOINT_AGENT_PATH 가 유효한 파일이 아닙니다: ${resolvedJar.absolutePath}. " +
+                            "버전 변경 후라면 ./docker/pinpoint/agent/download.sh 를 다시 실행해 주세요."
+                    )
+                }
                 val agentIdValue = pinpointAgentId.getOrElse("crispin-lab-local")
                 val applicationNameValue = pinpointApplicationName.getOrElse("crispin-lab")
                 val collectorHostValue = pinpointCollectorHost.getOrElse("localhost")
                 listOf(
-                    "-javaagent:$resolvedJar",
+                    "-javaagent:${resolvedJar.absolutePath}",
                     "-Dpinpoint.agentId=$agentIdValue",
                     "-Dpinpoint.applicationName=$applicationNameValue",
                     "-Dpinpoint.profiler.profiles.active=local",

@@ -17,8 +17,12 @@ URL="${RELEASE_BASE}/v${PINPOINT_VERSION}/${ARCHIVE_NAME}"
 BOOTSTRAP_JAR="${EXTRACTED}/pinpoint-bootstrap-${PINPOINT_VERSION}.jar"
 
 if [ -d "${EXTRACTED}" ]; then
-    echo "Pinpoint agent ${PINPOINT_VERSION} 가 이미 ${EXTRACTED} 에 풀려 있어 skip 합니다."
-    exit 0
+    if [ -f "${BOOTSTRAP_JAR}" ]; then
+        echo "Pinpoint agent ${PINPOINT_VERSION} 가 이미 ${EXTRACTED} 에 풀려 있어 skip 합니다."
+        exit 0
+    fi
+    echo "기존 추출본에 bootstrap jar 가 없어 정리 후 재다운로드합니다: ${EXTRACTED}" >&2
+    rm -rf "${EXTRACTED}"
 fi
 
 # 부분 추출본을 정리 — 안 그러면 다음 실행이 "이미 존재" 분기로 빠져 깨진 상태가 굳어진다.

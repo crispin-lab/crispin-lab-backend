@@ -33,11 +33,24 @@ sed -i 's/localhost:19092/pinpoint-kafka:9092/g' $TABLES
 # shellcheck disable=SC2086
 sed -i 's/.*replicasPerPartition.*/    "replicasPerPartition": "1",/g' $TABLES
 
+# pinot-admin.sh 가 exit code 0 을 항상 반환할 수 있어 (apache/pinot#7040) output 파싱이 필요.
+# 정상: "successfully added" / 재기동 무해: "already exists" / 그 외: fail-fast.
 for t in uriStat tag double dataType exceptionTrace inspectorAgent inspectorApplication; do
-    /opt/pinot/bin/pinot-admin.sh AddTable \
+    output="$(/opt/pinot/bin/pinot-admin.sh AddTable \
         -schemaFile "${t}Schema.json" \
         -tableConfigFile "${t}Table.json" \
         -controllerHost pinot-controller \
         -controllerPort 9000 \
-        -exec || echo "AddTable ${t} failed (may already exist — continuing)"
+        -exec 2>&1)"
+    status=$?
+    if [ $status -eq 0 ] && echo "$output" | grep -q "successfully added"; then
+        continue
+    fi
+    if echo "$output" | grep -qiE "already exists|TableAlreadyExist"; then
+        echo "AddTable ${t}: already exists — skip"
+        continue
+    fi
+    echo "AddTable ${t} 실패 (exit=$status):" >&2
+    echo "$output" >&2
+    exit 1
 done

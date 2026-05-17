@@ -111,7 +111,7 @@ docker run --rm \
 
 ## Pinpoint APM (로컬 dev)
 
-Pinpoint 풀스택(HBase + MySQL + collector + web + Kafka + Pinot 4종 + init 2종 = 11개 컨테이너) 은 매일 띄울 만큼 가볍지 않아 Docker Compose `profiles` 로 분리한다. 평소 `docker compose up -d` 는 그대로 postgres + redis 만 띄우고, `--profile pinpoint` 를 명시할 때만 APM 스택이 함께 기동. **Docker Desktop 메모리는 16GB 이상 권장** (Pinot/HBase JVM 으로 ~6GB 사용).
+Pinpoint 풀스택(HBase + MySQL + Redis + collector + web + Kafka + Pinot 4종 + init 2종 = 12개 컨테이너) 은 매일 띄울 만큼 가볍지 않아 Docker Compose `profiles` 로 분리한다. 평소 `docker compose up -d` 는 그대로 postgres + redis 만 띄우고, `--profile pinpoint` 를 명시할 때만 APM 스택이 함께 기동. **Docker Desktop 메모리는 16GB 이상 권장** (Pinot/HBase JVM 으로 ~6GB 사용).
 
 ### 구성
 
@@ -119,6 +119,7 @@ Pinpoint 풀스택(HBase + MySQL + collector + web + Kafka + Pinot 4종 + init 2
 |------|--------|------|
 | Pinpoint core | `pinpoint-hbase` | trace / 메타 저장. standalone 모드 (단일 JVM 안에 master + regionserver + 임베디드 ZK) |
 | | `pinpoint-mysql` | pinpoint-web 의 user/role/dashboard 메타 (이미지가 MySQL JDBC URL hardcoded — 교체 불가) |
+| | `pinpoint-redis` | `-metric` 이미지의 `redisMessageListenerContainer` 빈이 항상 부팅 → Redis 가 없으면 collector/web boot fail |
 | | `pinpoint-collector` | agent 트래픽 수집. `:3.0.5-metric` 이미지 (Pinot 발행 모듈 포함) |
 | | `pinpoint-web` | UI + REST. `:3.0.5-metric` 이미지 (`/api/inspector/*` controller 포함) |
 | Inspector / metric backend | `pinpoint-kafka` | inspector-stat / system-metric / exception-trace 토픽 |
@@ -131,7 +132,7 @@ Pinpoint 풀스택(HBase + MySQL + collector + web + Kafka + Pinot 4종 + init 2
 
 본 셋업의 복잡도 대부분은 **로컬 dev** 가 아니라 **Apple Silicon Rosetta x86 에뮬레이션** 때문. x86 Linux 호스트에서는 `pinpoint-hbase` 의 default distributed + 외부 ZK quorum 구성이 그대로 동작 (standalone override 불필요). 운영 / CI 환경에서는 본 우회를 그대로 옮기지 말 것.
 
-`CLUSTER_ENABLE=false` 로 두어 collector / web 의 Redis cluster coordination 의존을 제거함 (단일 인스턴스 dev 에서 의미 없는 publish/subscribe). 다중 collector / web 도입 시 `CLUSTER_ENABLE=true` 로 켜고 `pinpoint-redis` 서비스 + `SPRING_DATA_REDIS_*` 환경변수를 다시 추가. realtime active thread dump 같은 cluster-기반 기능도 그때 살아남.
+`CLUSTER_ENABLE=false` 로 두어 Pinpoint 자체의 cluster coordination (collector 간 metadata sync, web 의 realtime active thread dump 등) 은 끈다. 다만 `pinpoint-redis` 는 `CLUSTER_ENABLE` 과 무관하게 metric 이미지의 hard dependency 라 제거할 수 없다.
 
 ### 버전 픽스
 
@@ -158,7 +159,7 @@ Pinpoint 풀스택(HBase + MySQL + collector + web + Kafka + Pinot 4종 + init 2
 
 ```bash
 docker compose --profile pinpoint up -d         # 첫 기동 시 HBase schema + Pinot 테이블 등록 자동 — 2~3분
-docker compose --profile pinpoint ps            # 13개 서비스 (기존 2 + Pinpoint 11; Pinpoint 11 = core 4 + metric 7) 상태 확인
+docker compose --profile pinpoint ps            # 14개 서비스 (기존 2 + Pinpoint 12; Pinpoint 12 = core 5 + metric 7) 상태 확인
 docker compose --profile pinpoint stop          # 데이터 유지 + 정지
 docker compose --profile pinpoint down          # 컨테이너 제거 (볼륨 유지)
 docker compose --profile pinpoint down -v       # 컨테이너 + 볼륨 제거 (Pinpoint 데이터 초기화)

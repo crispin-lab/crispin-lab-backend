@@ -74,12 +74,26 @@ services:
       retries: 10
       start_period: 30s
 
+  # CLUSTER_ENABLE=false 와 별개로 -metric 이미지의 redisMessageListenerContainer 빈이 항상 부팅 →
+  # Redis 가 없으면 collector/web 둘 다 boot fail. metric mode 의 Inspector 흐름이 Redis 의존.
+  pinpoint-redis:
+    profiles: ["pinpoint"]
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
   # `-metric` 이미지 + metric profile 이 빠지면 Inspector / Pinot ingest 가 죽는다.
   pinpoint-collector:
     profiles: ["pinpoint"]
     image: pinpointdocker/pinpoint-collector:${PINPOINT_VERSION:-3.0.5}-metric
     depends_on:
       pinpoint-hbase:
+        condition: service_healthy
+      pinpoint-redis:
         condition: service_healthy
       pinpoint-kafka-init:
         condition: service_completed_successfully
@@ -90,8 +104,9 @@ services:
       # 3.0.5 image 에 micrometer-registry-otlp jar 누락 — auto-config 진입 시 NoClassDefFoundError.
       SPRING_AUTOCONFIGURE_EXCLUDE: org.springframework.boot.actuate.autoconfigure.metrics.export.otlp.OtlpMetricsExportAutoConfiguration
       PINPOINT_ZOOKEEPER_ADDRESS: pinpoint-hbase
-      # 단일 collector / web 이라 cluster coordination 불필요 — Redis 의존 제거.
       CLUSTER_ENABLE: "false"
+      SPRING_DATA_REDIS_HOST: pinpoint-redis
+      SPRING_DATA_REDIS_PORT: "6379"
       PINPOINT_METRIC_KAFKA_BOOTSTRAP_SERVERS: pinpoint-kafka:9092
       SPRING_PINOTDATASOURCE_PINOT_JDBCURL: jdbc:pinot://pinot-controller:9000
       SPRING_PINOTDATASOURCE_PINOT_USERNAME: admin
@@ -118,6 +133,8 @@ services:
         condition: service_healthy
       pinpoint-mysql:
         condition: service_healthy
+      pinpoint-redis:
+        condition: service_healthy
       pinpoint-kafka-init:
         condition: service_completed_successfully
       pinot-init:
@@ -127,6 +144,8 @@ services:
       SPRING_AUTOCONFIGURE_EXCLUDE: org.springframework.boot.actuate.autoconfigure.metrics.export.otlp.OtlpMetricsExportAutoConfiguration
       PINPOINT_ZOOKEEPER_ADDRESS: pinpoint-hbase
       CLUSTER_ENABLE: "false"
+      SPRING_DATA_REDIS_HOST: pinpoint-redis
+      SPRING_DATA_REDIS_PORT: "6379"
       # `${:?}` 는 profile 무관 평가라 기본 `up` 까지 깨져 채택 불가 — literal 로 fail-loud.
       ADMIN_PASSWORD: ${PINPOINT_ADMIN_PASSWORD:-CHANGE_ME}
       CONFIG_SENDUSAGE: "false"

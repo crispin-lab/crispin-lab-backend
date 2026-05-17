@@ -31,6 +31,234 @@ services:
       timeout: 3s
       retries: 10
 
+  # standalone HBase (트레이드오프 + entrypoint wrapper 동기는 dev-infra.md 참조).
+  pinpoint-hbase:
+    profiles: ["pinpoint"]
+    image: pinpointdocker/pinpoint-hbase:${PINPOINT_VERSION:-3.0.5}
+    volumes:
+      - pinpoint_hbase_data:/home/pinpoint/hbase
+      - ./docker/pinpoint/hbase/hbase-site.xml:/opt/hbase/hbase-2.2.6/conf/hbase-site.xml:ro
+      # /opt/hbase/hbase-create.hbase 로 직접 bind mount 하면 configure-hbase.sh 의 sed -i 가
+      # "Device or resource busy" 로 실패 — entrypoint.sh 가 cp 로 우회.
+      - ./docker/pinpoint/hbase/hbase-create.hbase:/etc/pinpoint-hbase/hbase-create.hbase:ro
+      - ./docker/pinpoint/hbase/entrypoint.sh:/entrypoint.sh:ro
+    command: ["/bin/sh", "/entrypoint.sh"]
+    environment:
+      # default 1G 로는 region 생성 도중 GC pause 가 60s 까지 늘어남.
+      HBASE_HEAPSIZE: "2048"
+    restart: unless-stopped
+    # 이미지에 nc/curl/wget 이 없어 /proc/net/tcp 로 16010 listen 직접 확인 (3E8A=16010).
+    healthcheck:
+      test: ["CMD-SHELL", "grep -qE ':3E8A ' /proc/net/tcp /proc/net/tcp6"]
+      interval: 15s
+      timeout: 5s
+      retries: 40
+      start_period: 300s
+
+  pinpoint-mysql:
+    profiles: ["pinpoint"]
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${PINPOINT_MYSQL_ROOT_PASSWORD:-pinpoint}
+      MYSQL_USER: ${PINPOINT_MYSQL_USER:-pinpoint}
+      MYSQL_PASSWORD: ${PINPOINT_MYSQL_PASSWORD:-pinpoint}
+      MYSQL_DATABASE: pinpoint
+    volumes:
+      - pinpoint_mysql_data:/var/lib/mysql
+      - ./docker/pinpoint/mysql-init:/docker-entrypoint-initdb.d:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # `-metric` 이미지 + metric profile 이 빠지면 Inspector / Pinot ingest 가 죽는다.
+  pinpoint-collector:
+    profiles: ["pinpoint"]
+    image: pinpointdocker/pinpoint-collector:${PINPOINT_VERSION:-3.0.5}-metric
+    depends_on:
+      pinpoint-hbase:
+        condition: service_healthy
+      pinpoint-kafka-init:
+        condition: service_completed_successfully
+      pinot-init:
+        condition: service_completed_successfully
+    environment:
+      SPRING_PROFILES_ACTIVE: release,metric
+      # 3.0.5 image 에 micrometer-registry-otlp jar 누락 — auto-config 진입 시 NoClassDefFoundError.
+      SPRING_AUTOCONFIGURE_EXCLUDE: org.springframework.boot.actuate.autoconfigure.metrics.export.otlp.OtlpMetricsExportAutoConfiguration
+      PINPOINT_ZOOKEEPER_ADDRESS: pinpoint-hbase
+      # 단일 collector / web 이라 cluster coordination 불필요 — Redis 의존 제거.
+      CLUSTER_ENABLE: "false"
+      PINPOINT_METRIC_KAFKA_BOOTSTRAP_SERVERS: pinpoint-kafka:9092
+      SPRING_PINOTDATASOURCE_PINOT_JDBCURL: jdbc:pinot://pinot-controller:9000
+      SPRING_PINOTDATASOURCE_PINOT_USERNAME: admin
+      SPRING_PINOTDATASOURCE_PINOT_PASSWORD: admin
+    ports:
+      - "9991:9991"
+      - "9992:9992"
+      - "9993:9993"
+    restart: unless-stopped
+    # agent gRPC port 9991 listen 확인 (2707=9991). 이미지에 nc/curl/wget 부재 — /proc/net/tcp 직접.
+    healthcheck:
+      test: ["CMD-SHELL", "grep -qE ':2707 ' /proc/net/tcp /proc/net/tcp6"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # `-metric` 이미지에만 Inspector controller (`/api/inspector/*`) 가 들어 있다.
+  pinpoint-web:
+    profiles: ["pinpoint"]
+    image: pinpointdocker/pinpoint-web:${PINPOINT_VERSION:-3.0.5}-metric
+    depends_on:
+      pinpoint-hbase:
+        condition: service_healthy
+      pinpoint-mysql:
+        condition: service_healthy
+      pinpoint-kafka-init:
+        condition: service_completed_successfully
+      pinot-init:
+        condition: service_completed_successfully
+    environment:
+      SPRING_PROFILES_ACTIVE: release,metric
+      SPRING_AUTOCONFIGURE_EXCLUDE: org.springframework.boot.actuate.autoconfigure.metrics.export.otlp.OtlpMetricsExportAutoConfiguration
+      PINPOINT_ZOOKEEPER_ADDRESS: pinpoint-hbase
+      CLUSTER_ENABLE: "false"
+      # `${:?}` 는 profile 무관 평가라 기본 `up` 까지 깨져 채택 불가 — literal 로 fail-loud.
+      ADMIN_PASSWORD: ${PINPOINT_ADMIN_PASSWORD:-CHANGE_ME}
+      CONFIG_SENDUSAGE: "false"
+      # main DS + metadata DS 가 동일 MySQL 인스턴스를 가리킴. Pinpoint 3.x 는 두 datasource 가 분리된 설정.
+      SPRING_DATASOURCE_HIKARI_JDBCURL: jdbc:mysql://pinpoint-mysql:3306/pinpoint?characterEncoding=UTF-8
+      SPRING_DATASOURCE_HIKARI_USERNAME: ${PINPOINT_MYSQL_USER:-pinpoint}
+      SPRING_DATASOURCE_HIKARI_PASSWORD: ${PINPOINT_MYSQL_PASSWORD:-pinpoint}
+      SPRING_METADATASOURCE_HIKARI_JDBCURL: jdbc:mysql://pinpoint-mysql:3306/pinpoint?characterEncoding=UTF-8
+      SPRING_METADATASOURCE_HIKARI_USERNAME: ${PINPOINT_MYSQL_USER:-pinpoint}
+      SPRING_METADATASOURCE_HIKARI_PASSWORD: ${PINPOINT_MYSQL_PASSWORD:-pinpoint}
+      SPRING_PINOTDATASOURCE_PINOT_JDBCURL: jdbc:pinot://pinot-controller:9000
+      SPRING_PINOTDATASOURCE_PINOT_USERNAME: admin
+      SPRING_PINOTDATASOURCE_PINOT_PASSWORD: admin
+    ports:
+      - "8079:8080"
+    restart: unless-stopped
+
+  pinpoint-kafka:
+    profiles: ["pinpoint"]
+    image: ubuntu/kafka:3.1-22.04_beta
+    hostname: pinpoint-kafka
+    # advertised.listeners 를 alias 로 고정 — 컨테이너 IP 에 의존하지 않게.
+    command: /etc/kafka/server.properties --override advertised.listeners=PLAINTEXT://pinpoint-kafka:9092
+    depends_on:
+      pinot-zoo:
+        condition: service_healthy
+    environment:
+      ZOOKEEPER_HOST: pinot-zoo
+    volumes:
+      - pinpoint_kafka_data:/var/lib/kafka/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  pinpoint-kafka-init:
+    profiles: ["pinpoint"]
+    image: ubuntu/kafka:3.1-22.04_beta
+    restart: "no"
+    depends_on:
+      pinpoint-kafka:
+        condition: service_healthy
+    entrypoint: >
+      sh -c "/opt/kafka/bin/kafka-topics.sh --create --if-not-exists --topic url-stat --partitions 64 --bootstrap-server pinpoint-kafka:9092 &&
+      /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --topic system-metric-data-type --bootstrap-server pinpoint-kafka:9092 &&
+      /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --topic system-metric-tag --bootstrap-server pinpoint-kafka:9092 &&
+      /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --topic system-metric-double --bootstrap-server pinpoint-kafka:9092 &&
+      /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --topic exception-trace --bootstrap-server pinpoint-kafka:9092 &&
+      /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --topic inspector-stat-app --partitions 64 --bootstrap-server pinpoint-kafka:9092 &&
+      /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --topic inspector-stat-agent-00 --partitions 32 --bootstrap-server pinpoint-kafka:9092"
+
+  # Pinot 전용 ZK — 우리 standalone HBase 의 임베디드 ZK 와 섞으면 znode 경합 + 디버깅 난이도 폭증.
+  pinot-zoo:
+    profiles: ["pinpoint"]
+    image: zookeeper:3.8.0-temurin
+    volumes:
+      - pinot_zoo_data:/data
+      - pinot_zoo_datalog:/datalog
+    restart: unless-stopped
+    # `ruok` 4LW 는 ZK 3.5+ 기본 disabled — port open 만 확인.
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  pinot-controller:
+    profiles: ["pinpoint"]
+    image: apachepinot/pinot:1.0.0-11-amazoncorretto
+    command: StartController -zkAddress pinot-zoo
+    depends_on:
+      pinot-zoo:
+        condition: service_healthy
+    ports:
+      - "9000:9000"
+    volumes:
+      - pinot_controller_data:/tmp/data/controller
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+
+  pinot-broker:
+    profiles: ["pinpoint"]
+    image: apachepinot/pinot:1.0.0-11-amazoncorretto
+    command: StartBroker -zkAddress pinot-zoo
+    depends_on:
+      pinot-controller:
+        condition: service_healthy
+    restart: unless-stopped
+
+  pinot-server:
+    profiles: ["pinpoint"]
+    image: apachepinot/pinot:1.0.0-11-amazoncorretto
+    command: StartServer -zkAddress pinot-zoo
+    depends_on:
+      pinot-broker:
+        condition: service_started
+    volumes:
+      - pinot_server_data:/tmp/data/server
+    restart: unless-stopped
+
+  pinot-init:
+    profiles: ["pinpoint"]
+    image: apachepinot/pinot:1.0.0-11-amazoncorretto
+    restart: "no"
+    depends_on:
+      pinot-controller:
+        condition: service_healthy
+      pinot-server:
+        condition: service_started
+      pinpoint-kafka-init:
+        condition: service_completed_successfully
+    environment:
+      PINPOINT_VERSION: ${PINPOINT_VERSION:-3.0.5}
+    volumes:
+      - ./docker/pinpoint/pinot/init.sh:/init.sh:ro
+    entrypoint: ["sh", "/init.sh"]
+
 volumes:
   postgres_data:
   redis_data:
+  pinpoint_hbase_data:
+  pinpoint_mysql_data:
+  pinpoint_kafka_data:
+  pinot_zoo_data:
+  pinot_zoo_datalog:
+  pinot_controller_data:
+  pinot_server_data:

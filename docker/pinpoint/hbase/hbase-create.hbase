@@ -1,0 +1,27 @@
+create 'AgentInfo', { NAME => 'Info', TTL => 31536000, DATA_BLOCK_ENCODING => 'PREFIX' }
+create 'AgentStatV2', { NAME => 'S', TTL => 5184000, DATA_BLOCK_ENCODING => 'PREFIX' }
+create 'ApplicationStatAggre', { NAME => 'S', TTL => 5184000, DATA_BLOCK_ENCODING => 'PREFIX' }
+
+create 'ApplicationIndex', { NAME => 'Agents', TTL => 31536000, DATA_BLOCK_ENCODING => 'PREFIX' }
+create 'AgentLifeCycle', { NAME => 'S', TTL => 5184000, DATA_BLOCK_ENCODING => 'PREFIX' }
+create 'AgentEvent', { NAME => 'E', TTL => 5184000, DATA_BLOCK_ENCODING => 'PREFIX' }
+
+create 'StringMetaData', { NAME => 'Str', TTL => 15552000, DATA_BLOCK_ENCODING => 'PREFIX' }
+create 'ApiMetaData', { NAME => 'Api', TTL => 31536000, DATA_BLOCK_ENCODING => 'PREFIX' }
+
+create 'SqlMetaData_Ver2', { NAME => 'Sql', TTL => 15552000, DATA_BLOCK_ENCODING => 'PREFIX' }
+create 'SqlUidMetaData', { NAME => 'Sql', TTL => 15552000, DATA_BLOCK_ENCODING => 'PREFIX' }
+
+create 'TraceV2', { NAME => 'S', TTL => 5184000, DATA_BLOCK_ENCODING => 'PREFIX' }
+
+create 'ApplicationTraceIndex', { NAME => 'I', TTL => 5184000, DATA_BLOCK_ENCODING => 'PREFIX' }, { NAME => 'M', TTL => 5184000, DATA_BLOCK_ENCODING => 'PREFIX' }
+
+create 'ApplicationMapStatisticsCaller_Ver2', { NAME => 'C', TTL => 5184000, VERSIONS => 1, DATA_BLOCK_ENCODING => 'PREFIX' }
+create 'ApplicationMapStatisticsCallee_Ver2', { NAME => 'C', TTL => 5184000, VERSIONS => 1, DATA_BLOCK_ENCODING => 'PREFIX' }
+create 'ApplicationMapStatisticsSelf_Ver2', { NAME => 'C', TTL => 5184000, VERSIONS => 1, DATA_BLOCK_ENCODING => 'PREFIX' }
+
+create 'HostApplicationMap_Ver2', { NAME => 'M', TTL => 5184000, VERSIONS => 1, DATA_BLOCK_ENCODING => 'PREFIX' }
+
+list
+
+exit

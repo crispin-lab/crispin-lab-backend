@@ -24,13 +24,15 @@ object Fixtures {
         id: SpaceId = SpaceId(1L),
         name: String = "자유게시판",
         description: String = "기본 설명",
-        createdAt: Instant = DUMMY_INSTANT
+        createdAt: Instant = DUMMY_INSTANT,
+        deletedAt: Instant? = null
     ): Space =
         Space(
             id = id,
             name = name,
             description = description,
-            createdAt = createdAt
+            createdAt = createdAt,
+            deletedAt = deletedAt
         )
 
     fun basicPage(
@@ -42,7 +44,8 @@ object Fixtures {
         content: PageContent = PageContent("본문"),
         visibility: Visibility = Visibility.DRAFT,
         currentVersion: Int = 1,
-        createdAt: Instant = DUMMY_INSTANT
+        createdAt: Instant = DUMMY_INSTANT,
+        deletedAt: Instant? = null
     ): Page =
         Page(
             id = id,
@@ -53,7 +56,8 @@ object Fixtures {
             content = content,
             visibility = visibility,
             currentVersion = currentVersion,
-            createdAt = createdAt
+            createdAt = createdAt,
+            deletedAt = deletedAt
         )
 
     fun basicPageRevision(
@@ -97,14 +101,16 @@ object Fixtures {
         pageId: PageId = PageId(10L),
         authorId: UserId = UserId(100L),
         body: String = "댓글",
-        createdAt: Instant = DUMMY_INSTANT
+        createdAt: Instant = DUMMY_INSTANT,
+        deletedAt: Instant? = null
     ): Comment =
         Comment(
             id = id,
             pageId = pageId,
             authorId = authorId,
             body = body,
-            createdAt = createdAt
+            createdAt = createdAt,
+            deletedAt = deletedAt
         )
 
     fun basicTag(

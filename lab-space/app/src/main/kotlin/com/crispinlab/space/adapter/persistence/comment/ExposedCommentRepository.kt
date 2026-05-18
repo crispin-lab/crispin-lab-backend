@@ -8,10 +8,9 @@ import com.crispinlab.space.domain.comment.Comment
 import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.user.UserId
-import org.jetbrains.exposed.v1.core.Column
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
-import org.jetbrains.exposed.v1.core.Table
+import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -24,6 +23,7 @@ class ExposedCommentRepository :
     CommentRepository {
     override val table = Comments
     override val idColumn = Comments.id
+    override val deletedAtColumn = Comments.deletedAt
 
     override fun ResultRow.toEntity(): Comment =
         Comment(
@@ -36,7 +36,8 @@ class ExposedCommentRepository :
             deletedAt = this[Comments.deletedAt]
         )
 
-    public override fun delete(id: CommentId) = super.delete(id)
+    @Suppress("RedundantOverride")
+    override fun delete(id: CommentId) = super.delete(id)
 
     override fun insert(entity: Comment) {
         Comments.insert {
@@ -62,7 +63,10 @@ class ExposedCommentRepository :
         pageId: PageId,
         pageRequest: PageRequest
     ): PageResult<Comment> {
-        val query = Comments.selectAll().where { Comments.pageId eq pageId.value }
+        val query =
+            Comments.selectAll().where {
+                (Comments.pageId eq pageId.value) and notDeleted()
+            }
         val totalElements: Long = query.count()
         val items: List<Comment> =
             query

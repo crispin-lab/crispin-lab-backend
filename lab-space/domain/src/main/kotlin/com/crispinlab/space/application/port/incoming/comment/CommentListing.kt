@@ -28,9 +28,9 @@ interface CommentListing : UseCase<Request, PageResult<Summary>> {
     }
 
     /*
-    todo    :: 삭제된 댓글(deletedAt != null) 은 현재 body·작성자 정보를 그대로 노출한다. 마스킹 정책(예: body 를 "삭제된 댓글입니다" 로 치환) 결정 시 Summary 구조 또는 매핑을 조정한다.
+    todo    :: 마스킹 정책 결정 시 findByPageIdIncludingDeleted 경로 + Summary.deletedAt 동시 도입.
      author :: heechoel shin
-     date   :: 2026-05-14T00:00:00KST
+     date   :: 2026-05-18T00:00:00KST
      ticket :: LAB-23
      */
     data class Summary(
@@ -39,7 +39,6 @@ interface CommentListing : UseCase<Request, PageResult<Summary>> {
         val authorId: UserId,
         val body: String,
         val createdAt: Instant,
-        val updatedAt: Instant,
-        val deletedAt: Instant?
+        val updatedAt: Instant
     )
 }

@@ -1,6 +1,7 @@
 package com.crispinlab.space.domain.comment
 
 import com.crispinlab.common.domain.Entity
+import com.crispinlab.common.domain.SoftDeletable
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.user.UserId
 import java.time.Instant
@@ -14,16 +15,14 @@ class Comment(
     val createdAt: Instant = now(),
     updatedAt: Instant = createdAt,
     deletedAt: Instant? = null
-) : Entity<CommentId> {
+) : Entity<CommentId>,
+    SoftDeletable {
     var body: String = body
         private set
     var updatedAt: Instant = updatedAt
         private set
-    var deletedAt: Instant? = deletedAt
+    override var deletedAt: Instant? = deletedAt
         private set
-
-    val isDeleted: Boolean
-        get() = deletedAt != null
 
     init {
         validateBody(body)

@@ -135,7 +135,7 @@ class ExposedTagRepositoryTest :
                 }
             }
 
-            it("page 삭제 시 page_tags 매핑이 FK CASCADE 로 함께 정리된다") {
+            it("page 가 soft delete 되면 row 가 보존되므로 page_tags 매핑도 그대로 유지된다") {
                 transaction(database) {
                     ensurePages(1500L)
                     repository.save(basicTag(id = TagId(35L)))
@@ -147,8 +147,8 @@ class ExposedTagRepositoryTest :
                 }
 
                 transaction(database) {
-                    repository.findTagsByPageId(PageId(1500L)).shouldBeEmpty()
-                    repository.findPageIdsByTagId(TagId(35L)).shouldBeEmpty()
+                    repository.findPageIdsByTagId(TagId(35L)) shouldContainExactlyInAnyOrder
+                        listOf(PageId(1500L))
                     repository.findBy(TagId(35L)).shouldNotBeNull()
                 }
             }

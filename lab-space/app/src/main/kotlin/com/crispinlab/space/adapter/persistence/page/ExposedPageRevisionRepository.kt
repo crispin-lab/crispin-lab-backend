@@ -7,10 +7,8 @@ import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.PageRevision
 import com.crispinlab.space.domain.page.PageRevisionId
 import com.crispinlab.space.domain.user.UserId
-import org.jetbrains.exposed.v1.core.Column
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
-import org.jetbrains.exposed.v1.core.Table
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -23,6 +21,7 @@ class ExposedPageRevisionRepository :
     PageRevisionRepository {
     override val table = PageRevisions
     override val idColumn = PageRevisions.id
+    override val deletedAtColumn = null
 
     override fun ResultRow.toEntity(): PageRevision =
         PageRevision(

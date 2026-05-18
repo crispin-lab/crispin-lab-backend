@@ -40,9 +40,7 @@ class CommentEditingUseCase(
         commentRepository
             .findBy(commentId)
             ?.takeIf {
-                it.pageId == pageId &&
-                    it.authorId == currentUserId &&
-                    !it.isDeleted
+                it.pageId == pageId && it.authorId == currentUserId
             } ?: throw NotFoundException(CommentErrorCode.COMMENT_NOT_FOUND)
 
     private fun Comment.editWith(request: Request): Comment =

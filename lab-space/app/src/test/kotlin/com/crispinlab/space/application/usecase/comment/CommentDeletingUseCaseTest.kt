@@ -3,16 +3,16 @@ package com.crispinlab.space.application.usecase.comment
 import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.space.application.port.incoming.comment.CommentDeleting.Request
 import com.crispinlab.space.application.port.outgoing.comment.CommentRepository
+import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.user.UserId
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicComment
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
-import io.kotest.matchers.nulls.shouldNotBeNull
-import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
 import io.mockk.every
+import io.mockk.justRun
 import io.mockk.mockk
 import io.mockk.verify
 
@@ -23,14 +23,13 @@ class CommentDeletingUseCaseTest :
 
         beforeEach {
             clearMocks(commentRepository)
-            every { commentRepository.save(any()) } answers { firstArg() }
         }
 
         describe("댓글 삭제") {
-            it("soft delete — isDeleted=true, deletedAt 비어있지 않은 상태로 save 가 호출된다") {
+            it("commentRepository.delete 가 한 번 호출된다 (base 가 자동 soft delete 분기)") {
                 val comment = basicComment(pageId = PageId(10L))
-                comment.isDeleted shouldBe false
                 every { commentRepository.findBy(comment.id) } returns comment
+                justRun { commentRepository.delete(comment.id) }
 
                 useCase.perform(
                     basicRequest(
@@ -39,16 +38,8 @@ class CommentDeletingUseCaseTest :
                     )
                 )
 
-                verify(exactly = 1) {
-                    commentRepository.save(
-                        match { saved ->
-                            saved.isDeleted && saved.deletedAt != null
-                        }
-                    )
-                }
-                verify(exactly = 0) { commentRepository.delete(any()) }
-                comment.isDeleted shouldBe true
-                comment.deletedAt.shouldNotBeNull()
+                verify(exactly = 1) { commentRepository.delete(comment.id) }
+                verify(exactly = 0) { commentRepository.save(any()) }
             }
 
             it("댓글이 없으면 NotFoundException") {
@@ -57,7 +48,7 @@ class CommentDeletingUseCaseTest :
                 shouldThrow<NotFoundException> {
                     useCase.perform(basicRequest())
                 }
-                verify(exactly = 0) { commentRepository.save(any()) }
+                verify(exactly = 0) { commentRepository.delete(any()) }
             }
 
             it("URL 의 pageId 와 댓글의 pageId 가 다르면 NotFoundException") {
@@ -72,7 +63,7 @@ class CommentDeletingUseCaseTest :
                         )
                     )
                 }
-                verify(exactly = 0) { commentRepository.save(any()) }
+                verify(exactly = 0) { commentRepository.delete(any()) }
             }
 
             it("작성자가 아니면 NotFoundException 으로 응답한다") {
@@ -82,22 +73,16 @@ class CommentDeletingUseCaseTest :
                 shouldThrow<NotFoundException> {
                     useCase.perform(basicRequest(currentUserId = UserId(100L)))
                 }
-                verify(exactly = 0) { commentRepository.save(any()) }
+                verify(exactly = 0) { commentRepository.delete(any()) }
             }
 
-            it("이미 삭제된 댓글이면 NotFoundException 으로 응답한다") {
-                val comment = basicComment(pageId = PageId(10L)).also { it.delete() }
-                every { commentRepository.findBy(comment.id) } returns comment
+            it("이미 삭제된 댓글은 자동 필터로 findBy 가 null 을 반환하므로 NotFoundException") {
+                every { commentRepository.findBy(CommentId(1L)) } returns null
 
                 shouldThrow<NotFoundException> {
-                    useCase.perform(
-                        basicRequest(
-                            pageId = "10",
-                            commentId = comment.id.value.toString()
-                        )
-                    )
+                    useCase.perform(basicRequest())
                 }
-                verify(exactly = 0) { commentRepository.save(any()) }
+                verify(exactly = 0) { commentRepository.delete(any()) }
             }
         }
     }) {

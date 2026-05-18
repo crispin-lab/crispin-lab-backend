@@ -81,17 +81,11 @@ class CommentEditingUseCaseTest :
                 verify(exactly = 0) { commentRepository.save(any()) }
             }
 
-            it("이미 삭제된 댓글이면 NotFoundException 으로 응답한다") {
-                val comment = basicComment(pageId = PageId(10L)).also { it.delete() }
-                every { commentRepository.findBy(comment.id) } returns comment
+            it("이미 삭제된 댓글은 자동 필터로 findBy 가 null 을 반환하므로 NotFoundException") {
+                every { commentRepository.findBy(any()) } returns null
 
                 shouldThrow<NotFoundException> {
-                    useCase.perform(
-                        basicRequest(
-                            pageId = "10",
-                            commentId = comment.id.value.toString()
-                        )
-                    )
+                    useCase.perform(basicRequest())
                 }
                 verify(exactly = 0) { commentRepository.save(any()) }
             }

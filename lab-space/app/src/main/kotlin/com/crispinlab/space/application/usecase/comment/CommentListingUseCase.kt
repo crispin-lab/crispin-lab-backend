@@ -43,7 +43,6 @@ class CommentListingUseCase(
             authorId = authorId,
             body = body,
             createdAt = createdAt,
-            updatedAt = updatedAt,
-            deletedAt = deletedAt
+            updatedAt = updatedAt
         )
 }

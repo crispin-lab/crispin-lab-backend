@@ -18,9 +18,7 @@ class PageDeletingUseCase(
         transactionProvider.transactional {
             request
                 .toEntity()
-                .let {
-                    pageRepository.delete(it.id)
-                }
+                .withdraw()
         }
     }
 
@@ -30,4 +28,8 @@ class PageDeletingUseCase(
             ?.takeIf {
                 it.authorId == currentUserId
             } ?: throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
+
+    private fun Page.withdraw() {
+        pageRepository.delete(id)
+    }
 }

@@ -1,6 +1,7 @@
 package com.crispinlab.space.domain.space
 
 import com.crispinlab.common.domain.Entity
+import com.crispinlab.common.domain.SoftDeletable
 import java.time.Instant
 import java.time.Instant.now
 
@@ -9,13 +10,17 @@ class Space(
     name: String,
     description: String,
     val createdAt: Instant = now(),
-    updatedAt: Instant = createdAt
-) : Entity<SpaceId> {
+    updatedAt: Instant = createdAt,
+    deletedAt: Instant? = null
+) : Entity<SpaceId>,
+    SoftDeletable {
     var name: String = name
         private set
     var description: String = description
         private set
     var updatedAt: Instant = updatedAt
+        private set
+    override var deletedAt: Instant? = deletedAt
         private set
 
     init {
@@ -27,6 +32,9 @@ class Space(
         name: String? = null,
         description: String? = null
     ) {
+        check(!isDeleted) {
+            "삭제된 스페이스는 수정할 수 없습니다."
+        }
         name?.also {
             validateName(it)
             this.name = it
@@ -36,6 +44,15 @@ class Space(
             this.description = it
         }
         updatedAt = now()
+    }
+
+    fun delete() {
+        check(!isDeleted) {
+            "이미 삭제된 스페이스입니다."
+        }
+        val occurredAt: Instant = now()
+        this.deletedAt = occurredAt
+        this.updatedAt = occurredAt
     }
 
     private fun validateName(name: String) {

@@ -296,6 +296,56 @@ class ExposedPageSearchAdapterTest :
                 result.totalElements shouldBe 5L
                 result.totalPages shouldBe 3
             }
+
+            it("soft deleted 페이지는 기본 검색 결과에서 제외된다") {
+                transaction(database) {
+                    pageRepository.save(publicPage(id = PageId(1L), title = "살아있는 페이지"))
+                    pageRepository.save(publicPage(id = PageId(2L), title = "삭제될 페이지"))
+                }
+
+                transaction(database) {
+                    pageRepository.delete(PageId(2L))
+                }
+
+                val result =
+                    transaction(database) {
+                        adapter.search(
+                            keyword = null,
+                            spaceId = null,
+                            tagIds = emptyList(),
+                            pageRequest = PageRequest.firstPage()
+                        )
+                    }
+
+                result.items.map { it.id } shouldBe listOf(PageId(1L))
+                result.totalElements shouldBe 1L
+            }
+
+            it("tag 매칭이 있어도 페이지가 soft delete 되었다면 결과에서 제외된다") {
+                transaction(database) {
+                    pageRepository.save(publicPage(id = PageId(1L), title = "살아있는 페이지"))
+                    pageRepository.save(publicPage(id = PageId(2L), title = "삭제될 페이지"))
+                    attachTag(pageId = 1L, tagId = 100L)
+                    attachTag(pageId = 2L, tagId = 100L)
+                }
+
+                transaction(database) {
+                    pageRepository.delete(PageId(2L))
+                }
+
+                val result =
+                    transaction(database) {
+                        adapter.search(
+                            keyword = null,
+                            spaceId = null,
+                            tagIds = listOf(TagId(100L)),
+                            pageRequest = PageRequest.firstPage()
+                        )
+                    }
+
+                result.items.map { it.id } shouldBe listOf(PageId(1L))
+                result.totalElements shouldBe 1L
+            }
         }
     }) {
     companion object {

@@ -26,7 +26,6 @@ interface CommentGetting : UseCase<Request, Result> {
         val authorId: UserId,
         val body: String,
         val createdAt: Instant,
-        val updatedAt: Instant,
-        val deletedAt: Instant?
+        val updatedAt: Instant
     )
 }

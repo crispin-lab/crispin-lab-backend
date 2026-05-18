@@ -13,6 +13,8 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 class ExposedCommentRepositoryTest :
@@ -79,7 +81,7 @@ class ExposedCommentRepositoryTest :
                 }
             }
 
-            it("soft delete 후 deletedAt 이 보존된다") {
+            it("comment.delete() + save 경로는 row 를 보존하고 자동 필터로 findBy 가 null 을 반환한다") {
                 transaction(database) {
                     repository.save(basicComment(id = CommentId(3L)))
                 }
@@ -91,9 +93,14 @@ class ExposedCommentRepositoryTest :
                 }
 
                 transaction(database) {
-                    val found = repository.findBy(CommentId(3L)).shouldNotBeNull()
-                    found.isDeleted shouldBe true
-                    found.deletedAt.shouldNotBeNull()
+                    repository.findBy(CommentId(3L)).shouldBeNull()
+                    val row =
+                        Comments
+                            .selectAll()
+                            .where { Comments.id eq 3L }
+                            .firstOrNull()
+                            .shouldNotBeNull()
+                    row[Comments.deletedAt].shouldNotBeNull()
                 }
             }
 
@@ -145,7 +152,7 @@ class ExposedCommentRepositoryTest :
                 }
             }
 
-            it("findByPageId 는 soft-deleted 댓글도 결과에 포함한다 (client 가 isDeleted 로 판단)") {
+            it("findByPageId 는 soft-deleted 댓글을 자동으로 제외한다") {
                 transaction(database) {
                     repository.save(basicComment(id = CommentId(60L), pageId = PageId(400L)))
                     val toDelete = basicComment(id = CommentId(61L), pageId = PageId(400L))
@@ -160,9 +167,10 @@ class ExposedCommentRepositoryTest :
                             pageRequest = PageRequest(page = 0, size = 20)
                         )
 
-                    result.items shouldHaveSize 2
-                    result.totalElements shouldBe 2L
-                    result.items.any { it.isDeleted } shouldBe true
+                    result.items shouldHaveSize 1
+                    result.totalElements shouldBe 1L
+                    result.items.all { it.isDeleted.not() } shouldBe true
+                    result.items.first().id shouldBe CommentId(60L)
                 }
             }
 
@@ -180,7 +188,7 @@ class ExposedCommentRepositoryTest :
                 }
             }
 
-            it("delete 후에는 findBy 가 null 을 반환한다 (물리 삭제)") {
+            it("repository.delete 는 soft delete 로 동작 — row 는 보존되고 findBy 는 null 을 반환한다") {
                 transaction(database) {
                     repository.save(basicComment(id = CommentId(30L)))
                 }
@@ -191,6 +199,38 @@ class ExposedCommentRepositoryTest :
 
                 transaction(database) {
                     repository.findBy(CommentId(30L)).shouldBeNull()
+                    val row =
+                        Comments
+                            .selectAll()
+                            .where { Comments.id eq 30L }
+                            .firstOrNull()
+                            .shouldNotBeNull()
+                    row[Comments.deletedAt].shouldNotBeNull()
+                }
+            }
+
+            it("이미 soft delete 된 row 에 delete 를 다시 호출해도 deletedAt 이 갱신되지 않는다") {
+                val firstDeletedAt =
+                    transaction(database) {
+                        repository.save(basicComment(id = CommentId(31L)))
+                        repository.delete(CommentId(31L))
+                        Comments
+                            .selectAll()
+                            .where { Comments.id eq 31L }
+                            .first()[Comments.deletedAt]
+                    }.shouldNotBeNull()
+
+                transaction(database) {
+                    repository.delete(CommentId(31L))
+                }
+
+                transaction(database) {
+                    val row =
+                        Comments
+                            .selectAll()
+                            .where { Comments.id eq 31L }
+                            .first()
+                    row[Comments.deletedAt] shouldBe firstDeletedAt
                 }
             }
         }

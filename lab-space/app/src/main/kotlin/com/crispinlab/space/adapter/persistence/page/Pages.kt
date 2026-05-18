@@ -15,6 +15,7 @@ object Pages : Table("pages") {
     val currentVersion = integer("current_version")
     val createdAt = timestamp("created_at")
     val updatedAt = timestamp("updated_at")
+    val deletedAt = timestamp("deleted_at").nullable()
 
     override val primaryKey = PrimaryKey(id)
 }

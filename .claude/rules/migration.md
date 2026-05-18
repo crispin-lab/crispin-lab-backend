@@ -72,6 +72,20 @@ V20260520090000__lab_user_init.sql
 - [ ] index 가 Exposed `.index()` / `uniqueIndex(...)` 와 1:1 정합한가
 - [ ] enum 컬럼의 길이(`varchar(20)` 등) 가 미래 enum 추가 여지를 충분히 가지는가
 
+### Soft delete 컬럼 도입
+
+SoftDeletable entity 도입 시 (`entity.md` 참조) 다음 4가지를 한 PR 에서 묶는다.
+
+```sql
+ALTER TABLE {table} ADD COLUMN deleted_at TIMESTAMP NULL;
+```
+
+- **nullable 필수** — null 이면 미삭제, timestamp 이면 삭제된 시점. `NOT NULL DEFAULT ...` 형태 금지.
+- Exposed table: `val deletedAt = timestamp("deleted_at").nullable()` 한 줄.
+- domain entity: 생성자에 `deletedAt: Instant? = null` + `SoftDeletable` implement + 상태 전이 메서드 (`edit` 등) 에 `check(!isDeleted)` 가드. `delete()` 도메인 메서드는 미래 invariant 보호용 enabler — 표준 삭제 흐름은 `repository.delete(id)` (`entity.md` / `usecase-implementation.md`).
+- 어댑터: `override val deletedAtColumn = {Table}.deletedAt` + `toEntity()` / `insert()` / `update()` 매핑 (`repository.md`). hard delete 어댑터는 `override val deletedAtColumn = null` 한 줄.
+- **인덱스 도입 정책**: 현재는 미도입 — `comments` / `pages` / `spaces` 모두 인덱스 없이 운영. 데이터 누적으로 `WHERE deleted_at IS NULL` 비용이 관측되면 별도 티켓에서 partial index 또는 복합 index (예: `pages_space_id_deleted_at_idx`) 검토.
+
 ### forward only
 
 - 한번 머지된 마이그레이션 파일은 **수정·삭제하지 않는다.** 실수했으면 새 마이그레이션으로 보정 (`V{ts}__fix_<...>.sql`).
@@ -82,6 +96,7 @@ V20260520090000__lab_user_init.sql
 
 - 한 파일에서 여러 테이블을 새로 만드는 init 은 OK (도메인 단위 초기화).
 - 그 외에는 한 파일에 한 의도 (테이블 추가 / 컬럼 추가 / 인덱스 추가 / 백필) — 롤백 작업이 단순해진다.
+- 같은 PR 의 같은 결정이라도 **테이블별로 ALTER 를 분리한다** — 예: `V..._add_deleted_at_to_pages.sql` + `V..._add_deleted_at_to_spaces.sql`. 운영 사고 시 한 테이블 단위로 롤백/재시도가 가능하고, 다른 테이블이 같은 정책을 부분 도입하는 경우 (예: Page 만 우선 적용) 도 파일 단위로 추적된다.
 
 ## Spring Boot 설정
 

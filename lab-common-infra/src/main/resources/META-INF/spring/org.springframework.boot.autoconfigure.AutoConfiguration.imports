@@ -2,3 +2,4 @@ com.crispinlab.common.infra.transaction.TransactionProviderConfiguration
 com.crispinlab.common.infra.time.ClockConfiguration
 com.crispinlab.common.infra.id.IdGeneratorConfiguration
 com.crispinlab.common.infra.logging.TraceContextFilterAutoConfiguration
+com.crispinlab.common.infra.jackson.EntityIdJacksonConfiguration

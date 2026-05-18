@@ -6,6 +6,7 @@ import com.crispinlab.common.pagination.PageRequest.Companion.DEFAULT_SIZE
 import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.application.port.incoming.comment.CommentListing.Request
 import com.crispinlab.space.application.port.incoming.comment.CommentListing.Summary
+import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.PageId.Companion.asPageId
 import com.crispinlab.space.domain.user.UserId
@@ -33,9 +34,9 @@ interface CommentListing : UseCase<Request, PageResult<Summary>> {
      ticket :: LAB-23
      */
     data class Summary(
-        val commentId: String,
-        val pageId: String,
-        val authorId: String,
+        val commentId: CommentId,
+        val pageId: PageId,
+        val authorId: UserId,
         val body: String,
         val createdAt: Instant,
         val updatedAt: Instant,

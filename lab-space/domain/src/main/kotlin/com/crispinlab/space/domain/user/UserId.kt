@@ -1,9 +1,10 @@
 package com.crispinlab.space.domain.user
 
-@JvmInline
-value class UserId(
-    val value: Long
-) {
+import com.crispinlab.common.domain.EntityId
+
+data class UserId(
+    override val value: Long
+) : EntityId {
     companion object {
         fun String.asUserId(): UserId =
             UserId(

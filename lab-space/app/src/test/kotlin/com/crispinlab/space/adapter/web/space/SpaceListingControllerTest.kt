@@ -4,6 +4,7 @@ import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder
 import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.application.port.incoming.space.SpaceListing
 import com.crispinlab.space.application.port.incoming.space.SpaceListing.Summary
+import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
 import io.mockk.clearMocks
@@ -28,14 +29,14 @@ class SpaceListingControllerTest :
                         items =
                             listOf(
                                 Summary(
-                                    spaceId = "2",
+                                    spaceId = SpaceId(2L),
                                     name = "최근",
                                     description = "최근 설명",
                                     createdAt = DUMMY_INSTANT,
                                     updatedAt = DUMMY_INSTANT
                                 ),
                                 Summary(
-                                    spaceId = "1",
+                                    spaceId = SpaceId(1L),
                                     name = "이전",
                                     description = "이전 설명",
                                     createdAt = DUMMY_INSTANT,

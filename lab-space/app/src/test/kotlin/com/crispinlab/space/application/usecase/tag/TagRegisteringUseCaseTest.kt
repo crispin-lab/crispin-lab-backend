@@ -8,6 +8,7 @@ import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.tag.TagRepository
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.tag.Tag
+import com.crispinlab.space.domain.tag.TagId
 import com.crispinlab.space.domain.user.UserId
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicSpace
@@ -54,7 +55,7 @@ class TagRegisteringUseCaseTest :
                         )
                     )
 
-                result.tagId shouldBe "42"
+                result.tagId shouldBe TagId(42L)
                 saved.captured.spaceId shouldBe SpaceId(10L)
                 saved.captured.name shouldBe "kotlin"
             }

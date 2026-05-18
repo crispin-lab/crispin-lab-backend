@@ -5,6 +5,9 @@ import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.space.application.port.incoming.comment.CommentGetting
 import com.crispinlab.space.application.port.incoming.comment.CommentGetting.Result
 import com.crispinlab.space.domain.comment.CommentErrorCode
+import com.crispinlab.space.domain.comment.CommentId
+import com.crispinlab.space.domain.page.PageId
+import com.crispinlab.space.domain.user.UserId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
 import io.mockk.clearMocks
@@ -34,9 +37,9 @@ class CommentGettingControllerTest :
                     )
                 } returns
                     Result(
-                        commentId = "7",
-                        pageId = "10",
-                        authorId = "100",
+                        commentId = CommentId(7L),
+                        pageId = PageId(10L),
+                        authorId = UserId(100L),
                         body = "안녕하세요",
                         createdAt = DUMMY_INSTANT,
                         updatedAt = DUMMY_INSTANT,

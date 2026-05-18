@@ -4,6 +4,7 @@ import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder
 import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder.Companion.responseFields
 import com.crispinlab.space.application.port.incoming.page.PageEditing
 import com.crispinlab.space.application.port.incoming.page.PageEditing.Result
+import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
 import io.mockk.clearMocks
@@ -25,7 +26,7 @@ class PageEditingControllerTest :
             it("제목·본문 변경 시 200 과 갱신 결과를 반환한다") {
                 every { useCase.perform(any()) } returns
                     Result(
-                        pageId = "1",
+                        pageId = PageId(1L),
                         title = "새 제목",
                         version = 2,
                         updatedAt = DUMMY_INSTANT

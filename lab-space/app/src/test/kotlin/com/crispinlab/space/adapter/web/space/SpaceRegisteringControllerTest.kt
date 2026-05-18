@@ -4,6 +4,7 @@ import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder
 import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder.Companion.responseFields
 import com.crispinlab.space.application.port.incoming.space.SpaceRegistering
 import com.crispinlab.space.application.port.incoming.space.SpaceRegistering.Result
+import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
 import io.mockk.clearMocks
 import io.mockk.every
@@ -30,7 +31,7 @@ class SpaceRegisteringControllerTest :
                                 it.currentUserId.value == 100L
                         }
                     )
-                } returns Result(spaceId = "42")
+                } returns Result(spaceId = SpaceId(42L))
 
                 controller
                     .`when`(

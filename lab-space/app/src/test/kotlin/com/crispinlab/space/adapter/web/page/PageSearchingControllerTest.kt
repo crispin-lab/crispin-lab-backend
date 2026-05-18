@@ -4,6 +4,8 @@ import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder
 import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.application.port.incoming.page.PageSearching
 import com.crispinlab.space.application.port.incoming.page.PageSearching.Summary
+import com.crispinlab.space.domain.page.PageId
+import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
 import io.kotest.matchers.shouldBe
@@ -31,14 +33,14 @@ class PageSearchingControllerTest :
                         items =
                             listOf(
                                 Summary(
-                                    pageId = "2",
-                                    spaceId = "10",
+                                    pageId = PageId(2L),
+                                    spaceId = SpaceId(10L),
                                     title = "오늘의 회고",
                                     updatedAt = DUMMY_INSTANT
                                 ),
                                 Summary(
-                                    pageId = "1",
-                                    spaceId = "10",
+                                    pageId = PageId(1L),
+                                    spaceId = SpaceId(10L),
                                     title = "어제의 회고",
                                     updatedAt = DUMMY_INSTANT
                                 )

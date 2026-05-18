@@ -146,6 +146,7 @@ data class PageEditingRequest(
 - API 경계(controller / infra)는 외부 스펙에 맞추되, 도메인 내부는 구체 타입을 쓴다.
 - 순서가 의미 있으면 `Collection` 대신 `List`.
 - 허용값이 정해진 입력은 enum 또는 값 객체.
+- ID 필드는 항상 도메인 타입(`PageId`/`SpaceId` 등 — `lab-common` 의 `EntityId` 구현체). UseCase Request 본문, UseCase 내부, Result/Summary 까지 일관되게 도메인 타입을 노출한다. 외부 JSON 응답 String 형식은 `lab-common-infra` 의 `EntityIdJacksonConfiguration` 이 자동 처리하므로 외부 계약 호환성은 그대로 유지된다 (`entity.md` / `usecase-request.md` 참조).
 
 ### 타입 일관성 유지
 

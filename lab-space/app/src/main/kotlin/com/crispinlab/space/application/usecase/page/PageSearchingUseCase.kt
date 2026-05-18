@@ -41,8 +41,8 @@ class PageSearchingUseCase(
 
     private fun PageSummary.toSummary(): Summary =
         Summary(
-            pageId = id.value.toString(),
-            spaceId = spaceId.value.toString(),
+            pageId = id,
+            spaceId = spaceId,
             title = title,
             updatedAt = updatedAt
         )

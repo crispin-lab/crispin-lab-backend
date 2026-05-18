@@ -4,6 +4,7 @@ import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder
 import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder.Companion.responseFields
 import com.crispinlab.space.application.port.incoming.space.SpaceEditing
 import com.crispinlab.space.application.port.incoming.space.SpaceEditing.Result
+import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
 import io.mockk.clearMocks
@@ -25,7 +26,7 @@ class SpaceEditingControllerTest :
             it("이름·설명을 변경하면 200 과 갱신 결과를 반환한다") {
                 every { useCase.perform(any()) } returns
                     Result(
-                        spaceId = "1",
+                        spaceId = SpaceId(1L),
                         name = "새 이름",
                         description = "새 설명",
                         updatedAt = DUMMY_INSTANT

@@ -5,6 +5,7 @@ import com.crispinlab.space.application.port.incoming.page.PageGetting.Request
 import com.crispinlab.space.application.port.incoming.page.PageGetting.Result
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.PageId.Companion.asPageId
+import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.user.UserId
 import java.time.Instant
 
@@ -17,10 +18,10 @@ interface PageGetting : UseCase<Request, Result> {
     }
 
     data class Result(
-        val pageId: String,
-        val spaceId: String,
-        val parentPageId: String?,
-        val authorId: String,
+        val pageId: PageId,
+        val spaceId: SpaceId,
+        val parentPageId: PageId?,
+        val authorId: UserId,
         val title: String,
         val content: String,
         val visibility: String,

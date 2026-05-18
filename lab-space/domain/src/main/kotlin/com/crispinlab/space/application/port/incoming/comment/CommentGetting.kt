@@ -21,9 +21,9 @@ interface CommentGetting : UseCase<Request, Result> {
     }
 
     data class Result(
-        val commentId: String,
-        val pageId: String,
-        val authorId: String,
+        val commentId: CommentId,
+        val pageId: PageId,
+        val authorId: UserId,
         val body: String,
         val createdAt: Instant,
         val updatedAt: Instant,

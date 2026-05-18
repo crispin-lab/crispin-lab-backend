@@ -1,9 +1,10 @@
 package com.crispinlab.space.domain.page
 
-@JvmInline
-value class PageId(
-    val value: Long
-) {
+import com.crispinlab.common.domain.EntityId
+
+data class PageId(
+    override val value: Long
+) : EntityId {
     companion object {
         fun String.asPageId(): PageId =
             PageId(

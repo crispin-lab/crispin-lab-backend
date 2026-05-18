@@ -69,8 +69,8 @@ class PageSearchingUseCaseTest :
                         )
                     )
 
-                result.items.map { it.pageId } shouldBe listOf("2", "1")
-                result.items.map { it.spaceId } shouldBe listOf("10", "10")
+                result.items.map { it.pageId } shouldBe listOf(PageId(2L), PageId(1L))
+                result.items.map { it.spaceId } shouldBe listOf(SpaceId(10L), SpaceId(10L))
                 result.items.map { it.title } shouldBe listOf("오늘의 회고", "어제의 회고")
                 result.totalElements shouldBe 2L
                 verify {

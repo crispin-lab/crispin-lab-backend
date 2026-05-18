@@ -4,6 +4,7 @@ import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder
 import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder.Companion.responseFields
 import com.crispinlab.space.application.port.incoming.comment.CommentEditing
 import com.crispinlab.space.application.port.incoming.comment.CommentEditing.Result
+import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
 import io.mockk.clearMocks
@@ -34,7 +35,7 @@ class CommentEditingControllerTest :
                     )
                 } returns
                     Result(
-                        commentId = "7",
+                        commentId = CommentId(7L),
                         body = "수정된 댓글",
                         updatedAt = DUMMY_INSTANT
                     )

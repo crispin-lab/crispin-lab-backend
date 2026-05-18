@@ -102,5 +102,5 @@ class PageRegisteringUseCase(
             }
     }
 
-    private fun Page.toResult(): Result = Result(pageId = id.value.toString())
+    private fun Page.toResult(): Result = Result(pageId = id)
 }

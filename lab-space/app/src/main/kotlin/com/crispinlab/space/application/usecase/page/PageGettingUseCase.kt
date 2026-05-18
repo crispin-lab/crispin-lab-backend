@@ -39,10 +39,10 @@ class PageGettingUseCase(
 
     private fun Page.toResult(): Result =
         Result(
-            pageId = id.value.toString(),
-            spaceId = spaceId.value.toString(),
-            parentPageId = parentPageId?.value?.toString(),
-            authorId = authorId.value.toString(),
+            pageId = id,
+            spaceId = spaceId,
+            parentPageId = parentPageId,
+            authorId = authorId,
             title = title,
             content = content.raw,
             visibility = visibility.name,

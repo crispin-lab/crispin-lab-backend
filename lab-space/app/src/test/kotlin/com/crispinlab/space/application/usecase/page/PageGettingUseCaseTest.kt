@@ -29,7 +29,7 @@ class PageGettingUseCaseTest :
 
                 val result = useCase.perform(basicRequest(pageId = page.id.value.toString()))
 
-                result.pageId shouldBe page.id.value.toString()
+                result.pageId shouldBe page.id
                 result.title shouldBe "오늘의 회고"
                 result.visibility shouldBe "DRAFT"
             }

@@ -4,6 +4,7 @@ plugins {
 
 dependencies {
     api(projects.labCommon)
+    api(projects.labCommonInfra)
 
     api(libs.spring.restdocs.mockmvc)
     api(libs.restdocs.api.spec.mockmvc)

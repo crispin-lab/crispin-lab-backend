@@ -52,5 +52,5 @@ class TagRegisteringUseCase(
             createdAt = now()
         )
 
-    private fun Tag.toResult(): Result = Result(tagId = id.value.toString())
+    private fun Tag.toResult(): Result = Result(tagId = id)
 }

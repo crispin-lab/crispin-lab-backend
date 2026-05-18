@@ -4,6 +4,7 @@ import com.crispinlab.common.id.IdGenerator
 import com.crispinlab.space.application.port.incoming.space.SpaceRegistering.Request
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.domain.space.Space
+import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.user.UserId
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import io.kotest.assertions.throwables.shouldThrow
@@ -38,7 +39,7 @@ class SpaceRegisteringUseCaseTest :
 
                 val result = useCase.perform(basicRequest())
 
-                result.spaceId shouldBe "42"
+                result.spaceId shouldBe SpaceId(42L)
                 saved.captured.name shouldBe "팀 위키"
                 saved.captured.description shouldBe "공유 공간"
                 verify(exactly = 1) { spaceRepository.save(any()) }

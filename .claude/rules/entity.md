@@ -7,20 +7,24 @@
 
 ## 핵심 규칙
 
-1. **EntityId 는 `data class`** — `equals`/`hashCode`/destructuring 이 그대로 필요. mockk 호환성도 좋다.
-2. **Entity 는 일반 `class`** (data class 아님) — 식별자 동치성과 불변성 제어를 직접 잡는다.
-3. **모든 `var` 는 `private set`** — 외부에서 필드 직접 변경 금지. 변경은 명시적 메서드로.
-4. **상태 변경은 도메인 메서드로만** — `entity.title = "x"` 가 아니라 `entity.rename("x")`.
-5. **값 객체(Value Object) 는 `data class`** — Money, EmailAddress 등 불변 보장이 필요한 작은 타입.
-6. **`init` 은 형식·길이·빈 값 검증** — 외부 의존이 필요한 검증은 UseCase 책임 (`conventions.md` "검증 책임 분리").
+1. **EntityId 는 `data class` + `lab-common` 의 `EntityId` interface implement**. `@JvmInline value class` 사용 금지 — 공통 super type 으로 묶어 Jackson 직렬화를 한 곳에서 처리한다. `equals`/`hashCode`/destructuring 도 자동. 박싱은 호출 측 hot path 가 발견되기 전까지 무시할 수준 (Long 단일 객체).
+2. **EntityId 의 외부 JSON 직렬화 형식은 String** — `lab-common-infra` 의 `EntityIdSerializer` 가 `value.toString()` 으로 변환한다. snowflake 64-bit Long 이 JS `Number.MAX_SAFE_INTEGER` (2^53-1) 를 넘어 Number 로 노출 시 클라이언트에서 정밀도 손실. 정책을 Number 로 바꾸면 모든 외부 응답이 깨지므로 정책 변경은 별도 결정.
+3. **Entity 는 일반 `class`** (data class 아님) — 식별자 동치성과 불변성 제어를 직접 잡는다.
+4. **모든 `var` 는 `private set`** — 외부에서 필드 직접 변경 금지. 변경은 명시적 메서드로.
+5. **상태 변경은 도메인 메서드로만** — `entity.title = "x"` 가 아니라 `entity.rename("x")`.
+6. **값 객체(Value Object) 는 `data class`** — Money, EmailAddress 등 불변 보장이 필요한 작은 타입.
+7. **`init` 은 형식·길이·빈 값 검증** — 외부 의존이 필요한 검증은 UseCase 책임 (`conventions.md` "검증 책임 분리").
 
 ## EntityId
 
 ```kotlin
 package com.crispinlab.space.domain.page
 
-@JvmInline
-value class PageId(val value: Long) {
+import com.crispinlab.common.domain.EntityId
+
+data class PageId(
+    override val value: Long
+) : EntityId {
     companion object {
         fun String.asPageId(): PageId =
             PageId(toLongOrNull() ?: throw IllegalArgumentException("페이지 ID 형식이 올바르지 않습니다."))
@@ -28,9 +32,10 @@ value class PageId(val value: Long) {
 }
 ```
 
-- `value class` (`@JvmInline`) 또는 `data class(val value: Long)`. 단일 값을 감싸는 작은 타입은 `value class` 가 박싱을 줄여준다.
+- **`data class` + `lab-common` 의 `EntityId` interface implement**. `@JvmInline value class` 는 사용하지 않는다 — 공통 super type 으로 묶어 Jackson 직렬화 (`lab-common-infra` 의 `EntityIdJacksonConfiguration`) 가 한 곳에서 처리되게 하기 위함. value class 의 박싱 회피 이점보다 일관된 직렬화 규약 가치가 더 크다.
 - 변환 함수는 **명사형 `asXxx()`** (`conventions.md` "값 획득 메서드는 명사형"). `toXxx`/`getXxx` 금지.
 - 변환 실패는 `IllegalArgumentException`. UseCase Request 단계에서 실패하면 controller 가 400 으로 응답하도록 매핑.
+- **JSON 직렬화 형식은 String**. snowflake 64-bit Long 이 JavaScript Number.MAX_SAFE_INTEGER (2^53-1) 를 넘기 때문에 Number 로 노출하면 JS 클라이언트에서 정밀도 손실. `EntityIdSerializer` 가 `value.toString()` 으로 직렬화한다.
 
 ## Entity
 

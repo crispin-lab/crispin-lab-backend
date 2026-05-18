@@ -4,6 +4,7 @@ import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder
 import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder.Companion.responseFields
 import com.crispinlab.space.application.port.incoming.tag.TagRegistering
 import com.crispinlab.space.application.port.incoming.tag.TagRegistering.Result
+import com.crispinlab.space.domain.tag.TagId
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
 import io.mockk.clearMocks
 import io.mockk.every
@@ -30,7 +31,7 @@ class TagRegisteringControllerTest :
                                 it.currentUserId.value == 100L
                         }
                     )
-                } returns Result(tagId = "42")
+                } returns Result(tagId = TagId(42L))
 
                 controller
                     .`when`(

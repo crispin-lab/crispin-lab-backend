@@ -44,5 +44,5 @@ class CommentRegisteringUseCase(
             body = body
         )
 
-    private fun Comment.toResult(): Result = Result(commentId = id.value.toString())
+    private fun Comment.toResult(): Result = Result(commentId = id)
 }

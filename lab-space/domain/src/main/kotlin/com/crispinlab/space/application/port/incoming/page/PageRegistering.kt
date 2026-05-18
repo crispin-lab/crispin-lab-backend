@@ -26,6 +26,6 @@ interface PageRegistering : UseCase<Request, Result> {
     }
 
     data class Result(
-        val pageId: String
+        val pageId: PageId
     )
 }

@@ -6,6 +6,7 @@ import com.crispinlab.space.application.port.incoming.comment.CommentRegistering
 import com.crispinlab.space.application.port.outgoing.comment.CommentRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.domain.comment.Comment
+import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.domain.user.UserId
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicPage
@@ -51,7 +52,7 @@ class CommentRegisteringUseCaseTest :
                         )
                     )
 
-                result.commentId shouldBe "42"
+                result.commentId shouldBe CommentId(42L)
                 saved.captured.body shouldBe "첫 댓글"
                 saved.captured.pageId.value shouldBe 10L
                 saved.captured.authorId.value shouldBe 100L

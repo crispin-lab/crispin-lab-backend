@@ -17,7 +17,7 @@ interface SpaceGetting : UseCase<Request, Result> {
     }
 
     data class Result(
-        val spaceId: String,
+        val spaceId: SpaceId,
         val name: String,
         val description: String,
         val createdAt: Instant,

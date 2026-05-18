@@ -42,7 +42,7 @@ class CommentGettingUseCaseTest :
                         )
                     )
 
-                result.commentId shouldBe "7"
+                result.commentId shouldBe CommentId(7L)
                 result.body shouldBe "안녕하세요"
                 result.deletedAt shouldBe null
             }

@@ -49,7 +49,7 @@ class SpaceListingUseCaseTest :
                         )
                     )
 
-                result.items.map { it.spaceId } shouldBe listOf("2", "1")
+                result.items.map { it.spaceId } shouldBe listOf(SpaceId(2L), SpaceId(1L))
                 result.items.map { it.name } shouldBe listOf("최근", "이전")
                 result.totalElements shouldBe 12L
                 result.page shouldBe 2

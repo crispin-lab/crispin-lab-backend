@@ -1,10 +1,13 @@
 package com.crispinlab.apisupport.testsupport
 
 import com.crispinlab.common.application.UseCase
+import com.crispinlab.common.domain.EntityId
+import com.crispinlab.common.infra.jackson.EntityIdSerializer
 import com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper.document
 import com.epages.restdocs.apispec.ResourceSnippetParametersBuilder
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS
+import com.fasterxml.jackson.databind.module.SimpleModule
 import io.kotest.common.KotestInternal
 import io.kotest.core.spec.style.DescribeSpec
 import io.mockk.every
@@ -95,21 +98,22 @@ abstract class ControllerDescribeSpec(
         body()
     }
 
-    private fun <T> T.mockMvc(): MockMvc {
-        val objectMapper: ObjectMapper =
-            Jackson2ObjectMapperBuilder
-                .json()
-                .featuresToDisable(WRITE_DATES_AS_TIMESTAMPS)
-                .build()
+    private val objectMapper: ObjectMapper by lazy {
+        Jackson2ObjectMapperBuilder
+            .json()
+            .featuresToDisable(WRITE_DATES_AS_TIMESTAMPS)
+            .modulesToInstall(entityIdModule())
+            .build()
+    }
 
-        return MockMvcBuilders
+    private fun <T> T.mockMvc(): MockMvc =
+        MockMvcBuilders
             .standaloneSetup(this)
             .setCustomArgumentResolvers(*argumentResolvers.toTypedArray())
             .setControllerAdvice(*controllerAdvices.toTypedArray())
             .setMessageConverters(MappingJackson2HttpMessageConverter(objectMapper))
             .apply<StandaloneMockMvcBuilder>(documentationConfiguration(documentation))
             .build()
-    }
 
     fun <T> T.`when`(builder: RequestBuilder): ResultActions =
         mockMvc()
@@ -125,18 +129,15 @@ abstract class ControllerDescribeSpec(
         userId: String = "100"
     ): MockHttpServletRequestBuilder = header(USER_ID_HEADER, userId)
 
-    inline fun <reified T> MockHttpServletRequestBuilder.body(
-        body: T
-    ): MockHttpServletRequestBuilder {
-        val mapper: ObjectMapper =
-            Jackson2ObjectMapperBuilder
-                .json()
-                .featuresToDisable(WRITE_DATES_AS_TIMESTAMPS)
-                .build()
-        return content(mapper.writeValueAsString(body))
+    fun MockHttpServletRequestBuilder.body(body: Any): MockHttpServletRequestBuilder =
+        content(objectMapper.writeValueAsString(body))
             .contentType(APPLICATION_JSON)
             .characterEncoding(UTF_8)
-    }
+
+    private fun entityIdModule(): SimpleModule =
+        SimpleModule().apply {
+            addSerializer(EntityId::class.java, EntityIdSerializer)
+        }
 
     /*
     todo    :: 페이징·쿼리·쿠키 헬퍼. LAB-22 Page 작업에서 사용처 생기면 유지, 아니면 제거.

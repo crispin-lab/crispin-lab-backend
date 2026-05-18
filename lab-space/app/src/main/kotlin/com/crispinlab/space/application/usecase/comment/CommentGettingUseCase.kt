@@ -42,9 +42,9 @@ class CommentGettingUseCase(
 
     private fun Comment.toResult(): Result =
         Result(
-            commentId = id.value.toString(),
-            pageId = pageId.value.toString(),
-            authorId = authorId.value.toString(),
+            commentId = id,
+            pageId = pageId,
+            authorId = authorId,
             body = body,
             createdAt = createdAt,
             updatedAt = updatedAt,

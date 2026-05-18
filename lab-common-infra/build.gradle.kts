@@ -8,10 +8,13 @@ dependencies {
     implementation(libs.spring.tx)
     compileOnly(libs.spring.web)
     compileOnly(libs.jakarta.servlet.api)
+    compileOnly(libs.jackson.databind)
 
     testImplementation(libs.spring.jdbc)
     testImplementation(libs.spring.webmvc)
     testImplementation(libs.jakarta.servlet.api)
+    testImplementation(libs.jackson.databind)
+    testImplementation(libs.jackson.module.kotlin)
     testImplementation(libs.testcontainers.postgresql)
     testRuntimeOnly(libs.postgresql)
 }

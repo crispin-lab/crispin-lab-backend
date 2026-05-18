@@ -5,6 +5,7 @@ import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.space.application.port.incoming.space.SpaceGetting
 import com.crispinlab.space.application.port.incoming.space.SpaceGetting.Result
 import com.crispinlab.space.domain.space.SpaceErrorCode
+import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
 import io.mockk.clearMocks
@@ -26,7 +27,7 @@ class SpaceGettingControllerTest :
             it("존재하면 200 과 정보를 반환한다") {
                 every { useCase.perform(any()) } returns
                     Result(
-                        spaceId = "1",
+                        spaceId = SpaceId(1L),
                         name = "팀 위키",
                         description = "공유 공간",
                         createdAt = DUMMY_INSTANT,

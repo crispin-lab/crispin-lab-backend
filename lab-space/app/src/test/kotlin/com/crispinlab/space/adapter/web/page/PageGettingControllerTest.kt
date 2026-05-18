@@ -5,6 +5,9 @@ import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.space.application.port.incoming.page.PageGetting
 import com.crispinlab.space.application.port.incoming.page.PageGetting.Result
 import com.crispinlab.space.domain.page.PageErrorCode
+import com.crispinlab.space.domain.page.PageId
+import com.crispinlab.space.domain.space.SpaceId
+import com.crispinlab.space.domain.user.UserId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
 import io.mockk.clearMocks
@@ -26,10 +29,10 @@ class PageGettingControllerTest :
             it("존재하면 200 과 정보를 반환한다") {
                 every { useCase.perform(any()) } returns
                     Result(
-                        pageId = "1",
-                        spaceId = "10",
+                        pageId = PageId(1L),
+                        spaceId = SpaceId(10L),
                         parentPageId = null,
-                        authorId = "100",
+                        authorId = UserId(100L),
                         title = "오늘의 회고",
                         content = "본문",
                         visibility = "DRAFT",

@@ -8,6 +8,7 @@ import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRevisionRepository
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.domain.page.Page
+import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.PageLink
 import com.crispinlab.space.domain.page.PageRevision
 import com.crispinlab.space.domain.space.SpaceId
@@ -72,7 +73,7 @@ class PageRegisteringUseCaseTest :
 
                 val result = useCase.perform(basicRequest(content = "본문 [[foo]] 와 [[bar|라벨]]"))
 
-                result.pageId shouldBe "1"
+                result.pageId shouldBe PageId(1L)
                 savedPage.captured.title shouldBe "테스트"
                 savedPage.captured.currentVersion shouldBe 1
                 savedRevision.captured.version shouldBe 1

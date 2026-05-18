@@ -41,5 +41,5 @@ class SpaceRegisteringUseCase(
             description = description
         )
 
-    private fun Space.toResult(): Result = Result(spaceId = id.value.toString())
+    private fun Space.toResult(): Result = Result(spaceId = id)
 }

@@ -38,9 +38,9 @@ class CommentListingUseCase(
 
     private fun Comment.toSummary(): Summary =
         Summary(
-            commentId = id.value.toString(),
-            pageId = pageId.value.toString(),
-            authorId = authorId.value.toString(),
+            commentId = id,
+            pageId = pageId,
+            authorId = authorId,
             body = body,
             createdAt = createdAt,
             updatedAt = updatedAt,

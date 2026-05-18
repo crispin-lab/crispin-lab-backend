@@ -16,6 +16,6 @@ interface UserRegistering : UseCase<Request, Result> {
     }
 
     data class Result(
-        val userId: String
+        val userId: UserId
     )
 }

@@ -70,7 +70,7 @@ class CommentListingUseCaseTest :
                         )
                     )
 
-                result.items.map { it.commentId } shouldBe listOf("1", "2")
+                result.items.map { it.commentId } shouldBe listOf(CommentId(1L), CommentId(2L))
                 result.items.map { it.body } shouldBe listOf("첫 댓글", "두 번째")
                 result.totalElements shouldBe 7L
                 result.page shouldBe 1

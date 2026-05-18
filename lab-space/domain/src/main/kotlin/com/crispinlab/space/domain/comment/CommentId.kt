@@ -1,9 +1,10 @@
 package com.crispinlab.space.domain.comment
 
-@JvmInline
-value class CommentId(
-    val value: Long
-) {
+import com.crispinlab.common.domain.EntityId
+
+data class CommentId(
+    override val value: Long
+) : EntityId {
     companion object {
         fun String.asCommentId(): CommentId =
             CommentId(

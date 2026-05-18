@@ -11,7 +11,7 @@
 2. 생성자 파라미터는 외부 입력 형태(primitive, String, 외부 enum 코드 등)로 받는다.
 3. 본문에서 `val` 프로퍼티로 도메인 타입으로 변환해 노출한다 — 호출부는 도메인 타입으로만 참조한다.
 4. **중첩 클래스(예: Attachment)도 같은 패턴**을 따른다. primitive in → 도메인 out.
-5. `Result` 는 `data class`. primitive 또는 `lab-common` 의 값 객체만 노출한다 — 도메인 엔티티 직접 노출 금지.
+5. `Result` 는 `data class`. ID 는 **도메인 타입** (`PageId`, `SpaceId` 등) 그대로 노출하고, 그 외 필드는 primitive 또는 `lab-common` 의 값 객체. 도메인 entity (`Page`, `Space` 등) 직접 노출은 금지. ID 도메인 타입은 `lab-common-infra` 의 Jackson customizer 에서 String 으로 직렬화되므로 외부 응답 형식은 String 으로 유지된다.
 6. 외부 입력 검증은 변환 시점(`asPageId()`, `asUrl()` 등) 또는 `init` 블록의 `require` 로.
 
 ## Canonical 예제
@@ -58,13 +58,15 @@ interface PageEditing : UseCase<Request, Result> {
     }
 
     data class Result(
-        val pageId: String,
+        val pageId: PageId,
         val title: String,
         val visibility: String,
         val updatedAt: Instant,
     )
 }
 ```
+
+ID 필드는 도메인 타입(`PageId`) 그대로. UseCase 구현체의 `toResult()` 매핑도 `pageId = id` 처럼 객체를 직접 넘긴다 (`.value.toString()` 변환 불필요 — Jackson 이 직렬화 시점에 String 으로 변환).
 
 ## 패턴이 보장하는 것
 
@@ -102,6 +104,7 @@ fun edit(
 
 - **`data class` 로 만들고 변환 프로퍼티를 추가한 케이스** — `copy()` 가 변환을 우회한다. 일반 `class` 로.
 - **변환 함수 이름이 `getXxx` / `toXxx` 형태** — 값 획득 메서드는 명사형(`asPageId`)으로. `conventions.md` "값 획득 메서드는 명사형" 참조.
-- **Result 가 도메인 엔티티 자체를 노출** — Result 는 외부 계약. primitive / 값 객체로만.
+- **Result 가 도메인 엔티티 자체를 노출** — Result 는 외부 계약. ID 는 EntityId (값 객체) 까지 허용하지만, `Page`/`Space` 같은 entity 노출은 금지.
+- **Result 의 ID 필드를 `String` 으로 둠** — 도메인 타입(`PageId`/`SpaceId` 등) 으로 노출한다. Jackson customizer (`EntityIdJacksonConfiguration`) 가 String 으로 직렬화하므로 외부 JSON 형식은 동일. 코드 안에서 호출 측의 자리 바꿈을 컴파일러가 잡아 준다.
 - **중첩 클래스만 `data class` 로 두는 혼합** — 동일 규칙을 적용한다. 외부 → 도메인 변환이 필요하면 일반 `class`.
 - **변환 함수를 Request `init` 블록에 모아두는 형태** — 프로퍼티 초기화로 자연스럽게 선언적으로 표현 가능. `init` 은 cross-field 검증(`require`) 같은 진짜 추가 검증에만 쓴다.

@@ -4,5 +4,5 @@ plugins {
 }
 
 dependencies {
-    implementation(projects.labCommon)
+    api(projects.labCommon)
 }

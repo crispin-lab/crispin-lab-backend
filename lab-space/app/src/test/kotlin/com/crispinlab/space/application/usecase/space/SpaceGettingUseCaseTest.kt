@@ -29,7 +29,7 @@ class SpaceGettingUseCaseTest :
 
                 val result = useCase.perform(basicRequest())
 
-                result.spaceId shouldBe "1"
+                result.spaceId shouldBe space.id
                 result.name shouldBe "팀 위키"
             }
 

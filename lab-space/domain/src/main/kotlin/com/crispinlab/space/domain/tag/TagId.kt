@@ -1,9 +1,10 @@
 package com.crispinlab.space.domain.tag
 
-@JvmInline
-value class TagId(
-    val value: Long
-) {
+import com.crispinlab.common.domain.EntityId
+
+data class TagId(
+    override val value: Long
+) : EntityId {
     companion object {
         fun String.asTagId(): TagId =
             TagId(

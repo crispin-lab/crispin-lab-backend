@@ -1,9 +1,10 @@
 package com.crispinlab.space.domain.space
 
-@JvmInline
-value class SpaceId(
-    val value: Long
-) {
+import com.crispinlab.common.domain.EntityId
+
+data class SpaceId(
+    override val value: Long
+) : EntityId {
     companion object {
         fun String.asSpaceId(): SpaceId =
             SpaceId(

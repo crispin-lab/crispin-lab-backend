@@ -4,6 +4,7 @@ import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder
 import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder.Companion.responseFields
 import com.crispinlab.space.application.port.incoming.comment.CommentRegistering
 import com.crispinlab.space.application.port.incoming.comment.CommentRegistering.Result
+import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
 import io.mockk.clearMocks
 import io.mockk.every
@@ -30,7 +31,7 @@ class CommentRegisteringControllerTest :
                                 it.currentUserId.value == 100L
                         }
                     )
-                } returns Result(commentId = "42")
+                } returns Result(commentId = CommentId(42L))
 
                 controller
                     .`when`(

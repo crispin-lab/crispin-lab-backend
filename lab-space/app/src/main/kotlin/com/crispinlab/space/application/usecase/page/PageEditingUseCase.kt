@@ -90,7 +90,7 @@ class PageEditingUseCase(
 
     private fun Page.toResult(): Result =
         Result(
-            pageId = id.value.toString(),
+            pageId = id,
             title = title,
             version = currentVersion,
             updatedAt = updatedAt

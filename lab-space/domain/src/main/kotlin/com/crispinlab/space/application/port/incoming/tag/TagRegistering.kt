@@ -5,6 +5,7 @@ import com.crispinlab.space.application.port.incoming.tag.TagRegistering.Request
 import com.crispinlab.space.application.port.incoming.tag.TagRegistering.Result
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.space.SpaceId.Companion.asSpaceId
+import com.crispinlab.space.domain.tag.TagId
 import com.crispinlab.space.domain.user.UserId
 
 interface TagRegistering : UseCase<Request, Result> {
@@ -17,6 +18,6 @@ interface TagRegistering : UseCase<Request, Result> {
     }
 
     data class Result(
-        val tagId: String
+        val tagId: TagId
     )
 }

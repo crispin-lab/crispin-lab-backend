@@ -16,7 +16,7 @@ interface UserGetting : UseCase<Request, Result> {
     }
 
     data class Result(
-        val userId: String,
+        val userId: UserId,
         val email: String,
         val displayName: String,
         val createdAt: Instant,

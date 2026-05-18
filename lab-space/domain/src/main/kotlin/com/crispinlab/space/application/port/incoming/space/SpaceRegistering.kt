@@ -3,6 +3,7 @@ package com.crispinlab.space.application.port.incoming.space
 import com.crispinlab.common.application.UseCase
 import com.crispinlab.space.application.port.incoming.space.SpaceRegistering.Request
 import com.crispinlab.space.application.port.incoming.space.SpaceRegistering.Result
+import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.user.UserId
 
 interface SpaceRegistering : UseCase<Request, Result> {
@@ -13,6 +14,6 @@ interface SpaceRegistering : UseCase<Request, Result> {
     )
 
     data class Result(
-        val spaceId: String
+        val spaceId: SpaceId
     )
 }

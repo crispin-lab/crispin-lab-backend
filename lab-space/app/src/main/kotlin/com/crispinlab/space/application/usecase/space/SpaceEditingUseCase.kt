@@ -45,7 +45,7 @@ class SpaceEditingUseCase(
 
     private fun Space.toResult(): Result =
         Result(
-            spaceId = id.value.toString(),
+            spaceId = id,
             name = name,
             description = description,
             updatedAt = updatedAt

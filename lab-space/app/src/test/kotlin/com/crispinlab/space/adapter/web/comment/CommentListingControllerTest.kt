@@ -4,6 +4,9 @@ import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder
 import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.application.port.incoming.comment.CommentListing
 import com.crispinlab.space.application.port.incoming.comment.CommentListing.Summary
+import com.crispinlab.space.domain.comment.CommentId
+import com.crispinlab.space.domain.page.PageId
+import com.crispinlab.space.domain.user.UserId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
 import io.mockk.clearMocks
@@ -28,18 +31,18 @@ class CommentListingControllerTest :
                         items =
                             listOf(
                                 Summary(
-                                    commentId = "1",
-                                    pageId = "10",
-                                    authorId = "100",
+                                    commentId = CommentId(1L),
+                                    pageId = PageId(10L),
+                                    authorId = UserId(100L),
                                     body = "첫 댓글",
                                     createdAt = DUMMY_INSTANT,
                                     updatedAt = DUMMY_INSTANT,
                                     deletedAt = null
                                 ),
                                 Summary(
-                                    commentId = "2",
-                                    pageId = "10",
-                                    authorId = "101",
+                                    commentId = CommentId(2L),
+                                    pageId = PageId(10L),
+                                    authorId = UserId(101L),
                                     body = "두 번째",
                                     createdAt = DUMMY_INSTANT,
                                     updatedAt = DUMMY_INSTANT,

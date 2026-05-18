@@ -6,6 +6,7 @@ import com.crispinlab.common.pagination.PageRequest.Companion.DEFAULT_SIZE
 import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.application.port.incoming.page.PageSearching.Request
 import com.crispinlab.space.application.port.incoming.page.PageSearching.Summary
+import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.space.SpaceId.Companion.asSpaceId
 import com.crispinlab.space.domain.tag.TagId
@@ -33,8 +34,8 @@ interface PageSearching : UseCase<Request, PageResult<Summary>> {
     }
 
     data class Summary(
-        val pageId: String,
-        val spaceId: String,
+        val pageId: PageId,
+        val spaceId: SpaceId,
         val title: String,
         val updatedAt: Instant
     )

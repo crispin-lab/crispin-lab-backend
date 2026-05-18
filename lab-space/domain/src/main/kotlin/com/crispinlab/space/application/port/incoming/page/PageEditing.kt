@@ -19,7 +19,7 @@ interface PageEditing : UseCase<Request, Result> {
     }
 
     data class Result(
-        val pageId: String,
+        val pageId: PageId,
         val title: String,
         val version: Int,
         val updatedAt: Instant

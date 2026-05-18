@@ -4,6 +4,7 @@ import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder
 import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder.Companion.responseFields
 import com.crispinlab.space.application.port.incoming.page.PageRegistering
 import com.crispinlab.space.application.port.incoming.page.PageRegistering.Result
+import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
 import io.mockk.clearMocks
@@ -34,7 +35,7 @@ class PageRegisteringControllerTest :
                                 it.currentUserId.value == 100L
                         }
                     )
-                } returns Result(pageId = "42")
+                } returns Result(pageId = PageId(42L))
 
                 controller
                     .`when`(

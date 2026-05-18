@@ -52,7 +52,7 @@ class CommentEditingUseCase(
 
     private fun Comment.toResult(): Result =
         Result(
-            commentId = id.value.toString(),
+            commentId = id,
             body = body,
             updatedAt = updatedAt
         )

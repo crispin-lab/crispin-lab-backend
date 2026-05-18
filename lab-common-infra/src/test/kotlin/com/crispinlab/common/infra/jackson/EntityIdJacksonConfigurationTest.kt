@@ -93,7 +93,7 @@ class EntityIdJacksonConfigurationTest :
     )
 
     private data class CollectionResponse(
-        val ids: List<SampleId>
+        val ids: List<EntityId>
     )
 
     private data class MixedSubtypeResponse(

@@ -7,7 +7,7 @@ import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.domain.page.PageId
 
 interface CommentRepository {
-    fun save(comment: Comment): Comment
+    fun save(entity: Comment): Comment
 
     fun findBy(id: CommentId): Comment?
 
@@ -18,7 +18,7 @@ interface CommentRepository {
 
     /**
      * 물리적 삭제 (관리자 영구 제거 등) 전용.
-     * 일반 사용자 흐름의 삭제는 `Comment.delete()` 로 deletedAt 을 설정한 뒤 `save(comment)` 를 사용한다.
+     * 일반 사용자 흐름의 삭제는 `Comment.delete()` 로 deletedAt 을 설정한 뒤 `save(entity)` 를 사용한다.
      */
     fun delete(id: CommentId)
 }

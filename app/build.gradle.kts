@@ -14,6 +14,7 @@ dependencies {
     runtimeOnly(libs.flyway.core)
     runtimeOnly(libs.flyway.database.postgresql)
 
+    testImplementation(projects.labCommonDomain)
     testImplementation(libs.spring.boot.testcontainers)
     testImplementation(libs.testcontainers.postgresql)
 }

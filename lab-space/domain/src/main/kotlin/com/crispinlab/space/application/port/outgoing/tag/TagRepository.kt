@@ -7,7 +7,7 @@ import com.crispinlab.space.domain.tag.Tag
 import com.crispinlab.space.domain.tag.TagId
 
 interface TagRepository {
-    fun save(tag: Tag): Tag
+    fun save(entity: Tag): Tag
 
     fun findBy(id: TagId): Tag?
 

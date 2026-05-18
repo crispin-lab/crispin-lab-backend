@@ -1,15 +1,16 @@
 package com.crispinlab.space.domain.space
 
+import com.crispinlab.common.domain.Entity
 import java.time.Instant
 import java.time.Instant.now
 
 class Space(
-    val id: SpaceId,
+    override val id: SpaceId,
     name: String,
     description: String,
     val createdAt: Instant = now(),
     updatedAt: Instant = createdAt
-) {
+) : Entity<SpaceId> {
     var name: String = name
         private set
     var description: String = description

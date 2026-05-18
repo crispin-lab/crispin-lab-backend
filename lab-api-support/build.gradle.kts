@@ -3,7 +3,8 @@ plugins {
 }
 
 dependencies {
-    api(projects.labCommon)
+    api(projects.labCommonDomain)
+    api(projects.labCommonPort)
     api(projects.labCommonInfra)
 
     api(libs.spring.restdocs.mockmvc)

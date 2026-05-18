@@ -1,14 +1,15 @@
 package com.crispinlab.space.domain.tag
 
+import com.crispinlab.common.domain.Entity
 import com.crispinlab.space.domain.space.SpaceId
 import java.time.Instant
 
 class Tag(
-    val id: TagId,
+    override val id: TagId,
     val spaceId: SpaceId,
     name: String,
     val createdAt: Instant
-) {
+) : Entity<TagId> {
     var name: String = name
         private set
 

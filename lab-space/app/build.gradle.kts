@@ -6,6 +6,8 @@ plugins {
 
 dependencies {
     implementation(projects.labCommon)
+    implementation(projects.labCommonDomain)
+    implementation(projects.labCommonPort)
     implementation(projects.labSpace.domain)
 
     testImplementation(testFixtures(projects.labSpace.domain))

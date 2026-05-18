@@ -5,6 +5,7 @@ plugins {
 
 dependencies {
     implementation(projects.labCommon)
+    implementation(projects.labCommonDomain)
     implementation(libs.spring.tx)
     compileOnly(libs.spring.web)
     compileOnly(libs.jakarta.servlet.api)

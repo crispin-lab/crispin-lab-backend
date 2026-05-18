@@ -5,7 +5,7 @@ import com.crispinlab.space.domain.page.PageRevision
 import com.crispinlab.space.domain.page.PageRevisionId
 
 interface PageRevisionRepository {
-    fun save(revision: PageRevision): PageRevision
+    fun save(entity: PageRevision): PageRevision
 
     fun findBy(id: PageRevisionId): PageRevision?
 

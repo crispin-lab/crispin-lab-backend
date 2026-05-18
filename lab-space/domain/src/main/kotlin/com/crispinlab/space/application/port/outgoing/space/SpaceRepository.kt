@@ -6,7 +6,7 @@ import com.crispinlab.space.domain.space.Space
 import com.crispinlab.space.domain.space.SpaceId
 
 interface SpaceRepository {
-    fun save(space: Space): Space
+    fun save(entity: Space): Space
 
     fun findBy(id: SpaceId): Space?
 

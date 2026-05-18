@@ -1,5 +1,5 @@
 package com.crispinlab.common.domain
 
-interface EntityId {
+interface LongValue {
     val value: Long
 }

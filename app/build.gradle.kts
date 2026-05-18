@@ -7,6 +7,7 @@ plugins {
 
 dependencies {
     implementation(projects.labCommon)
+    implementation(projects.labCommonDomain)
     implementation(projects.labCommonInfra)
     implementation(projects.labSpace.app)
 

@@ -4,5 +4,6 @@ plugins {
 }
 
 dependencies {
-    api(projects.labCommon)
+    api(projects.labCommonDomain)
+    api(projects.labCommonPort)
 }

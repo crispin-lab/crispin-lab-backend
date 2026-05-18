@@ -2,7 +2,7 @@
 kotlin = "2.3.21"
 kotest = "6.1.11"
 kotlinter = "5.4.2"
-spring-boot = "3.5.14"
+spring-boot = "4.0.6"
 kotlin-snowflake = "1.0.1"
 kotlin-serialization = "1.8.0"
 exposed = "1.2.0"

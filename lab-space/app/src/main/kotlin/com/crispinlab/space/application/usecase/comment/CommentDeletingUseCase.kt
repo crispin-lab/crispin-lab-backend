@@ -17,13 +17,9 @@ class CommentDeletingUseCase(
     override fun perform(request: Request) {
         transactionProvider.transactional {
             request
-                .also {
-                    it.validate()
-                }.toEntity()
-                .markDeleted()
-                .let {
-                    commentRepository.save(it)
-                }
+                .also { it.validate() }
+                .toEntity()
+                .withdraw()
         }
     }
 
@@ -40,13 +36,10 @@ class CommentDeletingUseCase(
         commentRepository
             .findBy(commentId)
             ?.takeIf {
-                it.pageId == pageId &&
-                    it.authorId == currentUserId &&
-                    !it.isDeleted
+                it.pageId == pageId && it.authorId == currentUserId
             } ?: throw NotFoundException(CommentErrorCode.COMMENT_NOT_FOUND)
 
-    private fun Comment.markDeleted(): Comment =
-        apply {
-            delete()
-        }
+    private fun Comment.withdraw() {
+        commentRepository.delete(id)
+    }
 }

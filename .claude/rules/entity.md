@@ -14,20 +14,26 @@
 5. **상태 변경은 도메인 메서드로만** — `entity.title = "x"` 가 아니라 `entity.rename("x")`.
 6. **값 객체(Value Object) 는 `data class`** — Money, EmailAddress 등 불변 보장이 필요한 작은 타입. Long 기반 단일 값 (예: Money) 은 `LongValue` implement 로 같은 직렬화 정책에 묶일 수 있다.
 7. **`init` 은 형식·길이·빈 값 검증** — 외부 의존이 필요한 검증은 UseCase 책임 (`conventions.md` "검증 책임 분리").
+8. **Soft delete 가 필요한 entity 는 `SoftDeletable` implement** — `lab-common-domain` 의 마커. `override var deletedAt: Instant? private set` + `delete()` 도메인 메서드 (`check(!isDeleted)` 가드) + 상태 전이 메서드 진입부에 `check(!isDeleted)` 가드. `isDeleted` 는 interface default impl 을 그대로 사용. `Entity<ID>` 와 직교 — 양쪽을 함께 implement (`Page : Entity<PageId>, SoftDeletable`). 어댑터 자동 분기는 `repository.md` 참조.
 
-## LongValue / EntityId / Entity 계층
+## LongValue / EntityId / Entity / SoftDeletable 계층
 
-`lab-common-domain` 에 세 마커가 있다:
+`lab-common-domain` 에 네 마커가 있다:
 
 ```kotlin
 interface LongValue { val value: Long }
 interface EntityId : LongValue
 interface Entity<ID : EntityId> { val id: ID }
+interface SoftDeletable {
+    val deletedAt: Instant?
+    val isDeleted: Boolean get() = deletedAt != null
+}
 ```
 
 - `LongValue` — Long 기반 단일 값의 공통 super type. EntityId 외에 Money / Score 같은 도메인 값 객체도 같은 직렬화 정책에 묶일 enabler.
 - `EntityId` — entity 의 식별자 마커. Jackson customizer 가 이 타입을 대상으로 String 직렬화 처리 (`EntityIdJacksonConfiguration`).
 - `Entity<ID>` — entity 자체의 마커. `ExposedEntityRepository<E, I>` 제네릭 base 의 enabler.
+- `SoftDeletable` — soft delete 정책 마커. `Entity<ID>` 와 직교 (양쪽을 함께 implement). 어댑터의 `deletedAtColumn` override 와 짝을 이뤄 `delete(id)` 자동 분기 + `notDeleted()` 자동 필터를 활성화 (`repository.md`). 읽기 프로퍼티만 두는 mixin 마커. entity 의 `delete()` 도메인 메서드는 미래 invariant 보호 enabler — 표준 삭제 흐름은 UseCase 의 `repository.delete(id)` (`usecase-implementation.md` "Deleting").
 
 reflection 변환 헬퍼 (`Long.asLongValue<T>()`) 는 도입하지 않는다 — 도메인 친화 한국어 에러 메시지를 유지하기 위해 각 EntityId 가 명시 변환 함수 (`asPageId` 등) 를 갖는다.
 
@@ -127,6 +133,37 @@ class Page(
 - 상태 전이(`publish`, `archive`) 는 별도 메서드 — `check` 로 상태 가드.
 - `updatedAt` 은 변경이 일어난 메서드 안에서 직접 갱신 (자동 콜백 신뢰 X).
 - 갱신은 **메서드 끝에 무조건 `updatedAt = now()` 한 줄**. 인자가 모두 null 이라 실제 필드 변경이 없어도 호출 자체가 일어났으면 갱신 — `if (changed)` 같은 조건부 가드는 두지 않는다. 호출 의도 자체를 audit 시점으로 본다.
+
+### SoftDeletable entity 패턴
+
+```kotlin
+class Page(
+    // ... 기존 파라미터 ...
+    deletedAt: Instant? = null
+) : Entity<PageId>,
+    SoftDeletable {
+    // ... 기존 var 필드 ...
+    override var deletedAt: Instant? = deletedAt
+        private set
+
+    fun edit(...) {
+        check(!isDeleted) { "삭제된 페이지는 수정할 수 없습니다." }
+        // ...
+    }
+
+    fun delete() {
+        check(!isDeleted) { "이미 삭제된 페이지입니다." }
+        val occurredAt: Instant = now()
+        this.deletedAt = occurredAt
+        this.updatedAt = occurredAt
+    }
+}
+```
+
+- **`SoftDeletable` implement + `override var deletedAt: Instant? private set`** — 마커는 읽기 프로퍼티만 강제하지만 entity 의 상태 전이를 위해 `var` 로 노출. `isDeleted` 는 interface default impl 을 그대로 사용 (entity 안에 override 하지 않는다).
+- **`delete()` 도메인 메서드** — `check(!isDeleted)` 가드 + `deletedAt`/`updatedAt` 같은 시점으로 갱신. UseCase 의 표준 삭제 흐름은 `repository.delete(id)` 한 줄 (base 의 자동 분기로 `UPDATE deleted_at = now()` 동작) 이라 현 시점 본 메서드는 호출처가 없다. 미래에 추가 invariant (상태 머신, 부수효과) 가 필요해질 때를 위한 enabler 로 유지 — 그 PR 에서 명시적 사용처와 함께 활성. 자세한 흐름 결정은 `usecase-implementation.md` "Deleting" / `repository.md` 참조.
+- **상태 전이 메서드 가드** — `edit()`, `move()`, `changeVisibility()` 같은 변경 메서드 진입부에 `check(!isDeleted)` 한 줄. 자동 필터가 일반 흐름에서는 deleted entity 를 노출하지 않지만, 도메인 invariant 차원에서 명시.
+- **마이그레이션 동시 변경** — `deleted_at TIMESTAMP NULL` 컬럼 추가 + Exposed `Table` 의 `val deletedAt = timestamp("deleted_at").nullable()` + 어댑터의 `deletedAtColumn` override (`repository.md`, `migration.md`).
 
 ## 값 객체 (Value Object)
 

@@ -19,7 +19,7 @@ class SpaceDeletingUseCase(
             request
                 .also { it.validate() }
                 .toEntity()
-                .let { spaceRepository.delete(it.id) }
+                .withdraw()
         }
     }
 
@@ -35,4 +35,8 @@ class SpaceDeletingUseCase(
     private fun Request.toEntity(): Space =
         spaceRepository.findBy(spaceId)
             ?: throw NotFoundException(SpaceErrorCode.SPACE_NOT_FOUND)
+
+    private fun Space.withdraw() {
+        spaceRepository.delete(id)
+    }
 }

@@ -36,8 +36,7 @@ class CommentListingControllerTest :
                                     authorId = UserId(100L),
                                     body = "첫 댓글",
                                     createdAt = DUMMY_INSTANT,
-                                    updatedAt = DUMMY_INSTANT,
-                                    deletedAt = null
+                                    updatedAt = DUMMY_INSTANT
                                 ),
                                 Summary(
                                     commentId = CommentId(2L),
@@ -45,8 +44,7 @@ class CommentListingControllerTest :
                                     authorId = UserId(101L),
                                     body = "두 번째",
                                     createdAt = DUMMY_INSTANT,
-                                    updatedAt = DUMMY_INSTANT,
-                                    deletedAt = null
+                                    updatedAt = DUMMY_INSTANT
                                 )
                             ),
                         page = 0,
@@ -78,7 +76,6 @@ class CommentListingControllerTest :
                                 "body".string("본문")
                                 "createdAt".datetime("생성 시각")
                                 "updatedAt".datetime("최근 갱신 시각")
-                                "deletedAt".datetime("삭제 시각 (soft delete)", optional = true)
                             }
                             "page".number("현재 페이지")
                             "size".number("페이지당 항목 수")

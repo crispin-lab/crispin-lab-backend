@@ -11,6 +11,8 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 class ExposedPageRepositoryTest :
@@ -108,7 +110,7 @@ class ExposedPageRepositoryTest :
                 }
             }
 
-            it("delete 후에는 findBy 가 null 을 반환한다") {
+            it("repository.delete 는 soft delete 로 동작 — row 는 보존되고 findBy 는 null 을 반환한다") {
                 transaction(database) {
                     repository.save(basicPage(id = PageId(9L)))
                 }
@@ -119,6 +121,76 @@ class ExposedPageRepositoryTest :
 
                 transaction(database) {
                     repository.findBy(PageId(9L)).shouldBeNull()
+                    val row =
+                        Pages
+                            .selectAll()
+                            .where { Pages.id eq 9L }
+                            .firstOrNull()
+                            .shouldNotBeNull()
+                    row[Pages.deletedAt].shouldNotBeNull()
+                }
+            }
+
+            it("findChildren 은 soft deleted 자식 페이지를 자동 제외한다") {
+                transaction(database) {
+                    repository.save(basicPage(id = PageId(70L), parentPageId = PageId(60L)))
+                    repository.save(basicPage(id = PageId(71L), parentPageId = PageId(60L)))
+                }
+
+                transaction(database) {
+                    repository.delete(PageId(70L))
+                }
+
+                transaction(database) {
+                    val children = repository.findChildren(PageId(60L))
+                    children shouldHaveSize 1
+                    children.first().id shouldBe PageId(71L)
+                }
+            }
+
+            it("findRoots 는 soft deleted 루트 페이지를 자동 제외한다") {
+                transaction(database) {
+                    repository.save(
+                        basicPage(id = PageId(80L), spaceId = SpaceId(80L), parentPageId = null)
+                    )
+                    repository.save(
+                        basicPage(id = PageId(81L), spaceId = SpaceId(80L), parentPageId = null)
+                    )
+                }
+
+                transaction(database) {
+                    repository.delete(PageId(80L))
+                }
+
+                transaction(database) {
+                    val roots = repository.findRoots(SpaceId(80L))
+                    roots shouldHaveSize 1
+                    roots.first().id shouldBe PageId(81L)
+                }
+            }
+
+            it("이미 soft delete 된 row 에 delete 를 다시 호출해도 deletedAt 이 갱신되지 않는다") {
+                val firstDeletedAt =
+                    transaction(database) {
+                        repository.save(basicPage(id = PageId(90L)))
+                        repository.delete(PageId(90L))
+                        Pages
+                            .selectAll()
+                            .where { Pages.id eq 90L }
+                            .first()[Pages.deletedAt]
+                    }.shouldNotBeNull()
+
+                transaction(database) {
+                    repository.delete(PageId(90L))
+                }
+
+                transaction(database) {
+                    val row =
+                        Pages
+                            .selectAll()
+                            .where { Pages.id eq 90L }
+                            .first()
+                    row[Pages.deletedAt] shouldBe firstDeletedAt
                 }
             }
         }

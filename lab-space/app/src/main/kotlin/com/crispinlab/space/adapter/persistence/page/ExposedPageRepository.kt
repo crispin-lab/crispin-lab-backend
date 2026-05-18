@@ -9,9 +9,7 @@ import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.page.Visibility.Companion.asVisibility
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.user.UserId
-import org.jetbrains.exposed.v1.core.Column
 import org.jetbrains.exposed.v1.core.ResultRow
-import org.jetbrains.exposed.v1.core.Table
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.isNull
@@ -26,6 +24,7 @@ class ExposedPageRepository :
     PageRepository {
     override val table = Pages
     override val idColumn = Pages.id
+    override val deletedAtColumn = Pages.deletedAt
 
     override fun ResultRow.toEntity(): Page =
         Page(
@@ -38,10 +37,12 @@ class ExposedPageRepository :
             visibility = decodeVisibility(this[Pages.visibility]),
             currentVersion = this[Pages.currentVersion],
             createdAt = this[Pages.createdAt],
-            updatedAt = this[Pages.updatedAt]
+            updatedAt = this[Pages.updatedAt],
+            deletedAt = this[Pages.deletedAt]
         )
 
-    public override fun delete(id: PageId) = super.delete(id)
+    @Suppress("RedundantOverride")
+    override fun delete(id: PageId) = super.delete(id)
 
     override fun insert(entity: Page) {
         Pages.insert {
@@ -55,6 +56,7 @@ class ExposedPageRepository :
             it[currentVersion] = entity.currentVersion
             it[createdAt] = entity.createdAt
             it[updatedAt] = entity.updatedAt
+            it[deletedAt] = entity.deletedAt
         }
     }
 
@@ -66,20 +68,23 @@ class ExposedPageRepository :
             it[visibility] = entity.visibility.name
             it[currentVersion] = entity.currentVersion
             it[updatedAt] = entity.updatedAt
+            it[deletedAt] = entity.deletedAt
         }
     }
 
     override fun findChildren(parentId: PageId): List<Page> =
         Pages
             .selectAll()
-            .where { Pages.parentPageId eq parentId.value }
+            .where { (Pages.parentPageId eq parentId.value) and notDeleted() }
             .map { it.toEntity() }
 
     override fun findRoots(spaceId: SpaceId): List<Page> =
         Pages
             .selectAll()
-            .where { (Pages.spaceId eq spaceId.value) and Pages.parentPageId.isNull() }
-            .map { it.toEntity() }
+            .where {
+                (Pages.spaceId eq spaceId.value) and Pages.parentPageId.isNull() and
+                    notDeleted()
+            }.map { it.toEntity() }
 
     private fun decodeVisibility(stored: String): Visibility =
         runCatching { stored.asVisibility() }

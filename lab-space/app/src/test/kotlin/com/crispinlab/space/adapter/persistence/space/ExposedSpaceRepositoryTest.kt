@@ -9,6 +9,8 @@ import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 class ExposedSpaceRepositoryTest :
@@ -54,7 +56,7 @@ class ExposedSpaceRepositoryTest :
                 }
             }
 
-            it("delete 후에는 findBy 가 null 을 반환한다") {
+            it("repository.delete 는 soft delete 로 동작 — row 는 보존되고 findBy 는 null 을 반환한다") {
                 transaction(database) {
                     repository.save(basicSpace(id = SpaceId(5L)))
                 }
@@ -65,6 +67,32 @@ class ExposedSpaceRepositoryTest :
 
                 transaction(database) {
                     repository.findBy(SpaceId(5L)).shouldBeNull()
+                    val row =
+                        Spaces
+                            .selectAll()
+                            .where { Spaces.id eq 5L }
+                            .firstOrNull()
+                            .shouldNotBeNull()
+                    row[Spaces.deletedAt].shouldNotBeNull()
+                }
+            }
+
+            it("findPage 는 soft deleted 스페이스를 자동 제외한다") {
+                transaction(database) {
+                    repository.save(basicSpace(id = SpaceId(40L), createdAt = DUMMY_INSTANT))
+                    repository.save(
+                        basicSpace(id = SpaceId(41L), createdAt = DUMMY_INSTANT.plusSeconds(60))
+                    )
+                }
+
+                transaction(database) {
+                    repository.delete(SpaceId(40L))
+                }
+
+                transaction(database) {
+                    val result = repository.findPage(PageRequest(page = 0, size = 10))
+                    result.totalElements shouldBe 1L
+                    result.items.map { it.id } shouldBe listOf(SpaceId(41L))
                 }
             }
 

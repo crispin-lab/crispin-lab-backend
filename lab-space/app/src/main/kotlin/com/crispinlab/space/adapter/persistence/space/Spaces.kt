@@ -10,6 +10,7 @@ object Spaces : Table("spaces") {
     val description = varchar("description", length = Space.MAX_DESCRIPTION_LENGTH)
     val createdAt = timestamp("created_at")
     val updatedAt = timestamp("updated_at")
+    val deletedAt = timestamp("deleted_at").nullable()
 
     override val primaryKey = PrimaryKey(id)
 }

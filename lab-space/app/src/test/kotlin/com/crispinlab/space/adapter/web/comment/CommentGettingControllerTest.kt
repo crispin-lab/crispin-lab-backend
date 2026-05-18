@@ -42,8 +42,7 @@ class CommentGettingControllerTest :
                         authorId = UserId(100L),
                         body = "안녕하세요",
                         createdAt = DUMMY_INSTANT,
-                        updatedAt = DUMMY_INSTANT,
-                        deletedAt = null
+                        updatedAt = DUMMY_INSTANT
                     )
 
                 controller
@@ -62,7 +61,6 @@ class CommentGettingControllerTest :
                             "body".string("본문")
                             "createdAt".datetime("생성 시각")
                             "updatedAt".datetime("최근 갱신 시각")
-                            "deletedAt".datetime("삭제 시각 (soft delete)", optional = true)
                         }
                     )
 

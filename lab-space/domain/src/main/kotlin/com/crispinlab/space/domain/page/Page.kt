@@ -1,6 +1,7 @@
 package com.crispinlab.space.domain.page
 
 import com.crispinlab.common.domain.Entity
+import com.crispinlab.common.domain.SoftDeletable
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.user.UserId
 import java.time.Instant
@@ -16,8 +17,10 @@ class Page(
     visibility: Visibility,
     currentVersion: Int,
     val createdAt: Instant = now(),
-    updatedAt: Instant = createdAt
-) : Entity<PageId> {
+    updatedAt: Instant = createdAt,
+    deletedAt: Instant? = null
+) : Entity<PageId>,
+    SoftDeletable {
     var parentPageId: PageId? = parentPageId
         private set
     var title: String = title
@@ -29,6 +32,8 @@ class Page(
     var currentVersion: Int = currentVersion
         private set
     var updatedAt: Instant = updatedAt
+        private set
+    override var deletedAt: Instant? = deletedAt
         private set
 
     init {
@@ -45,6 +50,9 @@ class Page(
         title: String,
         content: String
     ): EditResult {
+        check(!isDeleted) {
+            "삭제된 페이지는 수정할 수 없습니다."
+        }
         validateTitle(title)
         val newContent: PageContent = PageContent(content)
         val newVersion: Int = currentVersion + 1
@@ -70,6 +78,9 @@ class Page(
      * 자손 페이지 밑으로의 순환 이동 검증은 repository 조회가 필요하므로 UseCase 책임이다.
      */
     fun move(parentPageId: PageId?) {
+        check(!isDeleted) {
+            "삭제된 페이지는 이동할 수 없습니다."
+        }
         require(parentPageId != id) {
             "자기 자신을 부모로 설정할 수 없습니다."
         }
@@ -78,8 +89,20 @@ class Page(
     }
 
     fun changeVisibility(visibility: Visibility) {
+        check(!isDeleted) {
+            "삭제된 페이지의 공개 범위는 변경할 수 없습니다."
+        }
         this.visibility = visibility
         this.updatedAt = now()
+    }
+
+    fun delete() {
+        check(!isDeleted) {
+            "이미 삭제된 페이지입니다."
+        }
+        val occurredAt: Instant = now()
+        this.deletedAt = occurredAt
+        this.updatedAt = occurredAt
     }
 
     private fun validateTitle(title: String) {

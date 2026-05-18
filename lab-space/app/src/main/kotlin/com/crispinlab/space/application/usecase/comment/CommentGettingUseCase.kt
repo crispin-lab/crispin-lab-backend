@@ -47,7 +47,6 @@ class CommentGettingUseCase(
             authorId = authorId,
             body = body,
             createdAt = createdAt,
-            updatedAt = updatedAt,
-            deletedAt = deletedAt
+            updatedAt = updatedAt
         )
 }

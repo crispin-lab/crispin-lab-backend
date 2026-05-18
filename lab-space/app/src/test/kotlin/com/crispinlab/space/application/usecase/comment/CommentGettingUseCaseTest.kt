@@ -44,22 +44,14 @@ class CommentGettingUseCaseTest :
 
                 result.commentId shouldBe CommentId(7L)
                 result.body shouldBe "안녕하세요"
-                result.deletedAt shouldBe null
             }
 
-            it("삭제된 댓글도 그대로 반환한다 (소비자가 isDeleted 판단)") {
-                val comment = basicComment(pageId = PageId(10L)).also { it.delete() }
-                every { commentRepository.findBy(comment.id) } returns comment
+            it("삭제된 댓글은 repository.findBy 가 자동 필터로 null 을 돌려주므로 NotFoundException") {
+                every { commentRepository.findBy(any()) } returns null
 
-                val result =
-                    useCase.perform(
-                        basicRequest(
-                            pageId = "10",
-                            commentId = comment.id.value.toString()
-                        )
-                    )
-
-                result.deletedAt shouldBe comment.deletedAt
+                shouldThrow<NotFoundException> {
+                    useCase.perform(basicRequest())
+                }
             }
 
             it("댓글이 없으면 NotFoundException") {

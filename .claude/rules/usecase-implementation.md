@@ -157,6 +157,36 @@ class PageEditingUseCase(
 - 권한 체크는 `findBy` + `takeIf` 로 묶어, "존재" 와 "권한" 의 응답을 구분하지 않는다 (`error-messages.md` "정보 노출 방지" 참조).
 - 변경은 엔티티 메서드(`edit`) 안에서 — UseCase 가 필드를 직접 대입하지 않는다.
 
+## Deleting (삭제)
+
+```kotlin
+class PageDeletingUseCase(
+    private val pageRepository: PageRepository,
+    private val transactionProvider: TransactionProvider,
+) : PageDeleting {
+    override fun perform(request: Request) {
+        transactionProvider.transactional {
+            request
+                .toEntity()
+                .withdraw()
+        }
+    }
+
+    private fun Request.toEntity(): Page =
+        pageRepository.findBy(pageId)
+            ?.takeIf { it.authorId == currentUserId }
+            ?: throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
+
+    private fun Page.withdraw() {
+        pageRepository.delete(id)
+    }
+}
+```
+
+- `Result` 없이 `Unit` 반환 (`PageDeleting : UseCase<Request, Unit>`).
+- 표준은 **`repository.delete(id)` 한 줄** — entity 가 `SoftDeletable` 이면 어댑터의 base 가 자동 분기로 `UPDATE deleted_at = now()`, 아니면 hard `DELETE` (`repository.md`). UseCase 가 entity 의 도메인 `delete()` 메서드를 부르지 않는다 — 이중 삭제 invariant 는 `findBy` 자동 필터가 deleted entity 를 못 찾는 것으로 자연 보호 (NotFoundException 으로 fallback). `entity.delete() + save` 경로는 미래에 추가 invariant (상태 머신, 부수효과) 가 필요할 때를 위한 enabler 로 base 가 받아주는 자리.
+- **`.withdraw()` 확장 함수**로 어댑터 호출을 분리 — `.let { repo.delete(it.id) }` 형태의 `it.id` 추출이 어색하므로 `private fun Entity.withdraw()` 로 한 단어. `Entity.delete()` 도메인 메서드 (entity 상태 갱신 invariant) 와 의미를 구분 — `withdraw` 는 위키/블로그 도메인에서 "게시물을 내린다" 의 사용자 행위. 본 저장소의 `toEntity` / `toResult` / `editWith` 단계 분리 패턴과 정합.
+
 ## 트랜잭션 경계
 
 `lab-common` 의 `TransactionProvider` 를 UseCase 생성자로 주입받아 **`perform` 진입에서 한 번** 감싼다. 구현체(`DefaultTransactionProvider`) 는 `lab-common-infra` 가 Spring Boot auto-config 로 등록하므로 app 모듈은 의존만 추가하면 된다.

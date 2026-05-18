@@ -13,9 +13,11 @@ import com.crispinlab.space.domain.tag.TagId
 import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.compoundAnd
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.like
 import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.jdbc.Query
@@ -66,10 +68,11 @@ class ExposedPageSearchAdapter : PageSearchPort {
      ticket :: LAB-25
      */
     private fun matchedPageIdsByTag(tagIds: Collection<TagId>): List<Long> =
-        PageTags
+        (PageTags innerJoin Pages)
             .select(PageTags.pageId)
-            .where { PageTags.tagId inList tagIds.map { it.value } }
-            .withDistinct()
+            .where {
+                (PageTags.tagId inList tagIds.map { it.value }) and Pages.deletedAt.isNull()
+            }.withDistinct()
             .map { it[PageTags.pageId] }
 
     private fun baseQuery(
@@ -79,6 +82,7 @@ class ExposedPageSearchAdapter : PageSearchPort {
     ): Query {
         val conditions =
             buildList<Op<Boolean>> {
+                add(Pages.deletedAt.isNull())
                 add(Pages.visibility eq Visibility.PUBLIC.name)
                 keyword?.let {
                     val pattern = "%${it.escapeLike()}%"

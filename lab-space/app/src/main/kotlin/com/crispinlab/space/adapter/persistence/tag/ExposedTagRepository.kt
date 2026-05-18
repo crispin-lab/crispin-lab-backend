@@ -7,9 +7,7 @@ import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.tag.PageTag
 import com.crispinlab.space.domain.tag.Tag
 import com.crispinlab.space.domain.tag.TagId
-import org.jetbrains.exposed.v1.core.Column
 import org.jetbrains.exposed.v1.core.ResultRow
-import org.jetbrains.exposed.v1.core.Table
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
@@ -26,6 +24,7 @@ class ExposedTagRepository :
     TagRepository {
     override val table = Tags
     override val idColumn = Tags.id
+    override val deletedAtColumn = null
 
     override fun ResultRow.toEntity(): Tag =
         Tag(
@@ -35,7 +34,8 @@ class ExposedTagRepository :
             createdAt = this[Tags.createdAt]
         )
 
-    public override fun delete(id: TagId) = super.delete(id)
+    @Suppress("RedundantOverride")
+    override fun delete(id: TagId) = super.delete(id)
 
     override fun insert(entity: Tag) {
         Tags.insert {

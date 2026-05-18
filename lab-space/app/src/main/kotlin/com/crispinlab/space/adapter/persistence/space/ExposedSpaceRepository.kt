@@ -20,8 +20,8 @@ import org.springframework.stereotype.Repository
 class ExposedSpaceRepository :
     ExposedEntityRepository<Space, SpaceId>(),
     SpaceRepository {
-    override val table: Table = Spaces
-    override val idColumn: Column<Long> = Spaces.id
+    override val table = Spaces
+    override val idColumn = Spaces.id
 
     override fun ResultRow.toEntity(): Space =
         Space(
@@ -31,6 +31,8 @@ class ExposedSpaceRepository :
             createdAt = this[Spaces.createdAt],
             updatedAt = this[Spaces.updatedAt]
         )
+
+    public override fun delete(id: SpaceId): Unit = super.delete(id)
 
     override fun insert(entity: Space) {
         Spaces.insert {

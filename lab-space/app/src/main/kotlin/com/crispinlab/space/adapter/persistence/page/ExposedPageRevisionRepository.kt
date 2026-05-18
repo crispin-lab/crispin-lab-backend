@@ -21,8 +21,8 @@ import org.springframework.stereotype.Repository
 class ExposedPageRevisionRepository :
     ExposedEntityRepository<PageRevision, PageRevisionId>(),
     PageRevisionRepository {
-    override val table: Table = PageRevisions
-    override val idColumn: Column<Long> = PageRevisions.id
+    override val table = PageRevisions
+    override val idColumn = PageRevisions.id
 
     override fun ResultRow.toEntity(): PageRevision =
         PageRevision(

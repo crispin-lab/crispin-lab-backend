@@ -22,8 +22,8 @@ import org.springframework.stereotype.Repository
 class ExposedCommentRepository :
     ExposedEntityRepository<Comment, CommentId>(),
     CommentRepository {
-    override val table: Table = Comments
-    override val idColumn: Column<Long> = Comments.id
+    override val table = Comments
+    override val idColumn = Comments.id
 
     override fun ResultRow.toEntity(): Comment =
         Comment(
@@ -35,6 +35,8 @@ class ExposedCommentRepository :
             updatedAt = this[Comments.updatedAt],
             deletedAt = this[Comments.deletedAt]
         )
+
+    public override fun delete(id: CommentId): Unit = super.delete(id)
 
     override fun insert(entity: Comment) {
         Comments.insert {

@@ -24,8 +24,8 @@ import org.springframework.stereotype.Repository
 class ExposedPageRepository :
     ExposedEntityRepository<Page, PageId>(),
     PageRepository {
-    override val table: Table = Pages
-    override val idColumn: Column<Long> = Pages.id
+    override val table = Pages
+    override val idColumn = Pages.id
 
     override fun ResultRow.toEntity(): Page =
         Page(
@@ -40,6 +40,8 @@ class ExposedPageRepository :
             createdAt = this[Pages.createdAt],
             updatedAt = this[Pages.updatedAt]
         )
+
+    public override fun delete(id: PageId): Unit = super.delete(id)
 
     override fun insert(entity: Page) {
         Pages.insert {

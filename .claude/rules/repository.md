@@ -86,26 +86,28 @@ import org.springframework.stereotype.Repository
 class ExposedPageRepository :
     ExposedEntityRepository<Page, PageId>(),
     PageRepository {
-    override val table: Table = Pages
-    override val idColumn: Column<Long> = Pages.id
+    override val table = Pages
+    override val idColumn = Pages.id
 
     override fun ResultRow.toEntity(): Page =
         Page(
             id = PageId(this[Pages.id]),
             authorId = UserId(this[Pages.authorId]),
             title = this[Pages.title],
-            body = this[Pages.body],
+            content = PageContent(this[Pages.content]),
             visibility = decodeVisibility(this[Pages.visibility]),
             createdAt = this[Pages.createdAt],
             updatedAt = this[Pages.updatedAt]
         )
+
+    public override fun delete(id: PageId): Unit = super.delete(id)
 
     override fun insert(entity: Page) {
         Pages.insert {
             it[id] = entity.id.value
             it[authorId] = entity.authorId.value
             it[title] = entity.title
-            it[body] = entity.body
+            it[content] = entity.content.raw
             it[visibility] = entity.visibility.name
             it[createdAt] = entity.createdAt
             it[updatedAt] = entity.updatedAt
@@ -115,7 +117,7 @@ class ExposedPageRepository :
     override fun update(entity: Page) {
         Pages.update({ Pages.id eq entity.id.value }) {
             it[title] = entity.title
-            it[body] = entity.body
+            it[content] = entity.content.raw
             it[visibility] = entity.visibility.name
             it[updatedAt] = entity.updatedAt
         }
@@ -133,6 +135,8 @@ class ExposedPageRepository :
 
 `lab-space/app/adapter/persistence/ExposedEntityRepository.kt` 에 다음 abstract class 가 있다:
 
+`E` 는 `Entity<I>` 마커를 만족해야 한다 (`entity.md` 참조). base 의 시그니처:
+
 ```kotlin
 abstract class ExposedEntityRepository<E : Entity<I>, I : EntityId> {
     protected abstract val table: Table
@@ -142,14 +146,15 @@ abstract class ExposedEntityRepository<E : Entity<I>, I : EntityId> {
     protected abstract fun insert(entity: E)
     protected abstract fun update(entity: E)
 
-    fun save(entity: E): E = ...            // SELECT → insert/update 분기
-    fun findBy(id: I): E? = ...
-    fun findAllBy(ids: List<I>): List<E> = ...
-    fun delete(id: I) = ...
+    fun save(entity: E): E = ...                       // public — port 가 모두 노출
+    fun findBy(id: I): E? = ...                        // public — port 가 모두 노출
+    protected open fun findAllBy(ids: List<I>): List<E> = ...
+    protected open fun delete(id: I) = ...
 }
 ```
 
 - 어댑터는 `table`, `idColumn`, `ResultRow.toEntity()`, `insert`, `update` 만 구현. SELECT → insert/update 분기와 findBy/findAllBy/delete 의 SQL 보일러플레이트는 base 가 통합.
+- **노출 범위**: `save` / `findBy` 는 모든 어댑터의 port 가 노출하므로 base 에서 public. `findAllBy` / `delete` 는 `protected open` 으로 두고, port 시그니처가 정의된 어댑터에서만 `public override fun delete(id: I): Unit = super.delete(id)` 로 명시 expose. aggregate 내부 entity (예: `PageRevision`) 의 port 가 `delete` 를 정의하지 않으면 base 의 protected 가 그대로 유지되어 외부에서 호출 불가 — aggregate 일관성이 컴파일러로 보존된다.
 - 어댑터 클래스명 prefix 는 **기술 스택**(`Exposed`) 으로. `MySql`, `Redis` 등도 같은 결.
 - 도메인 특화 메서드 (`findByPageId`, `findBySpaceId`, `attach/detach` 등) 는 어댑터에 그대로 둔다 — base 가 일반화하지 않는다.
 - 도메인 port Repository 인터페이스 (`PageRepository` 등) 는 **공통 super type 없이** 각자 정의. base 가 강제하는 추상화는 어댑터 측에만.

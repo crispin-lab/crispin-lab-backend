@@ -16,6 +16,10 @@
 
 `lab-common` 을 세 모듈 (`lab-common-domain` / `lab-common-port` / `lab-common`) 로 나눈 이유: **모듈 경계를 build 설정으로 강제한다.** 도메인 모듈 (`lab-<domain>/domain`) 이 `api(labCommon)` 으로 통째 노출하면 인프라성 코드까지 consumer 에게 transitive 로 흘러간다 — 도메인 entity 가 `TransactionProvider` 같은 어댑터 인터페이스를 잘못 import 해도 컴파일러가 못 막는다. 분리하면 super-type 가시성이 정말 필요한 마커/포트만 `api(...)` 로 노출되고, 인프라성 인터페이스는 `lab-{domain}/app` 등의 어댑터 모듈에서만 `implementation(...)` 으로 받는다. 새 도메인 모듈 추가 시 build.gradle.kts 한 줄 (`api(labCommonDomain) + api(labCommonPort)`) 만으로 의도 정합.
 
+### 의존 정책 — `lab-common-infra` 가 `labCommonDomain` 을 `implementation` 으로 받는 이유
+
+`EntityIdSerializer` 의 시그니처에 `EntityId` 가 등장하지만 `lab-common-infra` 는 이 의존을 `api` 가 아닌 `implementation` 으로만 노출한다. consumer 가 `EntityIdSerializer` 를 직접 import 할 일은 거의 없고 (Spring Boot 의 Jackson auto-config 가 `SimpleModule` 빈을 자동 wiring), 직접 참조하는 곳 (예: `lab-api-support` 의 `ControllerDescribeSpec`) 은 이미 별도로 `api(labCommonDomain)` 을 명시한다. `lab-common-infra` 가 `api(labCommonDomain)` 으로 올리면 transitive 노출이 늘어나면서 분리 의도가 약해진다 — `EntityId` 가 필요한 consumer 는 자기 build.gradle.kts 에서 명시 의존을 갖는 것이 정합.
+
 ## component scan 범위
 
 `@SpringBootApplication(scanBasePackageClasses = [Application::class, SpaceModule::class, ...])` 로 type-safe 하게 명시한다. 도메인 모듈마다 `com.crispinlab.<domain>` 루트에 marker 인터페이스(`SpaceModule`, 향후 `UserModule` 등) 한 개를 두고, 진입 클래스의 `scanBasePackageClasses` 에 추가한다.

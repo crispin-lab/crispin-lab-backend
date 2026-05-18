@@ -24,8 +24,8 @@ import org.springframework.stereotype.Repository
 class ExposedTagRepository :
     ExposedEntityRepository<Tag, TagId>(),
     TagRepository {
-    override val table: Table = Tags
-    override val idColumn: Column<Long> = Tags.id
+    override val table = Tags
+    override val idColumn = Tags.id
 
     override fun ResultRow.toEntity(): Tag =
         Tag(
@@ -34,6 +34,8 @@ class ExposedTagRepository :
             name = this[Tags.name],
             createdAt = this[Tags.createdAt]
         )
+
+    public override fun delete(id: TagId): Unit = super.delete(id)
 
     override fun insert(entity: Tag) {
         Tags.insert {

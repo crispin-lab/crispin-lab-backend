@@ -1,15 +1,16 @@
 package com.crispinlab.space.domain.page
 
+import com.crispinlab.common.domain.Entity
 import java.time.Instant
 
 data class PageLink(
-    val id: PageLinkId,
+    override val id: PageLinkId,
     val pageId: PageId,
     val revisionId: PageRevisionId,
     val target: String,
     val type: Type,
     val createdAt: Instant
-) {
+) : Entity<PageLinkId> {
     init {
         require(target.isNotBlank()) {
             "링크 대상이 비어 있습니다."

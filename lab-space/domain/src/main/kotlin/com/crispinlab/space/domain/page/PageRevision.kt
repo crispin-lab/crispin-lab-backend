@@ -1,17 +1,18 @@
 package com.crispinlab.space.domain.page
 
+import com.crispinlab.common.domain.Entity
 import com.crispinlab.space.domain.user.UserId
 import java.time.Instant
 
 class PageRevision(
-    val id: PageRevisionId,
+    override val id: PageRevisionId,
     val pageId: PageId,
     val version: Int,
     val title: String,
     val content: PageContent,
     val authorId: UserId,
     val createdAt: Instant
-) {
+) : Entity<PageRevisionId> {
     init {
         require(version >= 1) {
             "리비전 버전은 1 이상이어야 합니다."

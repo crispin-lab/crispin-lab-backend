@@ -1,12 +1,13 @@
 package com.crispinlab.space.domain.page
 
+import com.crispinlab.common.domain.Entity
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.user.UserId
 import java.time.Instant
 import java.time.Instant.now
 
 class Page(
-    val id: PageId,
+    override val id: PageId,
     val spaceId: SpaceId,
     parentPageId: PageId?,
     val authorId: UserId,
@@ -16,7 +17,7 @@ class Page(
     currentVersion: Int,
     val createdAt: Instant = now(),
     updatedAt: Instant = createdAt
-) {
+) : Entity<PageId> {
     var parentPageId: PageId? = parentPageId
         private set
     var title: String = title

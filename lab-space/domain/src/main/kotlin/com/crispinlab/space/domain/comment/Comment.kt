@@ -1,19 +1,20 @@
 package com.crispinlab.space.domain.comment
 
+import com.crispinlab.common.domain.Entity
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.user.UserId
 import java.time.Instant
 import java.time.Instant.now
 
 class Comment(
-    val id: CommentId,
+    override val id: CommentId,
     val pageId: PageId,
     val authorId: UserId,
     body: String,
     val createdAt: Instant = now(),
     updatedAt: Instant = createdAt,
     deletedAt: Instant? = null
-) {
+) : Entity<CommentId> {
     var body: String = body
         private set
     var updatedAt: Instant = updatedAt

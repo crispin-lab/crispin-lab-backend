@@ -32,7 +32,7 @@ class ExposedSpaceRepository :
             updatedAt = this[Spaces.updatedAt]
         )
 
-    public override fun delete(id: SpaceId): Unit = super.delete(id)
+    public override fun delete(id: SpaceId) = super.delete(id)
 
     override fun insert(entity: Space) {
         Spaces.insert {

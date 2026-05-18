@@ -100,7 +100,7 @@ class ExposedPageRepository :
             updatedAt = this[Pages.updatedAt]
         )
 
-    public override fun delete(id: PageId): Unit = super.delete(id)
+    public override fun delete(id: PageId) = super.delete(id)
 
     override fun insert(entity: Page) {
         Pages.insert {
@@ -154,7 +154,7 @@ abstract class ExposedEntityRepository<E : Entity<I>, I : EntityId> {
 ```
 
 - 어댑터는 `table`, `idColumn`, `ResultRow.toEntity()`, `insert`, `update` 만 구현. SELECT → insert/update 분기와 findBy/findAllBy/delete 의 SQL 보일러플레이트는 base 가 통합.
-- **노출 범위**: `save` / `findBy` 는 모든 어댑터의 port 가 노출하므로 base 에서 public. `findAllBy` / `delete` 는 `protected open` 으로 두고, port 시그니처가 정의된 어댑터에서만 `public override fun delete(id: I): Unit = super.delete(id)` 로 명시 expose. aggregate 내부 entity (예: `PageRevision`) 의 port 가 `delete` 를 정의하지 않으면 base 의 protected 가 그대로 유지되어 외부에서 호출 불가 — aggregate 일관성이 컴파일러로 보존된다.
+- **노출 범위**: `save` / `findBy` 는 모든 어댑터의 port 가 노출하므로 base 에서 public. `findAllBy` / `delete` 는 `protected open` 으로 두고, port 시그니처가 정의된 어댑터에서만 `public override fun delete(id: I) = super.delete(id)` 로 명시 expose. aggregate 내부 entity (예: `PageRevision`) 의 port 가 `delete` 를 정의하지 않으면 base 의 protected 가 그대로 유지되어 외부에서 호출 불가 — aggregate 일관성이 컴파일러로 보존된다.
 - 어댑터 클래스명 prefix 는 **기술 스택**(`Exposed`) 으로. `MySql`, `Redis` 등도 같은 결.
 - 도메인 특화 메서드 (`findByPageId`, `findBySpaceId`, `attach/detach` 등) 는 어댑터에 그대로 둔다 — base 가 일반화하지 않는다.
 - 도메인 port Repository 인터페이스 (`PageRepository` 등) 는 **공통 super type 없이** 각자 정의. base 가 강제하는 추상화는 어댑터 측에만.

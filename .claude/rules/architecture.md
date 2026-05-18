@@ -16,6 +16,10 @@
 
 `lab-common` 을 세 모듈 (`lab-common-domain` / `lab-common-port` / `lab-common`) 로 나눈 이유: **모듈 경계를 build 설정으로 강제한다.** 도메인 모듈 (`lab-<domain>/domain`) 이 `api(labCommon)` 으로 통째 노출하면 인프라성 코드까지 consumer 에게 transitive 로 흘러간다 — 도메인 entity 가 `TransactionProvider` 같은 어댑터 인터페이스를 잘못 import 해도 컴파일러가 못 막는다. 분리하면 super-type 가시성이 정말 필요한 마커/포트만 `api(...)` 로 노출되고, 인프라성 인터페이스는 `lab-{domain}/app` 등의 어댑터 모듈에서만 `implementation(...)` 으로 받는다. 새 도메인 모듈 추가 시 build.gradle.kts 한 줄 (`api(labCommonDomain) + api(labCommonPort)`) 만으로 의도 정합.
 
+### 패키지 정책 — `com.crispinlab.common.exception` 의 split package
+
+`ErrorCode` 는 도메인 모듈이 `PageErrorCode : ErrorCode` 형태로 implement 하는 super-type 이라 `lab-common-port` 로 옮겼지만, 패키지 `com.crispinlab.common.exception` 은 그대로 유지한다. `NotFoundException` / `ConflictException` / `DomainException` 은 `lab-common` 의 같은 패키지에 남았다 — 모듈은 다르지만 패키지가 같은 **split package** 상태. JVM 동작에는 문제 없고, import 경로 변경을 도메인 모듈 전반에 일으키지 않으려는 의도. IDE 의 "이 클래스가 어느 모듈?" 추적이 약간 추가 비용이 들지만, port super-type 인 `ErrorCode` 와 예외 구현체가 같은 패키지에 모여 있는 도메인적 일관성이 더 크다.
+
 ### 의존 정책 — `lab-common-infra` 가 `labCommonDomain` 을 `implementation` 으로 받는 이유
 
 `EntityIdSerializer` 의 시그니처에 `EntityId` 가 등장하지만 `lab-common-infra` 는 이 의존을 `api` 가 아닌 `implementation` 으로만 노출한다. consumer 가 `EntityIdSerializer` 를 직접 import 할 일은 거의 없고 (Spring Boot 의 Jackson auto-config 가 `SimpleModule` 빈을 자동 wiring), 직접 참조하는 곳 (예: `lab-api-support` 의 `ControllerDescribeSpec`) 은 이미 별도로 `api(labCommonDomain)` 을 명시한다. `lab-common-infra` 가 `api(labCommonDomain)` 으로 올리면 transitive 노출이 늘어나면서 분리 의도가 약해진다 — `EntityId` 가 필요한 consumer 는 자기 build.gradle.kts 에서 명시 의존을 갖는 것이 정합.

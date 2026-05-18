@@ -36,7 +36,7 @@ class ExposedCommentRepository :
             deletedAt = this[Comments.deletedAt]
         )
 
-    public override fun delete(id: CommentId): Unit = super.delete(id)
+    public override fun delete(id: CommentId) = super.delete(id)
 
     override fun insert(entity: Comment) {
         Comments.insert {

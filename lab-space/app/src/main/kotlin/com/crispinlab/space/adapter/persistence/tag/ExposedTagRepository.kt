@@ -35,7 +35,7 @@ class ExposedTagRepository :
             createdAt = this[Tags.createdAt]
         )
 
-    public override fun delete(id: TagId): Unit = super.delete(id)
+    public override fun delete(id: TagId) = super.delete(id)
 
     override fun insert(entity: Tag) {
         Tags.insert {

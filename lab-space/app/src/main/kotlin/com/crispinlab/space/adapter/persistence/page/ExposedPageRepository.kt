@@ -41,7 +41,7 @@ class ExposedPageRepository :
             updatedAt = this[Pages.updatedAt]
         )
 
-    public override fun delete(id: PageId): Unit = super.delete(id)
+    public override fun delete(id: PageId) = super.delete(id)
 
     override fun insert(entity: Page) {
         Pages.insert {

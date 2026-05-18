@@ -7,7 +7,6 @@ plugins {
 
 dependencies {
     implementation(projects.labCommon)
-    implementation(projects.labCommonDomain)
     implementation(projects.labCommonInfra)
     implementation(projects.labSpace.app)
 
@@ -15,6 +14,7 @@ dependencies {
     runtimeOnly(libs.flyway.core)
     runtimeOnly(libs.flyway.database.postgresql)
 
+    testImplementation(projects.labCommonDomain)
     testImplementation(libs.spring.boot.testcontainers)
     testImplementation(libs.testcontainers.postgresql)
 }

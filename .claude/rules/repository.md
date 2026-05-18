@@ -26,7 +26,7 @@ import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageId
 
 interface PageRepository {
-    fun save(page: Page): Page
+    fun save(entity: Page): Page
     fun findBy(id: PageId): Page?
     fun delete(id: PageId)
 }
@@ -49,7 +49,7 @@ object Pages : Table("pages") {
     val id = long("id")
     val authorId = long("author_id")
     val title = varchar("title", length = 200)
-    val body = text("body")
+    val content = text("content")
     val visibility = varchar("visibility", length = 20)
     val createdAt = timestamp("created_at")
     val updatedAt = timestamp("updated_at")

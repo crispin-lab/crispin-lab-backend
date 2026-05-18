@@ -7,7 +7,7 @@ import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.domain.page.PageId
 
 interface CommentRepository {
-    fun save(comment: Comment): Comment
+    fun save(entity: Comment): Comment
 
     fun findBy(id: CommentId): Comment?
 

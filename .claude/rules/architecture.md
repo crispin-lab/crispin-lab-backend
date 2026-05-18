@@ -1,14 +1,20 @@
 # 아키텍처
 
 ## 모듈 레이아웃
-- `lab-common` — cross-cutting 전용 (snowflake ID, 예외, pagination, 트랜잭션 인터페이스, `UseCase<Req, Res>` 베이스 등). **도메인 로직·Spring 의존은 두지 않는다.**
-- `lab-common-infra` — `lab-common` 인터페이스의 Spring/인프라 어댑터 모음 (예: `TransactionProvider` 구현). Spring Boot auto-config 으로 노출 — `META-INF/spring/...AutoConfiguration.imports` 등록 + 클래스에 `@AutoConfiguration` (일반 `@Configuration` 금지). 두 표현이 어긋나면 ordering 메타데이터(`@AutoConfigureAfter` 등)가 누락된다.
+- `lab-common-domain` — 도메인 마커 (`LongValue`, `EntityId`, `Entity<ID>`). **pure Kotlin. 다른 모듈 의존 없음.** 도메인 모듈 (`lab-<domain>/domain`) 이 `api(...)` 로 노출해 consumer 가 super-type 을 볼 수 있게 한다.
+- `lab-common-port` — application/inbound port 시그니처 super type (`UseCase<Req, Res>`, `PageRequest`, `PageResult`, `ErrorCode`). **pure Kotlin.** 도메인 port 인터페이스가 이 모듈의 타입을 시그니처에 노출하므로 도메인 모듈이 `api(...)` 로 가져간다.
+- `lab-common` — cross-cutting 인프라성 인터페이스 (`IdGenerator`, `Clock`, `TransactionProvider`, `LogContext`) + 도메인 예외 클래스 (`DomainException`, `NotFoundException`, `ConflictException`). **pure Kotlin, Spring 의존 두지 않는다.** `api(labCommonPort)` 로 `ErrorCode` 노출. 도메인 모듈은 의존 안 함 (어댑터·UseCase 구현체만 `implementation(...)` 로 사용).
+- `lab-common-infra` — `lab-common` 인터페이스의 Spring/인프라 어댑터 모음 (예: `TransactionProvider` 구현, `EntityIdJacksonConfiguration`). Spring Boot auto-config 으로 노출 — `META-INF/spring/...AutoConfiguration.imports` 등록 + 클래스에 `@AutoConfiguration` (일반 `@Configuration` 금지). 두 표현이 어긋나면 ordering 메타데이터(`@AutoConfigureAfter` / `afterName`) 가 누락된다.
 - `lab-api-support` — 컨트롤러 테스트 공용 도구 (`ControllerDescribeSpec` + `FieldBuilder` DSL, restdocs-api-spec wrapper). 다른 도메인 `app` 모듈이 `testImplementation(projects.labApiSupport)` 로 받는다. main source 가 테스트 도구라서 외부 `kotest`, `mockk`, `spring-restdocs`, `restdocs-api-spec` 의존을 `api(...)` 로 노출한다.
-- `lab-space/domain` — 순수 도메인. **Spring / Exposed / HTTP import 금지.**
-- `lab-space/app` — Spring + Exposed 어댑터: controller, repository 구현, search 어댑터.
+- `lab-space/domain` — 순수 도메인. **Spring / Exposed / HTTP import 금지.** `api(labCommonDomain) + api(labCommonPort)` 만 — 인프라성 코드 (`TransactionProvider`, `LogContext` 등) 가 consumer 에게 transitive 노출되지 않게.
+- `lab-space/app` — Spring + Exposed 어댑터: controller, repository 구현, search 어댑터. `ExposedEntityRepository<E, I>` base 가 어댑터 보일러플레이트를 통합 (`repository.md` 참조).
 - `app` — `@SpringBootApplication`이 있는 실행 가능 모듈. 이 모듈만 `bootJar`를 활성화한다. 진입 클래스는 `com.crispinlab.app.Application` (루트 `com.crispinlab` 에 두면 default scan 이 `lab-common-infra` 의 auto-config 패스와 같은 패키지를 이중으로 훑게 된다).
 
 향후 도메인도 같은 패턴: `lab-<domain>/domain` + `lab-<domain>/app`.
+
+## lab-common 분리의 의도
+
+`lab-common` 을 세 모듈 (`lab-common-domain` / `lab-common-port` / `lab-common`) 로 나눈 이유: **모듈 경계를 build 설정으로 강제한다.** 도메인 모듈 (`lab-<domain>/domain`) 이 `api(labCommon)` 으로 통째 노출하면 인프라성 코드까지 consumer 에게 transitive 로 흘러간다 — 도메인 entity 가 `TransactionProvider` 같은 어댑터 인터페이스를 잘못 import 해도 컴파일러가 못 막는다. 분리하면 super-type 가시성이 정말 필요한 마커/포트만 `api(...)` 로 노출되고, 인프라성 인터페이스는 `lab-{domain}/app` 등의 어댑터 모듈에서만 `implementation(...)` 으로 받는다. 새 도메인 모듈 추가 시 build.gradle.kts 한 줄 (`api(labCommonDomain) + api(labCommonPort)`) 만으로 의도 정합.
 
 ## component scan 범위
 

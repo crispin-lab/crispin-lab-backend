@@ -83,54 +83,13 @@ import org.jetbrains.exposed.sql.update
 import org.springframework.stereotype.Repository
 
 @Repository
-class ExposedPageRepository : PageRepository {
-    override fun save(page: Page): Page =
-        Pages.selectAll()
-            .where { Pages.id eq page.id.value }
-            .firstOrNull()
-            ?.let { update(page) }
-            ?: insert(page)
+class ExposedPageRepository :
+    ExposedEntityRepository<Page, PageId>(),
+    PageRepository {
+    override val table: Table = Pages
+    override val idColumn: Column<Long> = Pages.id
 
-    override fun findBy(id: PageId): Page? =
-        Pages.selectAll()
-            .where { Pages.id eq id.value }
-            .firstOrNull()
-            ?.toEntity()
-
-    override fun delete(id: PageId) {
-        Pages.deleteWhere { Pages.id eq id.value }
-    }
-
-    private fun insert(page: Page): Page =
-        page.also {
-            Pages.insert {
-                it[id] = page.id.value
-                it[authorId] = page.authorId.value
-                it[title] = page.title
-                it[body] = page.body
-                it[visibility] = page.visibility.name
-                it[createdAt] = page.createdAt
-                it[updatedAt] = page.updatedAt
-            }
-        }
-
-    private fun update(page: Page): Page =
-        page.also {
-            Pages.update({ Pages.id eq page.id.value }) {
-                it[title] = page.title
-                it[body] = page.body
-                it[visibility] = page.visibility.name
-                it[updatedAt] = page.updatedAt
-            }
-        }
-
-    private fun decodeVisibility(stored: String): Visibility =
-        runCatching { stored.asVisibility() }
-            .getOrElse { cause ->
-                throw IllegalStateException("저장된 visibility 값을 해석할 수 없습니다.", cause)
-            }
-
-    private fun ResultRow.toEntity(): Page =
+    override fun ResultRow.toEntity(): Page =
         Page(
             id = PageId(this[Pages.id]),
             authorId = UserId(this[Pages.authorId]),
@@ -138,18 +97,71 @@ class ExposedPageRepository : PageRepository {
             body = this[Pages.body],
             visibility = decodeVisibility(this[Pages.visibility]),
             createdAt = this[Pages.createdAt],
-            updatedAt = this[Pages.updatedAt],
+            updatedAt = this[Pages.updatedAt]
         )
+
+    override fun insert(entity: Page) {
+        Pages.insert {
+            it[id] = entity.id.value
+            it[authorId] = entity.authorId.value
+            it[title] = entity.title
+            it[body] = entity.body
+            it[visibility] = entity.visibility.name
+            it[createdAt] = entity.createdAt
+            it[updatedAt] = entity.updatedAt
+        }
+    }
+
+    override fun update(entity: Page) {
+        Pages.update({ Pages.id eq entity.id.value }) {
+            it[title] = entity.title
+            it[body] = entity.body
+            it[visibility] = entity.visibility.name
+            it[updatedAt] = entity.updatedAt
+        }
+    }
+
+    private fun decodeVisibility(stored: String): Visibility =
+        runCatching { stored.asVisibility() }
+            .getOrElse { cause ->
+                throw IllegalStateException("저장된 visibility 값을 해석할 수 없습니다.", cause)
+            }
 }
 ```
 
+### ExposedEntityRepository base
+
+`lab-space/app/adapter/persistence/ExposedEntityRepository.kt` 에 다음 abstract class 가 있다:
+
+```kotlin
+abstract class ExposedEntityRepository<E : Entity<I>, I : EntityId> {
+    protected abstract val table: Table
+    protected abstract val idColumn: Column<Long>
+
+    protected abstract fun ResultRow.toEntity(): E
+    protected abstract fun insert(entity: E)
+    protected abstract fun update(entity: E)
+
+    fun save(entity: E): E = ...            // SELECT → insert/update 분기
+    fun findBy(id: I): E? = ...
+    fun findAllBy(ids: List<I>): List<E> = ...
+    fun delete(id: I) = ...
+}
+```
+
+- 어댑터는 `table`, `idColumn`, `ResultRow.toEntity()`, `insert`, `update` 만 구현. SELECT → insert/update 분기와 findBy/findAllBy/delete 의 SQL 보일러플레이트는 base 가 통합.
+- 어댑터 클래스명 prefix 는 **기술 스택**(`Exposed`) 으로. `MySql`, `Redis` 등도 같은 결.
+- 도메인 특화 메서드 (`findByPageId`, `findBySpaceId`, `attach/detach` 등) 는 어댑터에 그대로 둔다 — base 가 일반화하지 않는다.
+- 도메인 port Repository 인터페이스 (`PageRepository` 등) 는 **공통 super type 없이** 각자 정의. base 가 강제하는 추상화는 어댑터 측에만.
+- `saveAll` / `batchInsert` 만 쓰는 어댑터 (예: `ExposedPageLinkRepository`) 는 base 의 단건 CRUD 가 무의미하므로 base 상속하지 않는다.
+
 ### 작성 시 따져볼 것
 
-- 어댑터 클래스명 prefix 는 **기술 스택**(`Exposed`) 으로. `MySql`, `Redis` 등도 같은 결.
 - 매핑 함수 이름은 `ResultRow.toEntity()` — `from`, `mapToPage` 등 흩뿌리지 말 것. 한 어댑터 안에서 일관.
 - enum 은 컬럼에 `name` 으로 저장하고 읽을 때 `asXxx()` 로 복원. 인덱스가 필요하면 별도 정수 컬럼 고려.
 - **DB 손상 enum 매핑은 `IllegalStateException` 으로 래핑** — `asVisibility()` 가 `IllegalArgumentException` 을 던지지만, 어댑터에서 그대로 흘리면 `GlobalExceptionHandler` 가 400 으로 매핑한다. DB 에 깨진 값이 들어 있는 건 외부 입력 오류가 아니라 운영 결함이므로 `decodeXxx` 헬퍼로 래핑해 500 으로 응답되게 한다 (`error-messages.md` 의 "외부 입력 / 내부 상태" 구분과 정합).
 - `updatedAt` 은 어댑터에서 갱신하지 않는다 — entity 메서드가 이미 갱신했음 (`entity.md` "`updatedAt` 갱신 누락" 참조).
+- 도메인 port 의 `save` 파라미터 이름은 `entity` 로 통일 — base 의 `save(entity: E)` 와 시그니처 정합. 다른 이름 (`page`, `space` 등) 을 쓰면 named-argument 경고가 뜬다.
 
 ## Search / Retriever (보조 조회)
 

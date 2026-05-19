@@ -148,7 +148,7 @@ abstract class ExposedEntityRepository<E : Entity<I>, I : EntityId> {
     protected abstract fun upsertBody(builder: UpsertStatement<Long>, entity: E)
     protected open val updateExclude: List<Column<*>> = emptyList()
 
-    fun save(entity: E): E = ...                       // public — port 가 모두 노출. 단일 SQL upsert (INSERT ... ON CONFLICT (id) DO UPDATE SET ...). updateExclude 컬럼은 SET 절에서 제외
+    open fun save(entity: E): E = ...                  // public — port 가 모두 노출. 단일 SQL upsert (INSERT ... ON CONFLICT (id) DO UPDATE SET ...). updateExclude 컬럼은 SET 절에서 제외. SQLState 변환이 필요한 어댑터는 override
     fun findBy(id: I): E? = ...                        // public — port 가 모두 노출. deletedAtColumn 이 컬럼이면 자동 필터
     protected open fun findAllBy(ids: List<I>): List<E> = ...
     protected open fun delete(id: I) = ...             // deletedAtColumn 이 컬럼이면 UPDATE, null 이면 DELETE

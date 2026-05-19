@@ -33,6 +33,6 @@ class AuthLoginController(
                 password = password
             )
 
-        override fun toString(): String = "Body(email=$email, password=***)"
+        override fun toString(): String = "Body(email=***, password=***)"
     }
 }

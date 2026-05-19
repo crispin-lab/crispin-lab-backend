@@ -48,5 +48,16 @@ class AuthLogoutControllerTest :
                     ).then(status().isNoContent)
                 verify(exactly = 1) { useCase.perform(any()) }
             }
+
+            it("형식이 깨진 토큰도 204 (멱등)") {
+                every { useCase.perform(any()) } returns Unit
+
+                controller
+                    .`when`(
+                        post("/v1/auth/logout")
+                            .body(mapOf("token" to "not-a-session-token"))
+                    ).then(status().isNoContent)
+                verify(exactly = 1) { useCase.perform(any()) }
+            }
         }
     })

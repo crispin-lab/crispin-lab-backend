@@ -26,5 +26,7 @@ class AuthLogoutController(
         val token: String
     ) {
         fun toRequest(): Request = Request(token = token)
+
+        override fun toString(): String = "Body(token=***)"
     }
 }

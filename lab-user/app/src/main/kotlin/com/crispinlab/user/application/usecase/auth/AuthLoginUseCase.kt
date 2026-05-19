@@ -24,13 +24,13 @@ class AuthLoginUseCase(
     private val transactionProvider: TransactionProvider
 ) : AuthLogin {
     override fun perform(request: Request): Result =
-        transactionProvider.transactional {
-            request
-                .toEmail()
-                .toUser()
-                .verifyPassword(request.password)
-                .toResult()
-        }
+        transactionProvider
+            .transactional(readOnly = true) {
+                request
+                    .toEmail()
+                    .toUser()
+                    .verifyPassword(request.password)
+            }.toResult()
 
     private fun Request.toEmail(): EmailAddress =
         runCatching { EmailAddress(email) }

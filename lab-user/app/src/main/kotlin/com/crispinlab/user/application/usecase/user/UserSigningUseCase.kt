@@ -28,16 +28,17 @@ class UserSigningUseCase(
     private val transactionProvider: TransactionProvider
 ) : UserSigning {
     override fun perform(request: Request): Result =
-        transactionProvider.transactional {
-            request
-                .also {
-                    it.validate()
-                }.toEntity()
-                .save()
-                .also {
-                    it.saveCredential(request.password)
-                }.toResult()
-        }
+        transactionProvider
+            .transactional {
+                request
+                    .also {
+                        it.validate()
+                    }.toEntity()
+                    .save()
+                    .also {
+                        it.saveCredential(request.password)
+                    }
+            }.toResult()
 
     private fun Request.validate() {
         if (userRepository.existsByEmail(email)) {

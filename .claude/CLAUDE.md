@@ -7,6 +7,7 @@
 @rules/architecture.md
 @rules/package-structure.md
 @rules/conventions.md
+@rules/comments.md
 @rules/entity.md
 @rules/usecase-request.md
 @rules/usecase-implementation.md

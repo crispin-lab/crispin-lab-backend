@@ -18,53 +18,26 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 import org.jetbrains.exposed.v1.jdbc.upsert
 
-/**
- * Exposed 어댑터 공통 동작을 제공하는 abstract base.
- *
- * `save` / `findBy` 는 모든 어댑터의 port 가 노출하므로 public,
- * `findAllBy` / `delete` 는 protected 로 두어 port 시그니처가 정의된 어댑터에서만
- * visibility widening 으로 재노출한다 (aggregate 일관성 보존 — 예: `PageRevision` 은
- * `Page` aggregate 내부라 port 에 `delete` 가 없고 외부에서 호출되면 안 된다).
- *
- * Soft delete 지원: `deletedAtColumn` 을 SoftDeletable entity 어댑터는 실제 컬럼으로, hard delete 어댑터는 `null`
- * 로 명시 override. SoftDeletable 어댑터에선 `delete(id)` 가 hard DELETE 대신 `UPDATE deleted_at = now()` 로
- * 동작하고 `findBy` / `findAllBy` / 자식 도메인 특화 쿼리는 `notDeleted()` 헬퍼로 `deleted_at IS NULL` 자동 필터.
- * 정책 룰은 `repository.md` 참조.
- */
 abstract class ExposedEntityRepository<E : Entity<I>, I : EntityId> {
     protected abstract val table: Table
     protected abstract val idColumn: Column<Long>
-
-    /** SoftDeletable entity 의 어댑터는 실제 컬럼, hard delete 어댑터는 `null` 을 명시 override (`repository.md`). */
     protected abstract val deletedAtColumn: Column<Instant?>?
 
     protected abstract fun ResultRow.toEntity(): E
 
-    /**
-     * INSERT 와 UPDATE 양쪽에 적용되는 컬럼 매핑.
-     * UPDATE 시 INSERT 값으로 덮이지 말아야 하는 immutable 컬럼은 [updateExclude] 에 명시한다.
-     */
     protected abstract fun upsertBody(
         builder: UpsertStatement<Long>,
         entity: E
     )
 
-    /** UPDATE 시 INSERT 값으로 덮이지 말아야 하는 immutable 컬럼 (예: createdAt, FK). default 는 비어 있음. */
     protected open val updateExclude: List<Column<*>> = emptyList()
 
-    /**
-     * 단일 SQL upsert (`INSERT ... ON CONFLICT (id) DO UPDATE SET ...`) 로 동작.
-     * ON CONFLICT 대상은 [idColumn] 충돌 (PK) 만 원자 처리한다.
-     * 그 외 unique 제약 충돌은 DB 예외로 전파된다 — UseCase 레벨 사전 체크
-     * (`existsByXxx`) + DB constraint 의 fail-fast 조합으로 보호하거나,
-     * 그 unique 컬럼을 `keys` 로 두는 별도 시그니처를 도입한다 (`repository.md`).
-     */
-    fun save(entity: E): E {
+    open fun save(entity: E): E {
         table.upsert(
             idColumn,
             onUpdateExclude = updateExclude
-        ) { stmt ->
-            upsertBody(stmt, entity)
+        ) { statement ->
+            upsertBody(statement, entity)
         }
         return entity
     }
@@ -97,9 +70,5 @@ abstract class ExposedEntityRepository<E : Entity<I>, I : EntityId> {
         }
     }
 
-    /**
-     * `deletedAtColumn` 이 `null` 이면 (hard delete 어댑터) 항상 true, 컬럼이면 `deleted_at IS NULL`.
-     * 자식 어댑터의 도메인 특화 쿼리에서도 같은 헬퍼로 일관 필터.
-     */
     protected fun notDeleted(): Op<Boolean> = deletedAtColumn?.isNull() ?: Op.TRUE
 }

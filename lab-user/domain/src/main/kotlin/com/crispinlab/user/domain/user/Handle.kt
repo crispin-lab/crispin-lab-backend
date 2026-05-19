@@ -1,0 +1,17 @@
+package com.crispinlab.user.domain.user
+
+data class Handle(
+    val value: String
+) {
+    init {
+        require(HANDLE_REGEX.matches(value)) {
+            "핸들은 영문 소문자, 숫자, 밑줄(_) 로 ${MIN_LENGTH}~${MAX_LENGTH}자여야 합니다."
+        }
+    }
+
+    companion object {
+        const val MIN_LENGTH: Int = 3
+        const val MAX_LENGTH: Int = 30
+        private val HANDLE_REGEX: Regex = Regex("""^[a-z0-9_]{$MIN_LENGTH,$MAX_LENGTH}$""")
+    }
+}

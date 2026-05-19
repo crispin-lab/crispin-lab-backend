@@ -1,4 +1,4 @@
-package com.crispinlab.space.testsupport
+package com.crispinlab.common.persistence
 
 import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.v1.jdbc.Database

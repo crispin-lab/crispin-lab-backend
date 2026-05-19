@@ -12,10 +12,12 @@ COPY build-logic build-logic
 COPY app/build.gradle.kts app/build.gradle.kts
 COPY lab-common/build.gradle.kts lab-common/build.gradle.kts
 COPY lab-common-infra/build.gradle.kts lab-common-infra/build.gradle.kts
+COPY lab-common-persistence/build.gradle.kts lab-common-persistence/build.gradle.kts
 COPY lab-api-support/build.gradle.kts lab-api-support/build.gradle.kts
 COPY lab-space/domain/build.gradle.kts lab-space/domain/build.gradle.kts
 COPY lab-space/app/build.gradle.kts lab-space/app/build.gradle.kts
 COPY lab-user/domain/build.gradle.kts lab-user/domain/build.gradle.kts
+COPY lab-user/app/build.gradle.kts lab-user/app/build.gradle.kts
 
 RUN --mount=type=cache,target=/root/.gradle \
     ./gradlew --no-daemon :app:dependencies -q

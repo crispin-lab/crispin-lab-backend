@@ -33,6 +33,7 @@ spring-jdbc = { module = "org.springframework:spring-jdbc" }
 spring-web = { module = "org.springframework:spring-web" }
 spring-webmvc = { module = "org.springframework:spring-webmvc" }
 spring-test = { module = "org.springframework:spring-test" }
+spring-security-crypto = { module = "org.springframework.security:spring-security-crypto" }
 jakarta-servlet-api = { module = "jakarta.servlet:jakarta.servlet-api" }
 jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind" }
 jackson-module-kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin" }
@@ -53,6 +54,8 @@ junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher
 kotest-runner-junit5 = { module = "io.kotest:kotest-runner-junit5", version.ref = "kotest" }
 kotest-extensions-spring = { module = "io.kotest:kotest-extensions-spring", version.ref = "kotest" }
 spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
+spring-boot-test = { module = "org.springframework.boot:spring-boot-test" }
+spring-boot-test-autoconfigure = { module = "org.springframework.boot:spring-boot-test-autoconfigure" }
 rest-assured = { module = "io.rest-assured:rest-assured", version.ref = "rest-assured" }
 rest-assured-kotlin-extensions = { module = "io.rest-assured:kotlin-extensions", version.ref = "rest-assured" }
 spring-restdocs-mockmvc = { module = "org.springframework.restdocs:spring-restdocs-mockmvc" }

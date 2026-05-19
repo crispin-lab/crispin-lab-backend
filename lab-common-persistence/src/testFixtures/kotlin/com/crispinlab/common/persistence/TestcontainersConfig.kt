@@ -1,12 +1,12 @@
-package com.crispinlab.space.testsupport
+package com.crispinlab.common.persistence
 
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection
 import org.springframework.context.annotation.Bean
 import org.testcontainers.containers.PostgreSQLContainer
 
-// app 모듈도 동일 패턴의 자체 TestcontainersConfig 를 둔다 — 모듈 의존 방향상
-// 컨테이너 인스턴스를 공유할 수 없어, 같은 빌드 JVM 에서 두 컨테이너가 동시 기동될 수 있다.
+// 같은 빌드 JVM 의 모듈들이 [PostgresTestContext.container] 인스턴스를 공유한다.
+// app 모듈은 자체 TestcontainersConfig (별도 컨테이너 인스턴스) 를 둘 수 있어 본 헬퍼와 공존 가능.
 @TestConfiguration(proxyBeanMethods = false)
 class TestcontainersConfig {
     @Bean

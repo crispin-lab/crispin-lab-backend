@@ -54,7 +54,10 @@ abstract class ExposedEntityRepository<E : Entity<I>, I : EntityId> {
 
     /**
      * 단일 SQL upsert (`INSERT ... ON CONFLICT (id) DO UPDATE SET ...`) 로 동작.
-     * snowflake ID PK 든 unique 컬럼 분기든 race 없이 원자적.
+     * ON CONFLICT 대상은 [idColumn] 충돌 (PK) 만 원자 처리한다.
+     * 그 외 unique 제약 충돌은 DB 예외로 전파된다 — UseCase 레벨 사전 체크
+     * (`existsByXxx`) + DB constraint 의 fail-fast 조합으로 보호하거나,
+     * 그 unique 컬럼을 `keys` 로 두는 별도 시그니처를 도입한다 (`repository.md`).
      */
     fun save(entity: E): E {
         table.upsert(

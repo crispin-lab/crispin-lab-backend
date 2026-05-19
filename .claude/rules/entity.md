@@ -33,7 +33,7 @@ interface SoftDeletable {
 - `LongValue` — Long 기반 단일 값의 공통 super type. EntityId 외에 Money / Score 같은 도메인 값 객체도 같은 직렬화 정책에 묶일 enabler.
 - `EntityId` — entity 의 식별자 마커. Jackson customizer 가 이 타입을 대상으로 String 직렬화 처리 (`EntityIdJacksonConfiguration`).
 - `Entity<ID>` — entity 자체의 마커. `ExposedEntityRepository<E, I>` 제네릭 base 의 enabler.
-- `SoftDeletable` — soft delete 정책 마커. `Entity<ID>` 와 직교 (양쪽을 함께 implement). 어댑터의 `deletedAtColumn` override 와 짝을 이뤄 `delete(id)` 자동 분기 + `notDeleted()` 자동 필터를 활성화 (`repository.md`). 읽기 프로퍼티만 두는 mixin 마커. entity 의 `delete()` 도메인 메서드는 미래 invariant 보호 enabler — 표준 삭제 흐름은 UseCase 의 `repository.delete(id)` (`usecase-implementation.md` "Deleting").
+- `SoftDeletable` — soft delete 정책 마커. `Entity<ID>` 와 직교 (양쪽을 함께 implement). 어댑터의 `deletedAtColumn` override 와 짝을 이뤄 `delete(id)` 자동 분기 + `notDeleted()` 자동 필터를 활성화 (`repository.md`). 읽기 프로퍼티만 두는 mixin 마커. entity 자체에는 `delete()` 같은 도메인 메서드를 두지 않는다 — 삭제는 UseCase 의 `repository.delete(id)` 한 줄이 표준 (`usecase-implementation.md` "Deleting").
 
 reflection 변환 헬퍼 (`Long.asLongValue<T>()`) 는 도입하지 않는다 — 도메인 친화 한국어 에러 메시지를 유지하기 위해 각 EntityId 가 명시 변환 함수 (`asPageId` 등) 를 갖는다.
 

@@ -12,9 +12,11 @@ import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.core.statements.UpsertStatement
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
+import org.jetbrains.exposed.v1.jdbc.upsert
 
 /**
  * Exposed 어댑터 공통 동작을 제공하는 abstract base.
@@ -38,30 +40,34 @@ abstract class ExposedEntityRepository<E : Entity<I>, I : EntityId> {
 
     protected abstract fun ResultRow.toEntity(): E
 
-    protected abstract fun insert(entity: E)
+    /**
+     * INSERT 와 UPDATE 양쪽에 적용되는 컬럼 매핑.
+     * UPDATE 시 INSERT 값으로 덮이지 말아야 하는 immutable 컬럼은 [updateExclude] 에 명시한다.
+     */
+    protected abstract fun upsertBody(
+        builder: UpsertStatement<Long>,
+        entity: E
+    )
 
-    protected abstract fun update(entity: E)
+    /** UPDATE 시 INSERT 값으로 덮이지 말아야 하는 immutable 컬럼 (예: createdAt, FK). default 는 비어 있음. */
+    protected open val updateExclude: List<Column<*>> = emptyList()
 
     /**
-     * SELECT → insert/update 분기.
-     *
-     * snowflake ID 단건 PK 가정이라 동시 insert 충돌 확률이 매우 낮다.
-     * slug 같은 unique 컬럼 기반 분기에는 이 패턴을 복제하지 말고 `upsert` 로
-     * 한 번에 처리한다 (`repository.md` "race 주의" 참조).
-     *
-     * SELECT 분기에 `notDeleted()` 가 들어가 deleted row 가 일반 update 경로로 흘러 `deleted_at` 이 silent 하게 덮이는
-     * 사고를 차단한다 — `entity.delete() + save` 경로 (미래 invariant 보호용 enabler) 도 진입 시점엔 row 가 not-deleted
-     * 라 정상 흐름. 표준 삭제 흐름은 `repository.delete(id)` (`repository.md`).
+     * 단일 SQL upsert (`INSERT ... ON CONFLICT (id) DO UPDATE SET ...`) 로 동작.
+     * ON CONFLICT 대상은 [idColumn] 충돌 (PK) 만 원자 처리한다.
+     * 그 외 unique 제약 충돌은 DB 예외로 전파된다 — UseCase 레벨 사전 체크
+     * (`existsByXxx`) + DB constraint 의 fail-fast 조합으로 보호하거나,
+     * 그 unique 컬럼을 `keys` 로 두는 별도 시그니처를 도입한다 (`repository.md`).
      */
-    fun save(entity: E): E =
-        table
-            .selectAll()
-            .where { (idColumn eq entity.id.value) and notDeleted() }
-            .firstOrNull()
-            ?.let {
-                update(entity)
-                entity
-            } ?: entity.also { insert(it) }
+    fun save(entity: E): E {
+        table.upsert(
+            idColumn,
+            onUpdateExclude = updateExclude
+        ) { stmt ->
+            upsertBody(stmt, entity)
+        }
+        return entity
+    }
 
     fun findBy(id: I): E? =
         table

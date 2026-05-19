@@ -12,9 +12,8 @@ import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.core.statements.UpsertStatement
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.update
 import org.springframework.stereotype.Repository
 
 @Repository
@@ -24,6 +23,14 @@ class ExposedCommentRepository :
     override val table = Comments
     override val idColumn = Comments.id
     override val deletedAtColumn = Comments.deletedAt
+    override val updateExclude =
+        listOf(
+            Comments.id,
+            Comments.pageId,
+            Comments.authorId,
+            Comments.createdAt,
+            Comments.deletedAt
+        )
 
     override fun ResultRow.toEntity(): Comment =
         Comment(
@@ -39,24 +46,17 @@ class ExposedCommentRepository :
     @Suppress("RedundantOverride")
     override fun delete(id: CommentId) = super.delete(id)
 
-    override fun insert(entity: Comment) {
-        Comments.insert {
-            it[id] = entity.id.value
-            it[pageId] = entity.pageId.value
-            it[authorId] = entity.authorId.value
-            it[body] = entity.body
-            it[createdAt] = entity.createdAt
-            it[updatedAt] = entity.updatedAt
-            it[deletedAt] = entity.deletedAt
-        }
-    }
-
-    override fun update(entity: Comment) {
-        Comments.update({ Comments.id eq entity.id.value }) {
-            it[body] = entity.body
-            it[updatedAt] = entity.updatedAt
-            it[deletedAt] = entity.deletedAt
-        }
+    override fun upsertBody(
+        builder: UpsertStatement<Long>,
+        entity: Comment
+    ) {
+        builder[Comments.id] = entity.id.value
+        builder[Comments.pageId] = entity.pageId.value
+        builder[Comments.authorId] = entity.authorId.value
+        builder[Comments.body] = entity.body
+        builder[Comments.createdAt] = entity.createdAt
+        builder[Comments.updatedAt] = entity.updatedAt
+        builder[Comments.deletedAt] = entity.deletedAt
     }
 
     override fun findByPageId(

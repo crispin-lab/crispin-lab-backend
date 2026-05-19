@@ -35,7 +35,7 @@ class CommentTest :
             }
 
             it("삭제된 댓글은 수정할 수 없다") {
-                val comment: Comment = basicComment().also { it.delete() }
+                val comment: Comment = basicComment(deletedAt = DUMMY_INSTANT)
 
                 shouldThrow<IllegalStateException> {
                     comment.edit(body = "수정 시도")
@@ -47,26 +47,6 @@ class CommentTest :
 
                 shouldThrow<IllegalArgumentException> {
                     comment.edit(body = "")
-                }
-            }
-        }
-
-        describe("삭제") {
-            it("deletedAt·updatedAt 이 함께 갱신되고 isDeleted 가 true 가 된다") {
-                val comment: Comment = basicComment()
-
-                comment.delete()
-
-                comment.deletedAt shouldNotBe null
-                comment.updatedAt shouldNotBe DUMMY_INSTANT
-                comment.isDeleted shouldBe true
-            }
-
-            it("이미 삭제된 댓글을 다시 삭제할 수 없다") {
-                val comment: Comment = basicComment().also { it.delete() }
-
-                shouldThrow<IllegalStateException> {
-                    comment.delete()
                 }
             }
         }

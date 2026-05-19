@@ -10,9 +10,8 @@ import com.crispinlab.space.domain.user.UserId
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.core.statements.UpsertStatement
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.update
 import org.springframework.stereotype.Repository
 
 @Repository
@@ -22,6 +21,7 @@ class ExposedPageRevisionRepository :
     override val table = PageRevisions
     override val idColumn = PageRevisions.id
     override val deletedAtColumn = null
+    override val updateExclude = listOf(PageRevisions.id, PageRevisions.createdAt)
 
     override fun ResultRow.toEntity(): PageRevision =
         PageRevision(
@@ -34,27 +34,17 @@ class ExposedPageRevisionRepository :
             createdAt = this[PageRevisions.createdAt]
         )
 
-    override fun insert(entity: PageRevision) {
-        PageRevisions.insert {
-            it[id] = entity.id.value
-            it[pageId] = entity.pageId.value
-            it[version] = entity.version
-            it[title] = entity.title
-            it[content] = entity.content.raw
-            it[authorId] = entity.authorId.value
-            it[createdAt] = entity.createdAt
-        }
-    }
-
-    override fun update(entity: PageRevision) {
-        PageRevisions.update({ PageRevisions.id eq entity.id.value }) {
-            it[pageId] = entity.pageId.value
-            it[version] = entity.version
-            it[title] = entity.title
-            it[content] = entity.content.raw
-            it[authorId] = entity.authorId.value
-            it[createdAt] = entity.createdAt
-        }
+    override fun upsertBody(
+        builder: UpsertStatement<Long>,
+        entity: PageRevision
+    ) {
+        builder[PageRevisions.id] = entity.id.value
+        builder[PageRevisions.pageId] = entity.pageId.value
+        builder[PageRevisions.version] = entity.version
+        builder[PageRevisions.title] = entity.title
+        builder[PageRevisions.content] = entity.content.raw
+        builder[PageRevisions.authorId] = entity.authorId.value
+        builder[PageRevisions.createdAt] = entity.createdAt
     }
 
     override fun findByPageId(pageId: PageId): List<PageRevision> =

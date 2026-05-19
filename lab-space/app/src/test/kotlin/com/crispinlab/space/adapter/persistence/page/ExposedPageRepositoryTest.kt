@@ -4,6 +4,8 @@ import com.crispinlab.space.domain.page.PageContent
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.space.SpaceId
+import com.crispinlab.space.domain.user.UserId
+import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.Fixtures.basicPage
 import com.crispinlab.space.testsupport.PostgresTestContext
 import io.kotest.core.spec.style.DescribeSpec
@@ -191,6 +193,67 @@ class ExposedPageRepositoryTest :
                             .where { Pages.id eq 90L }
                             .first()
                     row[Pages.deletedAt] shouldBe firstDeletedAt
+                }
+            }
+
+            it("save 가 soft delete 된 row 의 deleted_at 을 덮지 않는다") {
+                val originalDeletedAt =
+                    transaction(database) {
+                        repository.save(basicPage(id = PageId(100L)))
+                        repository.delete(PageId(100L))
+                        Pages
+                            .selectAll()
+                            .where { Pages.id eq 100L }
+                            .first()[Pages.deletedAt]
+                    }.shouldNotBeNull()
+
+                transaction(database) {
+                    repository.save(
+                        basicPage(id = PageId(100L), title = "복구 시도", deletedAt = null)
+                    )
+                }
+
+                transaction(database) {
+                    val row =
+                        Pages
+                            .selectAll()
+                            .where { Pages.id eq 100L }
+                            .first()
+                    row[Pages.deletedAt] shouldBe originalDeletedAt
+                    repository.findBy(PageId(100L)).shouldBeNull()
+                }
+            }
+
+            it("save 는 immutable 컬럼 (spaceId / authorId / createdAt) 을 덮지 않는다") {
+                transaction(database) {
+                    repository.save(
+                        basicPage(
+                            id = PageId(110L),
+                            spaceId = SpaceId(800L),
+                            authorId = UserId(900L),
+                            createdAt = DUMMY_INSTANT
+                        )
+                    )
+                }
+
+                transaction(database) {
+                    repository.save(
+                        basicPage(
+                            id = PageId(110L),
+                            spaceId = SpaceId(801L),
+                            authorId = UserId(901L),
+                            createdAt = DUMMY_INSTANT.plusSeconds(60),
+                            title = "수정 시도"
+                        )
+                    )
+                }
+
+                transaction(database) {
+                    val found = repository.findBy(PageId(110L)).shouldNotBeNull()
+                    found.spaceId shouldBe SpaceId(800L)
+                    found.authorId shouldBe UserId(900L)
+                    found.createdAt shouldBe DUMMY_INSTANT
+                    found.title shouldBe "수정 시도"
                 }
             }
         }

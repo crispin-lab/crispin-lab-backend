@@ -14,7 +14,7 @@
 5. **상태 변경은 도메인 메서드로만** — `entity.title = "x"` 가 아니라 `entity.rename("x")`.
 6. **값 객체(Value Object) 는 `data class`** — Money, EmailAddress 등 불변 보장이 필요한 작은 타입. Long 기반 단일 값 (예: Money) 은 `LongValue` implement 로 같은 직렬화 정책에 묶일 수 있다.
 7. **`init` 은 형식·길이·빈 값 검증** — 외부 의존이 필요한 검증은 UseCase 책임 (`conventions.md` "검증 책임 분리").
-8. **Soft delete 가 필요한 entity 는 `SoftDeletable` implement** — `lab-common-domain` 의 마커. `override var deletedAt: Instant? private set` + `delete()` 도메인 메서드 (`check(!isDeleted)` 가드) + 상태 전이 메서드 진입부에 `check(!isDeleted)` 가드. `isDeleted` 는 interface default impl 을 그대로 사용. `Entity<ID>` 와 직교 — 양쪽을 함께 implement (`Page : Entity<PageId>, SoftDeletable`). 어댑터 자동 분기는 `repository.md` 참조.
+8. **Soft delete 가 필요한 entity 는 `SoftDeletable` implement** — `lab-common-domain` 의 마커. `override var deletedAt: Instant? private set` + 상태 전이 메서드 진입부에 `check(!isDeleted)` 가드. `isDeleted` 는 interface default impl 을 그대로 사용. `Entity<ID>` 와 직교 — 양쪽을 함께 implement (`Page : Entity<PageId>, SoftDeletable`). entity 자체에는 `delete()` 같은 도메인 메서드를 두지 않는다 — 삭제 흐름은 UseCase 의 `repository.delete(id)` 한 줄이 표준이고, base 가 `deletedAtColumn` 분기로 `UPDATE deleted_at = now()` 를 처리한다 (`repository.md`). 어댑터는 `deletedAtColumn` 을 `updateExclude` 에 포함해 `save` 가 `deleted_at` 을 절대 덮지 못하게 한다.
 
 ## LongValue / EntityId / Entity / SoftDeletable 계층
 
@@ -33,7 +33,7 @@ interface SoftDeletable {
 - `LongValue` — Long 기반 단일 값의 공통 super type. EntityId 외에 Money / Score 같은 도메인 값 객체도 같은 직렬화 정책에 묶일 enabler.
 - `EntityId` — entity 의 식별자 마커. Jackson customizer 가 이 타입을 대상으로 String 직렬화 처리 (`EntityIdJacksonConfiguration`).
 - `Entity<ID>` — entity 자체의 마커. `ExposedEntityRepository<E, I>` 제네릭 base 의 enabler.
-- `SoftDeletable` — soft delete 정책 마커. `Entity<ID>` 와 직교 (양쪽을 함께 implement). 어댑터의 `deletedAtColumn` override 와 짝을 이뤄 `delete(id)` 자동 분기 + `notDeleted()` 자동 필터를 활성화 (`repository.md`). 읽기 프로퍼티만 두는 mixin 마커. entity 의 `delete()` 도메인 메서드는 미래 invariant 보호 enabler — 표준 삭제 흐름은 UseCase 의 `repository.delete(id)` (`usecase-implementation.md` "Deleting").
+- `SoftDeletable` — soft delete 정책 마커. `Entity<ID>` 와 직교 (양쪽을 함께 implement). 어댑터의 `deletedAtColumn` override 와 짝을 이뤄 `delete(id)` 자동 분기 + `notDeleted()` 자동 필터를 활성화 (`repository.md`). 읽기 프로퍼티만 두는 mixin 마커. entity 자체에는 `delete()` 같은 도메인 메서드를 두지 않는다 — 삭제는 UseCase 의 `repository.delete(id)` 한 줄이 표준 (`usecase-implementation.md` "Deleting").
 
 reflection 변환 헬퍼 (`Long.asLongValue<T>()`) 는 도입하지 않는다 — 도메인 친화 한국어 에러 메시지를 유지하기 위해 각 EntityId 가 명시 변환 함수 (`asPageId` 등) 를 갖는다.
 
@@ -150,20 +150,13 @@ class Page(
         check(!isDeleted) { "삭제된 페이지는 수정할 수 없습니다." }
         // ...
     }
-
-    fun delete() {
-        check(!isDeleted) { "이미 삭제된 페이지입니다." }
-        val occurredAt: Instant = now()
-        this.deletedAt = occurredAt
-        this.updatedAt = occurredAt
-    }
 }
 ```
 
-- **`SoftDeletable` implement + `override var deletedAt: Instant? private set`** — 마커는 읽기 프로퍼티만 강제하지만 entity 의 상태 전이를 위해 `var` 로 노출. `isDeleted` 는 interface default impl 을 그대로 사용 (entity 안에 override 하지 않는다).
-- **`delete()` 도메인 메서드** — `check(!isDeleted)` 가드 + `deletedAt`/`updatedAt` 같은 시점으로 갱신. UseCase 의 표준 삭제 흐름은 `repository.delete(id)` 한 줄 (base 의 자동 분기로 `UPDATE deleted_at = now()` 동작) 이라 현 시점 본 메서드는 호출처가 없다. 미래에 추가 invariant (상태 머신, 부수효과) 가 필요해질 때를 위한 enabler 로 유지 — 그 PR 에서 명시적 사용처와 함께 활성. 자세한 흐름 결정은 `usecase-implementation.md` "Deleting" / `repository.md` 참조.
+- **`SoftDeletable` implement + `override var deletedAt: Instant? private set`** — 마커는 읽기 프로퍼티만 강제하지만 entity 의 상태 전이를 위해 `var` 로 노출 (생성자 파라미터로 받음 — 어댑터의 `toEntity()` 가 DB row 의 `deleted_at` 을 그대로 재구성). `isDeleted` 는 interface default impl 을 그대로 사용 (entity 안에 override 하지 않는다).
+- **삭제 도메인 메서드는 두지 않는다** — `delete()` 메서드를 entity 에 두면 호출처 없는 dead code 가 된다. 삭제는 UseCase 의 `repository.delete(id)` 한 줄이 표준 (base 의 자동 분기로 `UPDATE deleted_at = now()` 동작 — `repository.md`). 미래에 상태 머신·부수효과 같은 추가 invariant 가 필요해지면 그 PR 에서 도메인 메서드와 호출처를 함께 도입 (`conventions.md` "구현 없는 포트/미사용 코드" 정합).
 - **상태 전이 메서드 가드** — `edit()`, `move()`, `changeVisibility()` 같은 변경 메서드 진입부에 `check(!isDeleted)` 한 줄. 자동 필터가 일반 흐름에서는 deleted entity 를 노출하지 않지만, 도메인 invariant 차원에서 명시.
-- **마이그레이션 동시 변경** — `deleted_at TIMESTAMP NULL` 컬럼 추가 + Exposed `Table` 의 `val deletedAt = timestamp("deleted_at").nullable()` + 어댑터의 `deletedAtColumn` override (`repository.md`, `migration.md`).
+- **마이그레이션 동시 변경** — `deleted_at TIMESTAMP NULL` 컬럼 추가 + Exposed `Table` 의 `val deletedAt = timestamp("deleted_at").nullable()` + 어댑터의 `deletedAtColumn` override + 어댑터의 `updateExclude` 에 `deletedAt` 컬럼 포함 (`repository.md`, `migration.md`).
 
 ## 값 객체 (Value Object)
 

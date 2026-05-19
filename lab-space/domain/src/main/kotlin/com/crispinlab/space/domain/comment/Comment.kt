@@ -37,15 +37,6 @@ class Comment(
         this.updatedAt = now()
     }
 
-    fun delete() {
-        check(!isDeleted) {
-            "이미 삭제된 댓글입니다."
-        }
-        val occurredAt: Instant = now()
-        this.deletedAt = occurredAt
-        this.updatedAt = occurredAt
-    }
-
     private fun validateBody(body: String) {
         require(body.isNotBlank()) {
             "댓글 내용을 입력해 주세요."

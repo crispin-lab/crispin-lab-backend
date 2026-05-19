@@ -181,6 +181,58 @@ class ExposedSpaceRepositoryTest :
                 }
             }
 
+            it("save 가 soft delete 된 row 의 deleted_at 을 덮지 않는다") {
+                val originalDeletedAt =
+                    transaction(database) {
+                        repository.save(basicSpace(id = SpaceId(100L)))
+                        repository.delete(SpaceId(100L))
+                        Spaces
+                            .selectAll()
+                            .where { Spaces.id eq 100L }
+                            .first()[Spaces.deletedAt]
+                    }.shouldNotBeNull()
+
+                transaction(database) {
+                    repository.save(
+                        basicSpace(id = SpaceId(100L), name = "복구 시도", deletedAt = null)
+                    )
+                }
+
+                transaction(database) {
+                    val row =
+                        Spaces
+                            .selectAll()
+                            .where { Spaces.id eq 100L }
+                            .first()
+                    row[Spaces.deletedAt] shouldBe originalDeletedAt
+                    repository.findBy(SpaceId(100L)).shouldBeNull()
+                }
+            }
+
+            it("save 는 immutable 컬럼 (createdAt) 을 덮지 않는다") {
+                transaction(database) {
+                    repository.save(
+                        basicSpace(id = SpaceId(110L), name = "원본", createdAt = DUMMY_INSTANT)
+                    )
+                }
+
+                transaction(database) {
+                    repository.save(
+                        basicSpace(
+                            id = SpaceId(110L),
+                            name = "수정 시도",
+                            createdAt = DUMMY_INSTANT.plusSeconds(60)
+                        )
+                    )
+                }
+
+                transaction(database) {
+                    val found = repository.findBy(SpaceId(110L)).shouldNotBeNull()
+                    found.name shouldBe "수정 시도"
+                    found.createdAt shouldBe DUMMY_INSTANT
+                }
+            }
+
             it("findPage 는 createdAt 이 동일하면 id DESC 로 결정적으로 정렬한다") {
                 transaction(database) {
                     repository.save(

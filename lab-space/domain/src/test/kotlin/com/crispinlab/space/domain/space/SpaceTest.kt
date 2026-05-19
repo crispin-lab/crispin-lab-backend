@@ -4,7 +4,6 @@ import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.Fixtures.basicSpace
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
-import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 
@@ -69,27 +68,9 @@ class SpaceTest :
             }
         }
 
-        describe("soft delete") {
-            it("delete() 호출 시 deletedAt 과 updatedAt 이 같은 시점으로 갱신된다") {
-                val space: Space = basicSpace()
-
-                space.delete()
-
-                space.isDeleted shouldBe true
-                val occurredAt = space.deletedAt.shouldNotBeNull()
-                space.updatedAt shouldBe occurredAt
-            }
-
-            it("이미 삭제된 스페이스에 delete() 를 다시 호출하면 실패한다") {
-                val space: Space = basicSpace().also { it.delete() }
-
-                shouldThrow<IllegalStateException> {
-                    space.delete()
-                }
-            }
-
-            it("삭제된 스페이스는 edit() 가 실패한다") {
-                val space: Space = basicSpace().also { it.delete() }
+        describe("soft delete 상태 가드") {
+            it("edit() 가 실패한다") {
+                val space: Space = basicSpace(deletedAt = DUMMY_INSTANT)
 
                 shouldThrow<IllegalStateException> {
                     space.edit(name = "변경")

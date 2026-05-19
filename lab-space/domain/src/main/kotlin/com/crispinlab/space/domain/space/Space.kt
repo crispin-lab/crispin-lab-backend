@@ -46,15 +46,6 @@ class Space(
         updatedAt = now()
     }
 
-    fun delete() {
-        check(!isDeleted) {
-            "이미 삭제된 스페이스입니다."
-        }
-        val occurredAt: Instant = now()
-        this.deletedAt = occurredAt
-        this.updatedAt = occurredAt
-    }
-
     private fun validateName(name: String) {
         require(name.isNotBlank()) {
             "스페이스 이름을 입력해 주세요."

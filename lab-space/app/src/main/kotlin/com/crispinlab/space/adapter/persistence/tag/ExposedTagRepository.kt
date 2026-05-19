@@ -10,12 +10,11 @@ import com.crispinlab.space.domain.tag.TagId
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.statements.UpsertStatement
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
-import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.insertIgnore
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.update
 import org.springframework.stereotype.Repository
 
 @Repository
@@ -25,6 +24,7 @@ class ExposedTagRepository :
     override val table = Tags
     override val idColumn = Tags.id
     override val deletedAtColumn = null
+    override val updateExclude = listOf(Tags.id, Tags.spaceId, Tags.createdAt)
 
     override fun ResultRow.toEntity(): Tag =
         Tag(
@@ -37,19 +37,14 @@ class ExposedTagRepository :
     @Suppress("RedundantOverride")
     override fun delete(id: TagId) = super.delete(id)
 
-    override fun insert(entity: Tag) {
-        Tags.insert {
-            it[id] = entity.id.value
-            it[spaceId] = entity.spaceId.value
-            it[name] = entity.name
-            it[createdAt] = entity.createdAt
-        }
-    }
-
-    override fun update(entity: Tag) {
-        Tags.update({ Tags.id eq entity.id.value }) {
-            it[name] = entity.name
-        }
+    override fun upsertBody(
+        builder: UpsertStatement<Long>,
+        entity: Tag
+    ) {
+        builder[Tags.id] = entity.id.value
+        builder[Tags.spaceId] = entity.spaceId.value
+        builder[Tags.name] = entity.name
+        builder[Tags.createdAt] = entity.createdAt
     }
 
     override fun findBySpaceId(spaceId: SpaceId): List<Tag> =

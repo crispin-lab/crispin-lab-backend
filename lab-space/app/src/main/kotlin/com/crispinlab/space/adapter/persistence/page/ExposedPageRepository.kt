@@ -13,9 +13,8 @@ import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.isNull
-import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.core.statements.UpsertStatement
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.update
 import org.springframework.stereotype.Repository
 
 @Repository
@@ -25,6 +24,8 @@ class ExposedPageRepository :
     override val table = Pages
     override val idColumn = Pages.id
     override val deletedAtColumn = Pages.deletedAt
+    override val updateExclude =
+        listOf(Pages.id, Pages.spaceId, Pages.authorId, Pages.createdAt, Pages.deletedAt)
 
     override fun ResultRow.toEntity(): Page =
         Page(
@@ -44,32 +45,21 @@ class ExposedPageRepository :
     @Suppress("RedundantOverride")
     override fun delete(id: PageId) = super.delete(id)
 
-    override fun insert(entity: Page) {
-        Pages.insert {
-            it[id] = entity.id.value
-            it[spaceId] = entity.spaceId.value
-            it[parentPageId] = entity.parentPageId?.value
-            it[authorId] = entity.authorId.value
-            it[title] = entity.title
-            it[content] = entity.content.raw
-            it[visibility] = entity.visibility.name
-            it[currentVersion] = entity.currentVersion
-            it[createdAt] = entity.createdAt
-            it[updatedAt] = entity.updatedAt
-            it[deletedAt] = entity.deletedAt
-        }
-    }
-
-    override fun update(entity: Page) {
-        Pages.update({ Pages.id eq entity.id.value }) {
-            it[parentPageId] = entity.parentPageId?.value
-            it[title] = entity.title
-            it[content] = entity.content.raw
-            it[visibility] = entity.visibility.name
-            it[currentVersion] = entity.currentVersion
-            it[updatedAt] = entity.updatedAt
-            it[deletedAt] = entity.deletedAt
-        }
+    override fun upsertBody(
+        builder: UpsertStatement<Long>,
+        entity: Page
+    ) {
+        builder[Pages.id] = entity.id.value
+        builder[Pages.spaceId] = entity.spaceId.value
+        builder[Pages.parentPageId] = entity.parentPageId?.value
+        builder[Pages.authorId] = entity.authorId.value
+        builder[Pages.title] = entity.title
+        builder[Pages.content] = entity.content.raw
+        builder[Pages.visibility] = entity.visibility.name
+        builder[Pages.currentVersion] = entity.currentVersion
+        builder[Pages.createdAt] = entity.createdAt
+        builder[Pages.updatedAt] = entity.updatedAt
+        builder[Pages.deletedAt] = entity.deletedAt
     }
 
     override fun findChildren(parentId: PageId): List<Page> =

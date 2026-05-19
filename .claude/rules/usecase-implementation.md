@@ -184,8 +184,8 @@ class PageDeletingUseCase(
 ```
 
 - `Result` 없이 `Unit` 반환 (`PageDeleting : UseCase<Request, Unit>`).
-- 표준은 **`repository.delete(id)` 한 줄** — entity 가 `SoftDeletable` 이면 어댑터의 base 가 자동 분기로 `UPDATE deleted_at = now()`, 아니면 hard `DELETE` (`repository.md`). UseCase 가 entity 의 도메인 `delete()` 메서드를 부르지 않는다 — 이중 삭제 invariant 는 `findBy` 자동 필터가 deleted entity 를 못 찾는 것으로 자연 보호 (NotFoundException 으로 fallback). `entity.delete() + save` 경로는 미래에 추가 invariant (상태 머신, 부수효과) 가 필요할 때를 위한 enabler 로 base 가 받아주는 자리.
-- **`.withdraw()` 확장 함수**로 어댑터 호출을 분리 — `.let { repo.delete(it.id) }` 형태의 `it.id` 추출이 어색하므로 `private fun Entity.withdraw()` 로 한 단어. `Entity.delete()` 도메인 메서드 (entity 상태 갱신 invariant) 와 의미를 구분 — `withdraw` 는 위키/블로그 도메인에서 "게시물을 내린다" 의 사용자 행위. 본 저장소의 `toEntity` / `toResult` / `editWith` 단계 분리 패턴과 정합.
+- 표준은 **`repository.delete(id)` 한 줄** — entity 가 `SoftDeletable` 이면 어댑터의 base 가 자동 분기로 `UPDATE deleted_at = now()`, 아니면 hard `DELETE` (`repository.md`). entity 에는 `delete()` 도메인 메서드를 두지 않는다 — 이중 삭제 invariant 는 `findBy` 자동 필터가 deleted entity 를 못 찾는 것으로 자연 보호 (NotFoundException 으로 fallback). 미래에 상태 머신·부수효과 같은 추가 invariant 가 필요해지면 그 PR 에서 도메인 메서드와 호출처를 함께 도입 (`entity.md` "SoftDeletable entity 패턴" 참조).
+- **`.withdraw()` 확장 함수**로 어댑터 호출을 분리 — `.let { repo.delete(it.id) }` 형태의 `it.id` 추출이 어색하므로 `private fun Entity.withdraw()` 로 한 단어. `withdraw` 는 위키/블로그 도메인에서 "게시물을 내린다" 의 사용자 행위. 본 저장소의 `toEntity` / `toResult` / `editWith` 단계 분리 패턴과 정합.
 
 ## 트랜잭션 경계
 

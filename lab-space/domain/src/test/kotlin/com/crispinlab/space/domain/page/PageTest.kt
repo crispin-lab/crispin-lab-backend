@@ -5,7 +5,6 @@ import com.crispinlab.space.testsupport.Fixtures.basicPage
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldContainExactly
-import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 
@@ -129,43 +128,25 @@ class PageTest :
             }
         }
 
-        describe("soft delete") {
-            it("delete() 호출 시 deletedAt 과 updatedAt 이 같은 시점으로 갱신된다") {
-                val page: Page = basicPage()
-
-                page.delete()
-
-                page.isDeleted shouldBe true
-                val occurredAt = page.deletedAt.shouldNotBeNull()
-                page.updatedAt shouldBe occurredAt
-            }
-
-            it("이미 삭제된 페이지에 delete() 를 다시 호출하면 실패한다") {
-                val page: Page = basicPage().also { it.delete() }
-
-                shouldThrow<IllegalStateException> {
-                    page.delete()
-                }
-            }
-
-            it("삭제된 페이지는 edit() 가 실패한다") {
-                val page: Page = basicPage().also { it.delete() }
+        describe("soft delete 상태 가드") {
+            it("edit() 가 실패한다") {
+                val page: Page = basicPage(deletedAt = DUMMY_INSTANT)
 
                 shouldThrow<IllegalStateException> {
                     page.edit(title = "수정", content = "본문")
                 }
             }
 
-            it("삭제된 페이지는 move() 가 실패한다") {
-                val page: Page = basicPage().also { it.delete() }
+            it("move() 가 실패한다") {
+                val page: Page = basicPage(deletedAt = DUMMY_INSTANT)
 
                 shouldThrow<IllegalStateException> {
                     page.move(parentPageId = PageId(999L))
                 }
             }
 
-            it("삭제된 페이지는 changeVisibility() 가 실패한다") {
-                val page: Page = basicPage().also { it.delete() }
+            it("changeVisibility() 가 실패한다") {
+                val page: Page = basicPage(deletedAt = DUMMY_INSTANT)
 
                 shouldThrow<IllegalStateException> {
                     page.changeVisibility(visibility = Visibility.PUBLIC)

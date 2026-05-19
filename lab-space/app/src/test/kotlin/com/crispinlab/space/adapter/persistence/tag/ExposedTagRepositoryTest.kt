@@ -1,6 +1,7 @@
 package com.crispinlab.space.adapter.persistence.tag
 
 import com.crispinlab.common.exception.ConflictException
+import com.crispinlab.common.pagination.PageRequest
 import com.crispinlab.space.adapter.persistence.page.ExposedPageRepository
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.space.SpaceId
@@ -18,6 +19,7 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import java.time.Instant
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 class ExposedTagRepositoryTest :
@@ -93,7 +95,7 @@ class ExposedTagRepositoryTest :
                 thrown.errorCode shouldBe TagErrorCode.TAG_NAME_DUPLICATED
             }
 
-            it("findBySpaceId 는 해당 스페이스의 태그만 반환한다") {
+            it("findBySpaceId 는 해당 스페이스의 태그만 페이지로 반환한다") {
                 transaction(database) {
                     repository.save(basicTag(id = TagId(10L), spaceId = SpaceId(100L), name = "a"))
                     repository.save(basicTag(id = TagId(11L), spaceId = SpaceId(100L), name = "b"))
@@ -101,8 +103,64 @@ class ExposedTagRepositoryTest :
                 }
 
                 transaction(database) {
-                    val tags = repository.findBySpaceId(SpaceId(100L))
-                    tags.map { it.id } shouldContainExactlyInAnyOrder listOf(TagId(10L), TagId(11L))
+                    val result =
+                        repository.findBySpaceId(
+                            SpaceId(100L),
+                            PageRequest(page = 0, size = 20)
+                        )
+                    result.items.map { it.id } shouldContainExactlyInAnyOrder
+                        listOf(TagId(10L), TagId(11L))
+                    result.totalElements shouldBe 2L
+                    result.page shouldBe 0
+                    result.size shouldBe 20
+                }
+            }
+
+            it("findBySpaceId 는 createdAt ASC 로 정렬된 페이지를 끊어 반환한다") {
+                transaction(database) {
+                    repository.save(
+                        basicTag(
+                            id = TagId(13L),
+                            spaceId = SpaceId(150L),
+                            name = "first",
+                            createdAt = Instant.parse("2026-01-01T00:00:00Z")
+                        )
+                    )
+                    repository.save(
+                        basicTag(
+                            id = TagId(14L),
+                            spaceId = SpaceId(150L),
+                            name = "second",
+                            createdAt = Instant.parse("2026-01-02T00:00:00Z")
+                        )
+                    )
+                    repository.save(
+                        basicTag(
+                            id = TagId(15L),
+                            spaceId = SpaceId(150L),
+                            name = "third",
+                            createdAt = Instant.parse("2026-01-03T00:00:00Z")
+                        )
+                    )
+                }
+
+                transaction(database) {
+                    val firstPage =
+                        repository.findBySpaceId(
+                            SpaceId(150L),
+                            PageRequest(page = 0, size = 2)
+                        )
+                    firstPage.items.map { it.id } shouldBe listOf(TagId(13L), TagId(14L))
+                    firstPage.totalElements shouldBe 3L
+                    firstPage.hasNext shouldBe true
+
+                    val secondPage =
+                        repository.findBySpaceId(
+                            SpaceId(150L),
+                            PageRequest(page = 1, size = 2)
+                        )
+                    secondPage.items.map { it.id } shouldBe listOf(TagId(15L))
+                    secondPage.hasNext shouldBe false
                 }
             }
 
@@ -196,7 +254,7 @@ class ExposedTagRepositoryTest :
                 }
             }
 
-            it("findTagsByPageId 는 page 에 매핑된 모든 tag 를 반환한다") {
+            it("findTagsByPageId 는 page 에 매핑된 모든 tag 를 페이지로 반환한다") {
                 transaction(database) {
                     ensurePages(4000L, 4001L)
                     repository.save(basicTag(id = TagId(60L), name = "a"))
@@ -208,17 +266,99 @@ class ExposedTagRepositoryTest :
                 }
 
                 transaction(database) {
-                    repository
-                        .findTagsByPageId(
-                            PageId(4000L)
-                        ).map { it.id } shouldContainExactlyInAnyOrder
+                    val result =
+                        repository.findTagsByPageId(
+                            PageId(4000L),
+                            PageRequest(page = 0, size = 20)
+                        )
+                    result.items.map { it.id } shouldContainExactlyInAnyOrder
                         listOf(TagId(60L), TagId(61L))
+                    result.totalElements shouldBe 2L
                 }
             }
 
-            it("findTagsByPageId 는 매핑이 없으면 빈 리스트를 반환한다") {
+            it("findTagsByPageId 는 createdAt ASC 로 정렬된 페이지를 끊어 반환한다") {
                 transaction(database) {
-                    repository.findTagsByPageId(PageId(8888L)).shouldBeEmpty()
+                    ensurePages(4500L)
+                    repository.save(
+                        basicTag(
+                            id = TagId(70L),
+                            name = "first",
+                            createdAt = Instant.parse("2026-02-01T00:00:00Z")
+                        )
+                    )
+                    repository.save(
+                        basicTag(
+                            id = TagId(71L),
+                            name = "second",
+                            createdAt = Instant.parse("2026-02-02T00:00:00Z")
+                        )
+                    )
+                    repository.save(
+                        basicTag(
+                            id = TagId(72L),
+                            name = "third",
+                            createdAt = Instant.parse("2026-02-03T00:00:00Z")
+                        )
+                    )
+                    repository.attach(basicPageTag(pageId = PageId(4500L), tagId = TagId(70L)))
+                    repository.attach(basicPageTag(pageId = PageId(4500L), tagId = TagId(71L)))
+                    repository.attach(basicPageTag(pageId = PageId(4500L), tagId = TagId(72L)))
+                }
+
+                transaction(database) {
+                    val firstPage =
+                        repository.findTagsByPageId(
+                            PageId(4500L),
+                            PageRequest(page = 0, size = 2)
+                        )
+                    firstPage.items.map { it.id } shouldBe listOf(TagId(70L), TagId(71L))
+                    firstPage.totalElements shouldBe 3L
+                    firstPage.hasNext shouldBe true
+
+                    val secondPage =
+                        repository.findTagsByPageId(
+                            PageId(4500L),
+                            PageRequest(page = 1, size = 2)
+                        )
+                    secondPage.items.map { it.id } shouldBe listOf(TagId(72L))
+                    secondPage.hasNext shouldBe false
+                }
+            }
+
+            it("findTagsByPageId 는 매핑이 없으면 빈 페이지를 반환한다") {
+                transaction(database) {
+                    val result =
+                        repository.findTagsByPageId(
+                            PageId(8888L),
+                            PageRequest(page = 0, size = 20)
+                        )
+                    result.items.shouldBeEmpty()
+                    result.totalElements shouldBe 0L
+                }
+            }
+
+            it("findTagsByPageId 는 soft delete 된 page 의 tag 매핑을 노출하지 않지만 page_tags row 는 보존한다") {
+                transaction(database) {
+                    ensurePages(5000L)
+                    repository.save(basicTag(id = TagId(80L), name = "kotlin"))
+                    repository.attach(basicPageTag(pageId = PageId(5000L), tagId = TagId(80L)))
+                }
+
+                transaction(database) {
+                    pageRepository.delete(PageId(5000L))
+                }
+
+                transaction(database) {
+                    val result =
+                        repository.findTagsByPageId(
+                            PageId(5000L),
+                            PageRequest(page = 0, size = 20)
+                        )
+                    result.items.shouldBeEmpty()
+                    result.totalElements shouldBe 0L
+                    repository.findPageIdsByTagId(TagId(80L)) shouldContainExactlyInAnyOrder
+                        listOf(PageId(5000L))
                 }
             }
         }

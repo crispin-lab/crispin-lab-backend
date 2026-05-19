@@ -3,6 +3,7 @@ package com.crispinlab.space.adapter.persistence.space
 import com.crispinlab.common.pagination.PageRequest
 import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.adapter.persistence.ExposedEntityRepository
+import com.crispinlab.space.adapter.persistence.toPageResult
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.domain.space.Space
 import com.crispinlab.space.domain.space.SpaceId
@@ -46,22 +47,13 @@ class ExposedSpaceRepository :
         builder[Spaces.deletedAt] = entity.deletedAt
     }
 
-    override fun findPage(pageRequest: PageRequest): PageResult<Space> {
-        val query = Spaces.selectAll().where { notDeleted() }
-        val totalElements: Long = query.count()
-        val items: List<Space> =
-            query
-                .orderBy(
-                    Spaces.createdAt to SortOrder.DESC,
-                    Spaces.id to SortOrder.DESC
-                ).limit(pageRequest.size)
-                .offset(pageRequest.offset)
-                .map { it.toEntity() }
-        return PageResult(
-            items = items,
-            page = pageRequest.page,
-            size = pageRequest.size,
-            totalElements = totalElements
-        )
-    }
+    override fun findPage(pageRequest: PageRequest): PageResult<Space> =
+        Spaces
+            .selectAll()
+            .where { notDeleted() }
+            .toPageResult(
+                pageRequest,
+                Spaces.createdAt to SortOrder.DESC,
+                Spaces.id to SortOrder.DESC
+            ) { it.toEntity() }
 }

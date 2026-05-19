@@ -1,7 +1,11 @@
 package com.crispinlab.space.adapter.persistence.tag
 
 import com.crispinlab.common.exception.ConflictException
+import com.crispinlab.common.pagination.PageRequest
+import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.adapter.persistence.ExposedEntityRepository
+import com.crispinlab.space.adapter.persistence.page.Pages
+import com.crispinlab.space.adapter.persistence.toPageResult
 import com.crispinlab.space.application.port.outgoing.tag.TagRepository
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.space.SpaceId
@@ -10,6 +14,7 @@ import com.crispinlab.space.domain.tag.Tag
 import com.crispinlab.space.domain.tag.TagErrorCode
 import com.crispinlab.space.domain.tag.TagId
 import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.statements.UpsertStatement
@@ -62,11 +67,18 @@ class ExposedTagRepository :
         builder[Tags.createdAt] = entity.createdAt
     }
 
-    override fun findBySpaceId(spaceId: SpaceId): List<Tag> =
+    override fun findBySpaceId(
+        spaceId: SpaceId,
+        pageRequest: PageRequest
+    ): PageResult<Tag> =
         Tags
             .selectAll()
             .where { Tags.spaceId eq spaceId.value }
-            .map { it.toEntity() }
+            .toPageResult(
+                pageRequest,
+                Tags.createdAt to SortOrder.ASC,
+                Tags.id to SortOrder.ASC
+            ) { it.toEntity() }
 
     override fun existsByNameAndSpaceId(
         spaceId: SpaceId,
@@ -96,11 +108,18 @@ class ExposedTagRepository :
         }
     }
 
-    override fun findTagsByPageId(pageId: PageId): List<Tag> =
-        (Tags innerJoin PageTags)
+    override fun findTagsByPageId(
+        pageId: PageId,
+        pageRequest: PageRequest
+    ): PageResult<Tag> =
+        (Tags innerJoin PageTags innerJoin Pages)
             .select(Tags.columns)
-            .where { PageTags.pageId eq pageId.value }
-            .map { it.toEntity() }
+            .where { (PageTags.pageId eq pageId.value) and Pages.notDeleted() }
+            .toPageResult(
+                pageRequest,
+                Tags.createdAt to SortOrder.ASC,
+                Tags.id to SortOrder.ASC
+            ) { it.toEntity() }
 
     override fun findPageIdsByTagId(tagId: TagId): List<PageId> =
         PageTags

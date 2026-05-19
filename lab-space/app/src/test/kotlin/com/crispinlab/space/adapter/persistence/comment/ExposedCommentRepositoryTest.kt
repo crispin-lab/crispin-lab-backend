@@ -81,29 +81,6 @@ class ExposedCommentRepositoryTest :
                 }
             }
 
-            it("comment.delete() + save 경로는 row 를 보존하고 자동 필터로 findBy 가 null 을 반환한다") {
-                transaction(database) {
-                    repository.save(basicComment(id = CommentId(3L)))
-                }
-
-                transaction(database) {
-                    val comment = repository.findBy(CommentId(3L)).shouldNotBeNull()
-                    comment.delete()
-                    repository.save(comment)
-                }
-
-                transaction(database) {
-                    repository.findBy(CommentId(3L)).shouldBeNull()
-                    val row =
-                        Comments
-                            .selectAll()
-                            .where { Comments.id eq 3L }
-                            .firstOrNull()
-                            .shouldNotBeNull()
-                    row[Comments.deletedAt].shouldNotBeNull()
-                }
-            }
-
             it("findByPageId 는 해당 페이지의 댓글만 paging 으로 반환한다") {
                 transaction(database) {
                     repository.save(basicComment(id = CommentId(10L), pageId = PageId(100L)))
@@ -155,9 +132,8 @@ class ExposedCommentRepositoryTest :
             it("findByPageId 는 soft-deleted 댓글을 자동으로 제외한다") {
                 transaction(database) {
                     repository.save(basicComment(id = CommentId(60L), pageId = PageId(400L)))
-                    val toDelete = basicComment(id = CommentId(61L), pageId = PageId(400L))
-                    toDelete.delete()
-                    repository.save(toDelete)
+                    repository.save(basicComment(id = CommentId(61L), pageId = PageId(400L)))
+                    repository.delete(CommentId(61L))
                 }
 
                 transaction(database) {
@@ -206,6 +182,34 @@ class ExposedCommentRepositoryTest :
                             .firstOrNull()
                             .shouldNotBeNull()
                     row[Comments.deletedAt].shouldNotBeNull()
+                }
+            }
+
+            it("save 가 soft delete 된 row 의 deleted_at 을 덮지 않는다") {
+                val originalDeletedAt =
+                    transaction(database) {
+                        repository.save(basicComment(id = CommentId(100L)))
+                        repository.delete(CommentId(100L))
+                        Comments
+                            .selectAll()
+                            .where { Comments.id eq 100L }
+                            .first()[Comments.deletedAt]
+                    }.shouldNotBeNull()
+
+                transaction(database) {
+                    repository.save(
+                        basicComment(id = CommentId(100L), body = "복구 시도", deletedAt = null)
+                    )
+                }
+
+                transaction(database) {
+                    val row =
+                        Comments
+                            .selectAll()
+                            .where { Comments.id eq 100L }
+                            .first()
+                    row[Comments.deletedAt] shouldBe originalDeletedAt
+                    repository.findBy(CommentId(100L)).shouldBeNull()
                 }
             }
 

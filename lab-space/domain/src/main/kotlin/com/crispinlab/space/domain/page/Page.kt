@@ -96,15 +96,6 @@ class Page(
         this.updatedAt = now()
     }
 
-    fun delete() {
-        check(!isDeleted) {
-            "이미 삭제된 페이지입니다."
-        }
-        val occurredAt: Instant = now()
-        this.deletedAt = occurredAt
-        this.updatedAt = occurredAt
-    }
-
     private fun validateTitle(title: String) {
         require(title.isNotBlank()) {
             "제목을 입력해 주세요."

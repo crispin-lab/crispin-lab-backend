@@ -1,8 +1,10 @@
 package com.crispinlab.user.domain.user
 
+import com.crispinlab.common.domain.StringValue
+
 data class Handle(
-    val value: String
-) {
+    override val value: String
+) : StringValue {
     init {
         require(HANDLE_REGEX.matches(value)) {
             "핸들은 영문 소문자, 숫자, 밑줄(_) 로 ${MIN_LENGTH}~${MAX_LENGTH}자여야 합니다."

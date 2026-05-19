@@ -11,10 +11,7 @@ tasks.named<Jar>("jar") {
 dependencies {
     api(projects.labCommonDomain)
 
-    // testFixtures source set 은 main 의 implementation 의존을 inherit 받지 않으므로
-    // PostgresTestContext / TestcontainersConfig 가 쓰는 의존을 명시적으로 다시 받는다.
-    // consumer (다른 모듈) 의 test 코드가 PostgreSQLContainer · TestConfiguration 등 타입을
-    // 직접 import 하므로 testFixturesApi 로 노출한다.
+    // testFixtures 는 main 의 implementation 을 inherit 안 받음 — consumer 가 직접 import 하는 타입은 api 로 노출.
     testFixturesApi(libs.exposed.spring.boot.starter)
     testFixturesApi(libs.exposed.java.time)
     testFixturesApi(libs.spring.boot.test)

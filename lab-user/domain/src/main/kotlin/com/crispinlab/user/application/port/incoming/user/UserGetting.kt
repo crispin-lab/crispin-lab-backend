@@ -3,6 +3,8 @@ package com.crispinlab.user.application.port.incoming.user
 import com.crispinlab.common.application.UseCase
 import com.crispinlab.user.application.port.incoming.user.UserGetting.Request
 import com.crispinlab.user.application.port.incoming.user.UserGetting.Result
+import com.crispinlab.user.domain.user.EmailAddress
+import com.crispinlab.user.domain.user.Handle
 import com.crispinlab.user.domain.user.SystemRole
 import com.crispinlab.user.domain.user.UserId
 import com.crispinlab.user.domain.user.UserId.Companion.asUserId
@@ -17,8 +19,8 @@ interface UserGetting : UseCase<Request, Result> {
 
     data class Result(
         val userId: UserId,
-        val email: String,
-        val handle: String,
+        val email: EmailAddress,
+        val handle: Handle,
         val role: SystemRole,
         val createdAt: Instant,
         val updatedAt: Instant

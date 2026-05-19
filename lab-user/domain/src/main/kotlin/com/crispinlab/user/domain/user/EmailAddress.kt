@@ -1,8 +1,10 @@
 package com.crispinlab.user.domain.user
 
+import com.crispinlab.common.domain.StringValue
+
 data class EmailAddress(
-    val value: String
-) {
+    override val value: String
+) : StringValue {
     init {
         require(value.isNotBlank()) {
             "이메일을 입력해 주세요."

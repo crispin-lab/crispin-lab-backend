@@ -74,10 +74,7 @@ class ExposedUserCredentialRepository :
     @Suppress("RedundantOverride")
     override fun delete(id: UserCredentialId) = super.delete(id)
 
-    // users 와 inner join 해서 soft deleted 사용자의 자격증명은 노출하지 않는다.
-    // user_credentials 자체는 hard delete + FK CASCADE 미부착이라 user 가 soft delete 돼도
-    // credential row 가 남기 때문에 join 단계의 명시 필터가 필요하다.
-    // schema 에 FK 가 없어 infix `innerJoin` 이 매칭 키를 추론하지 못하므로 Join 을 직접 구성한다.
+    // user soft delete ↔ credential hard delete cross-aggregate 필터. FK 없어 Join 직접 구성.
     override fun findPasswordBy(userId: UserId): UserCredential? =
         Join(
             table = UserCredentials,

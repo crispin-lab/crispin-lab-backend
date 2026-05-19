@@ -4,6 +4,7 @@ import com.crispinlab.user.domain.credential.Credential
 import com.crispinlab.user.domain.credential.PasswordHash
 import com.crispinlab.user.domain.credential.UserCredential
 import com.crispinlab.user.domain.credential.UserCredentialId
+import com.crispinlab.user.domain.session.SessionToken
 import com.crispinlab.user.domain.user.EmailAddress
 import com.crispinlab.user.domain.user.Handle
 import com.crispinlab.user.domain.user.SystemRole
@@ -46,4 +47,7 @@ object Fixtures {
             createdAt = createdAt,
             updatedAt = updatedAt
         )
+
+    fun basicSessionToken(body: String = "a".repeat(SessionToken.BODY_LENGTH)): SessionToken =
+        SessionToken(SessionToken.PREFIX + body)
 }

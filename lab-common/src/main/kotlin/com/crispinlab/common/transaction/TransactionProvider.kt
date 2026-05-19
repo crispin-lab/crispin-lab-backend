@@ -5,4 +5,6 @@ interface TransactionProvider {
         readOnly: Boolean = false,
         block: () -> T
     ): T
+
+    fun afterRollback(block: () -> Unit)
 }

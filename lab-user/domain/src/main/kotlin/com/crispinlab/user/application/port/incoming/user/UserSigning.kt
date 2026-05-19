@@ -1,13 +1,14 @@
 package com.crispinlab.user.application.port.incoming.user
 
 import com.crispinlab.common.application.UseCase
-import com.crispinlab.user.application.port.incoming.user.UserRegistering.Request
-import com.crispinlab.user.application.port.incoming.user.UserRegistering.Result
+import com.crispinlab.user.application.port.incoming.user.UserSigning.Request
+import com.crispinlab.user.application.port.incoming.user.UserSigning.Result
+import com.crispinlab.user.domain.session.SessionToken
 import com.crispinlab.user.domain.user.EmailAddress
 import com.crispinlab.user.domain.user.Handle
 import com.crispinlab.user.domain.user.UserId
 
-interface UserRegistering : UseCase<Request, Result> {
+interface UserSigning : UseCase<Request, Result> {
     class Request(
         email: String,
         handle: String,
@@ -24,6 +25,7 @@ interface UserRegistering : UseCase<Request, Result> {
     }
 
     data class Result(
-        val userId: UserId
+        val userId: UserId,
+        val token: SessionToken
     )
 }

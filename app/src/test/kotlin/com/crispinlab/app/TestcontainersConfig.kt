@@ -3,6 +3,7 @@ package com.crispinlab.app
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection
 import org.springframework.context.annotation.Bean
+import org.testcontainers.containers.GenericContainer
 import org.testcontainers.containers.PostgreSQLContainer
 
 // lab-space/app 도 동일 패턴의 자체 TestcontainersConfig 를 둔다 — 모듈 의존 방향상
@@ -12,4 +13,9 @@ class TestcontainersConfig {
     @Bean
     @ServiceConnection
     fun postgresContainer(): PostgreSQLContainer<*> = PostgreSQLContainer<Nothing>("postgres:16")
+
+    @Bean
+    @ServiceConnection(name = "redis")
+    fun redisContainer(): GenericContainer<*> =
+        GenericContainer<Nothing>("redis:7-alpine").withExposedPorts(6379)
 }

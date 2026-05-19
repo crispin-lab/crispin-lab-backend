@@ -28,6 +28,7 @@ spring-boot-bom = { module = "org.springframework.boot:spring-boot-dependencies"
 spring-boot-starter = { module = "org.springframework.boot:spring-boot-starter" }
 spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-starter-web" }
 spring-boot-starter-validation = { module = "org.springframework.boot:spring-boot-starter-validation" }
+spring-boot-starter-data-redis = { module = "org.springframework.boot:spring-boot-starter-data-redis" }
 spring-tx = { module = "org.springframework:spring-tx" }
 spring-jdbc = { module = "org.springframework:spring-jdbc" }
 spring-web = { module = "org.springframework:spring-web" }
@@ -64,6 +65,7 @@ springmockk = { module = "com.ninja-squad:springmockk", version.ref = "springmoc
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 # testcontainers (versions resolved by spring-boot-bom)
 spring-boot-testcontainers = { module = "org.springframework.boot:spring-boot-testcontainers" }
+testcontainers = { module = "org.testcontainers:testcontainers" }
 testcontainers-postgresql = { module = "org.testcontainers:postgresql" }
 
 [plugins]

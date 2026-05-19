@@ -1,4 +1,4 @@
-package com.crispinlab.space.testsupport
+package com.crispinlab.user.testsupport
 
 import com.crispinlab.common.transaction.TransactionProvider
 

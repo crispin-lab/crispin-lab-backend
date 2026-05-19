@@ -26,27 +26,29 @@ class AuthLoginUseCase(
     override fun perform(request: Request): Result =
         transactionProvider.transactional {
             request
-                .toEntity()
+                .toEmail()
+                .toUser()
+                .verifyPassword(request.password)
                 .toResult()
         }
 
-    private fun Request.toEntity(): User {
-        val emailAddress =
-            runCatching { EmailAddress(email) }
-                .getOrElse { throw invalidCredentials() }
-        val user =
-            userRepository.findByEmail(emailAddress)
+    private fun Request.toEmail(): EmailAddress =
+        runCatching { EmailAddress(email) }
+            .getOrElse { throw invalidCredentials() }
+
+    private fun EmailAddress.toUser(): User =
+        userRepository.findByEmail(this)
+            ?: throw invalidCredentials()
+
+    private fun User.verifyPassword(rawPassword: String): User =
+        apply {
+            passwordCredential()
+                ?.takeIf { passwordEncoder.matches(rawPassword, it.hash) }
                 ?: throw invalidCredentials()
-        val passwordCredential =
-            userCredentialRepository
-                .findPasswordBy(user.id)
-                ?.credential as? Credential.Password
-                ?: throw invalidCredentials()
-        if (!passwordEncoder.matches(password, passwordCredential.hash)) {
-            throw invalidCredentials()
         }
-        return user
-    }
+
+    private fun User.passwordCredential(): Credential.Password? =
+        userCredentialRepository.findPasswordBy(id)?.credential as? Credential.Password
 
     private fun User.toResult(): Result =
         Result(

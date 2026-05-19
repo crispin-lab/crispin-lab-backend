@@ -1,6 +1,6 @@
 package com.crispinlab.space.adapter.persistence.page
 
-import com.crispinlab.space.adapter.persistence.ExposedEntityRepository
+import com.crispinlab.common.persistence.ExposedEntityRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRevisionRepository
 import com.crispinlab.space.domain.page.PageContent
 import com.crispinlab.space.domain.page.PageId

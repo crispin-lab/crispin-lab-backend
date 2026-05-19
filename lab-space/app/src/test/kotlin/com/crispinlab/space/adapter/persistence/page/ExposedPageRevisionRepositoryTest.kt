@@ -1,9 +1,9 @@
 package com.crispinlab.space.adapter.persistence.page
 
+import com.crispinlab.common.persistence.PostgresTestContext
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.PageRevisionId
 import com.crispinlab.space.testsupport.Fixtures.basicPageRevision
-import com.crispinlab.space.testsupport.PostgresTestContext
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldNotBeNull

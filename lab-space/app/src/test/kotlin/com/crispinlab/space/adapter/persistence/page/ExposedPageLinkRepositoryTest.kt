@@ -1,11 +1,11 @@
 package com.crispinlab.space.adapter.persistence.page
 
+import com.crispinlab.common.persistence.PostgresTestContext
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.PageLink
 import com.crispinlab.space.domain.page.PageLinkId
 import com.crispinlab.space.domain.page.PageRevisionId
 import com.crispinlab.space.testsupport.Fixtures.basicPageLink
-import com.crispinlab.space.testsupport.PostgresTestContext
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder

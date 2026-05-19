@@ -9,6 +9,7 @@ dependencies {
     implementation(projects.labCommon)
     implementation(projects.labCommonInfra)
     implementation(projects.labSpace.app)
+    implementation(projects.labUser.app)
 
     runtimeOnly(libs.postgresql)
     runtimeOnly(libs.flyway.core)

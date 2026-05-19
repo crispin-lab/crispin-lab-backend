@@ -3,3 +3,4 @@ com.crispinlab.common.infra.time.ClockConfiguration
 com.crispinlab.common.infra.id.IdGeneratorConfiguration
 com.crispinlab.common.infra.logging.TraceContextFilterAutoConfiguration
 com.crispinlab.common.infra.jackson.EntityIdJacksonConfiguration
+com.crispinlab.common.infra.jackson.StringValueJacksonConfiguration

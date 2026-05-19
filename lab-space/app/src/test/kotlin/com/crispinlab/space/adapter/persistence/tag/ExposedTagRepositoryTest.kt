@@ -2,6 +2,7 @@ package com.crispinlab.space.adapter.persistence.tag
 
 import com.crispinlab.common.exception.ConflictException
 import com.crispinlab.common.pagination.PageRequest
+import com.crispinlab.common.persistence.PostgresTestContext
 import com.crispinlab.space.adapter.persistence.page.ExposedPageRepository
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.space.SpaceId
@@ -10,7 +11,6 @@ import com.crispinlab.space.domain.tag.TagId
 import com.crispinlab.space.testsupport.Fixtures.basicPage
 import com.crispinlab.space.testsupport.Fixtures.basicPageTag
 import com.crispinlab.space.testsupport.Fixtures.basicTag
-import com.crispinlab.space.testsupport.PostgresTestContext
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldBeEmpty

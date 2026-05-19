@@ -2,7 +2,7 @@ package com.crispinlab.space.adapter.persistence.comment
 
 import com.crispinlab.common.pagination.PageRequest
 import com.crispinlab.common.pagination.PageResult
-import com.crispinlab.space.adapter.persistence.ExposedEntityRepository
+import com.crispinlab.common.persistence.ExposedEntityRepository
 import com.crispinlab.space.adapter.persistence.toPageResult
 import com.crispinlab.space.application.port.outgoing.comment.CommentRepository
 import com.crispinlab.space.domain.comment.Comment

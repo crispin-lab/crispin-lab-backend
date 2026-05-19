@@ -26,9 +26,11 @@ include(
     ":lab-common-port",
     ":lab-common",
     ":lab-common-infra",
+    ":lab-common-persistence",
     ":lab-api-support",
     ":lab-space:domain",
     ":lab-space:app",
     ":lab-user:domain",
+    ":lab-user:app",
     ":app"
 )

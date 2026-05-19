@@ -1,4 +1,4 @@
-package com.crispinlab.space.adapter.persistence
+package com.crispinlab.common.persistence
 
 import com.crispinlab.common.domain.Entity
 import com.crispinlab.common.domain.EntityId

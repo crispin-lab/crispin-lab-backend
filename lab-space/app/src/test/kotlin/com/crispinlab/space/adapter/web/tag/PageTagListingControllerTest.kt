@@ -1,16 +1,20 @@
 package com.crispinlab.space.adapter.web.tag
 
 import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder.Companion.responseFields
+import com.crispinlab.common.pagination.PageRequest.Companion.DEFAULT_SIZE
 import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.application.port.incoming.tag.PageTagListing
+import com.crispinlab.space.application.port.incoming.tag.PageTagListing.Request
 import com.crispinlab.space.application.port.incoming.tag.PageTagListing.Summary
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.tag.TagId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
+import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
@@ -81,12 +85,13 @@ class PageTagListingControllerTest :
                     )
             }
 
-            it("page/size 파라미터가 없어도 기본값으로 200 을 반환한다") {
-                every { useCase.perform(any()) } returns
+            it("page/size 파라미터가 없어도 기본값을 useCase 에 전달하고 200 을 반환한다") {
+                val capturedRequest = slot<Request>()
+                every { useCase.perform(capture(capturedRequest)) } returns
                     PageResult(
                         items = emptyList(),
                         page = 0,
-                        size = 20,
+                        size = DEFAULT_SIZE,
                         totalElements = 0L
                     )
 
@@ -97,6 +102,8 @@ class PageTagListingControllerTest :
                         jsonPath("$.items.length()").value(0),
                         jsonPath("$.totalElements").value(0)
                     )
+                capturedRequest.captured.pageRequest.page shouldBe 0
+                capturedRequest.captured.pageRequest.size shouldBe DEFAULT_SIZE
             }
 
             it("X-User-Id 헤더가 없으면 400 을 반환한다") {

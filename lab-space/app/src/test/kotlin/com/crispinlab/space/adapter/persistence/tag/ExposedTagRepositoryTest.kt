@@ -1,8 +1,10 @@
 package com.crispinlab.space.adapter.persistence.tag
 
+import com.crispinlab.common.exception.ConflictException
 import com.crispinlab.space.adapter.persistence.page.ExposedPageRepository
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.space.SpaceId
+import com.crispinlab.space.domain.tag.TagErrorCode
 import com.crispinlab.space.domain.tag.TagId
 import com.crispinlab.space.testsupport.Fixtures.basicPage
 import com.crispinlab.space.testsupport.Fixtures.basicPageTag
@@ -16,7 +18,6 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import org.jetbrains.exposed.v1.exceptions.ExposedSQLException
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 class ExposedTagRepositoryTest :
@@ -74,20 +75,22 @@ class ExposedTagRepositoryTest :
                 }
             }
 
-            it("(space_id, name) UNIQUE 제약 위반 시 ExposedSQLException 이 발생한다") {
+            it("동일 (space_id, name) 으로 두 번째 save 시 ConflictException 으로 변환된다") {
                 transaction(database) {
                     repository.save(
                         basicTag(id = TagId(3L), spaceId = SpaceId(20L), name = "kotlin")
                     )
                 }
 
-                shouldThrow<ExposedSQLException> {
-                    transaction(database) {
-                        repository.save(
-                            basicTag(id = TagId(4L), spaceId = SpaceId(20L), name = "kotlin")
-                        )
+                val thrown =
+                    shouldThrow<ConflictException> {
+                        transaction(database) {
+                            repository.save(
+                                basicTag(id = TagId(4L), spaceId = SpaceId(20L), name = "kotlin")
+                            )
+                        }
                     }
-                }
+                thrown.errorCode shouldBe TagErrorCode.TAG_NAME_DUPLICATED
             }
 
             it("findBySpaceId 는 해당 스페이스의 태그만 반환한다") {

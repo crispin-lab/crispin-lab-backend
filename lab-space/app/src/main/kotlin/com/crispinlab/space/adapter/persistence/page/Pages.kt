@@ -1,7 +1,9 @@
 package com.crispinlab.space.adapter.persistence.page
 
 import com.crispinlab.space.domain.page.Page
+import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.Table
+import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.javatime.timestamp
 
 object Pages : Table("pages") {
@@ -18,4 +20,6 @@ object Pages : Table("pages") {
     val deletedAt = timestamp("deleted_at").nullable()
 
     override val primaryKey = PrimaryKey(id)
+
+    fun notDeleted(): Op<Boolean> = deletedAt.isNull()
 }

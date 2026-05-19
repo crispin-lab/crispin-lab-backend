@@ -1,5 +1,7 @@
 package com.crispinlab.space.application.port.outgoing.tag
 
+import com.crispinlab.common.pagination.PageRequest
+import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.tag.PageTag
@@ -11,7 +13,10 @@ interface TagRepository {
 
     fun findBy(id: TagId): Tag?
 
-    fun findBySpaceId(spaceId: SpaceId): List<Tag>
+    fun findBySpaceId(
+        spaceId: SpaceId,
+        pageRequest: PageRequest
+    ): PageResult<Tag>
 
     fun existsByNameAndSpaceId(
         spaceId: SpaceId,
@@ -27,7 +32,10 @@ interface TagRepository {
         tagId: TagId
     )
 
-    fun findTagsByPageId(pageId: PageId): List<Tag>
+    fun findTagsByPageId(
+        pageId: PageId,
+        pageRequest: PageRequest
+    ): PageResult<Tag>
 
     fun findPageIdsByTagId(tagId: TagId): List<PageId>
 }

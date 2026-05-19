@@ -3,6 +3,7 @@ package com.crispinlab.space.adapter.persistence.comment
 import com.crispinlab.common.pagination.PageRequest
 import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.adapter.persistence.ExposedEntityRepository
+import com.crispinlab.space.adapter.persistence.toPageResult
 import com.crispinlab.space.application.port.outgoing.comment.CommentRepository
 import com.crispinlab.space.domain.comment.Comment
 import com.crispinlab.space.domain.comment.CommentId
@@ -62,25 +63,13 @@ class ExposedCommentRepository :
     override fun findByPageId(
         pageId: PageId,
         pageRequest: PageRequest
-    ): PageResult<Comment> {
-        val query =
-            Comments.selectAll().where {
-                (Comments.pageId eq pageId.value) and notDeleted()
-            }
-        val totalElements: Long = query.count()
-        val items: List<Comment> =
-            query
-                .orderBy(
-                    Comments.createdAt to SortOrder.ASC,
-                    Comments.id to SortOrder.ASC
-                ).limit(pageRequest.size)
-                .offset(pageRequest.offset)
-                .map { it.toEntity() }
-        return PageResult(
-            items = items,
-            page = pageRequest.page,
-            size = pageRequest.size,
-            totalElements = totalElements
-        )
-    }
+    ): PageResult<Comment> =
+        Comments
+            .selectAll()
+            .where { (Comments.pageId eq pageId.value) and notDeleted() }
+            .toPageResult(
+                pageRequest,
+                Comments.createdAt to SortOrder.ASC,
+                Comments.id to SortOrder.ASC
+            ) { it.toEntity() }
 }

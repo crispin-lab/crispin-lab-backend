@@ -4,6 +4,7 @@ import com.crispinlab.common.pagination.PageRequest
 import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.adapter.persistence.page.Pages
 import com.crispinlab.space.adapter.persistence.tag.PageTags
+import com.crispinlab.space.adapter.persistence.toPageResult
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.PageSummary
 import com.crispinlab.space.domain.page.PageId
@@ -17,7 +18,6 @@ import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.compoundAnd
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
-import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.like
 import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.jdbc.Query
@@ -42,23 +42,12 @@ class ExposedPageSearchAdapter : PageSearchPort {
                 matched
             }
 
-        val query = baseQuery(keyword, spaceId, tagPageIds)
-        val totalElements = query.count()
-        val items =
-            query
-                .orderBy(
-                    Pages.updatedAt to SortOrder.DESC,
-                    Pages.id to SortOrder.DESC
-                ).limit(pageRequest.size)
-                .offset(pageRequest.offset)
-                .map { it.toSummary() }
-
-        return PageResult(
-            items = items,
-            page = pageRequest.page,
-            size = pageRequest.size,
-            totalElements = totalElements
-        )
+        return baseQuery(keyword, spaceId, tagPageIds)
+            .toPageResult(
+                pageRequest,
+                Pages.updatedAt to SortOrder.DESC,
+                Pages.id to SortOrder.DESC
+            ) { it.toSummary() }
     }
 
     /*
@@ -71,7 +60,7 @@ class ExposedPageSearchAdapter : PageSearchPort {
         (PageTags innerJoin Pages)
             .select(PageTags.pageId)
             .where {
-                (PageTags.tagId inList tagIds.map { it.value }) and Pages.deletedAt.isNull()
+                (PageTags.tagId inList tagIds.map { it.value }) and Pages.notDeleted()
             }.withDistinct()
             .map { it[PageTags.pageId] }
 
@@ -82,7 +71,7 @@ class ExposedPageSearchAdapter : PageSearchPort {
     ): Query {
         val conditions =
             buildList<Op<Boolean>> {
-                add(Pages.deletedAt.isNull())
+                add(Pages.notDeleted())
                 add(Pages.visibility eq Visibility.PUBLIC.name)
                 keyword?.let {
                     val pattern = "%${it.escapeLike()}%"

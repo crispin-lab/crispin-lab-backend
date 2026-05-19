@@ -1,15 +1,13 @@
-package com.crispinlab.space.testsupport
+package com.crispinlab.user.testsupport
 
 import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec
 import com.crispinlab.common.infra.web.GlobalExceptionHandler
-import com.crispinlab.space.adapter.web.auth.AuthArgumentResolver
 
-abstract class SpaceAppControllerDescribeSpec(
+abstract class UserAppControllerDescribeSpec(
     tag: String,
     body: ControllerDescribeSpec.() -> Unit
 ) : ControllerDescribeSpec(
         tag = tag,
-        argumentResolvers = listOf(AuthArgumentResolver()),
         controllerAdvices = listOf(GlobalExceptionHandler()),
         body = body
     )

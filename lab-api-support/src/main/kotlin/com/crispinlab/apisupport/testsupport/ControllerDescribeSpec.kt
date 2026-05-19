@@ -2,7 +2,9 @@ package com.crispinlab.apisupport.testsupport
 
 import com.crispinlab.common.application.UseCase
 import com.crispinlab.common.domain.EntityId
+import com.crispinlab.common.domain.StringValue
 import com.crispinlab.common.infra.jackson.EntityIdSerializer
+import com.crispinlab.common.infra.jackson.StringValueSerializer
 import com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper.document
 import com.epages.restdocs.apispec.ResourceSnippetParametersBuilder
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -102,7 +104,7 @@ abstract class ControllerDescribeSpec(
         Jackson2ObjectMapperBuilder
             .json()
             .featuresToDisable(WRITE_DATES_AS_TIMESTAMPS)
-            .modulesToInstall(entityIdModule())
+            .modulesToInstall(domainSerializationModule())
             .build()
     }
 
@@ -134,9 +136,10 @@ abstract class ControllerDescribeSpec(
             .contentType(APPLICATION_JSON)
             .characterEncoding(UTF_8)
 
-    private fun entityIdModule(): SimpleModule =
+    private fun domainSerializationModule(): SimpleModule =
         SimpleModule().apply {
             addSerializer(EntityId::class.java, EntityIdSerializer)
+            addSerializer(StringValue::class.java, StringValueSerializer)
         }
 
     /*

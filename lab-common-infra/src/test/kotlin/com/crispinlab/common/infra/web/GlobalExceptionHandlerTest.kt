@@ -1,5 +1,6 @@
-package com.crispinlab.space.adapter.web
+package com.crispinlab.common.infra.web
 
+import com.crispinlab.common.exception.AuthenticationException
 import com.crispinlab.common.exception.DomainException
 import com.crispinlab.common.exception.ErrorCode
 import io.kotest.core.spec.style.DescribeSpec
@@ -18,6 +19,18 @@ class GlobalExceptionHandlerTest :
         val handler = GlobalExceptionHandler()
 
         describe("핸들러 fallback") {
+            it("AuthenticationException 은 401 + errorCode.code 로 매핑한다") {
+                val response =
+                    handler.handleAuthentication(
+                        AuthenticationException(DummyErrorCode.INVALID_CREDENTIALS)
+                    )
+
+                response.statusCode shouldBe HttpStatus.UNAUTHORIZED
+                val body = response.body.shouldNotBeNull()
+                body.code shouldBe "INVALID_CREDENTIALS"
+                body.message shouldBe "인증 정보가 올바르지 않습니다."
+            }
+
             it("DomainException 은 422 + errorCode.code 로 매핑한다") {
                 val response =
                     handler.handleDomain(object : DomainException(DummyErrorCode.DUMMY_FAILURE) {})
@@ -95,7 +108,8 @@ class GlobalExceptionHandlerTest :
     private enum class DummyErrorCode(
         override val defaultMessage: String
     ) : ErrorCode {
-        DUMMY_FAILURE("도메인 규칙을 위반했습니다.")
+        DUMMY_FAILURE("도메인 규칙을 위반했습니다."),
+        INVALID_CREDENTIALS("인증 정보가 올바르지 않습니다.")
         ;
 
         override val code: String get() = name

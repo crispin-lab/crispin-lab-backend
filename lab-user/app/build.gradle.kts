@@ -16,9 +16,11 @@ dependencies {
     implementation(projects.labUser.domain)
 
     implementation(libs.spring.security.crypto)
+    implementation(libs.spring.boot.starter.data.redis)
 
     testImplementation(testFixtures(projects.labUser.domain))
     testImplementation(testFixtures(projects.labCommonPersistence))
     testImplementation(projects.labApiSupport)
+    testImplementation(libs.testcontainers)
     testRuntimeOnly(libs.postgresql)
 }

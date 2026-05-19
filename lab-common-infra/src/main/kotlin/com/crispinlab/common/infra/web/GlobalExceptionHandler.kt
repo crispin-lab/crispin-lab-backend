@@ -1,10 +1,13 @@
-package com.crispinlab.space.adapter.web
+package com.crispinlab.common.infra.web
 
+import com.crispinlab.common.exception.AuthenticationException
 import com.crispinlab.common.exception.ConflictException
 import com.crispinlab.common.exception.DomainException
 import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.common.logging.LogContext.Field
 import org.slf4j.LoggerFactory
+import org.springframework.core.Ordered
+import org.springframework.core.annotation.Order
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.HttpMessageNotReadableException
@@ -15,8 +18,17 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 
 @RestControllerAdvice
+@Order(Ordered.LOWEST_PRECEDENCE)
 class GlobalExceptionHandler {
     private val log = LoggerFactory.getLogger(javaClass)
+
+    @ExceptionHandler(AuthenticationException::class)
+    fun handleAuthentication(exception: AuthenticationException): ResponseEntity<ErrorPayload> =
+        respondClientError(
+            status = HttpStatus.UNAUTHORIZED,
+            code = exception.errorCode.code,
+            message = exception.message
+        )
 
     @ExceptionHandler(NotFoundException::class)
     fun handleNotFound(exception: NotFoundException): ResponseEntity<ErrorPayload> =

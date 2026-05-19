@@ -7,6 +7,10 @@ spring:
     username: overridden-by-testcontainers
     password: overridden-by-testcontainers
     driver-class-name: org.postgresql.Driver
+  data:
+    redis:
+      host: overridden-by-testcontainers
+      port: 6379
   flyway:
     enabled: true
     locations: classpath:db/migration

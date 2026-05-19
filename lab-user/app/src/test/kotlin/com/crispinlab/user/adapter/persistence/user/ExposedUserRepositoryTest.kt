@@ -122,6 +122,74 @@ class ExposedUserRepositoryTest :
                 }
             }
 
+            it("existsByEmail 은 동일 이메일 존재 여부를 반환한다") {
+                transaction(database) {
+                    repository.save(
+                        basicUser(
+                            id = UserId(7L),
+                            email = EmailAddress("carol@example.com"),
+                            handle = Handle("carol")
+                        )
+                    )
+                }
+
+                transaction(database) {
+                    repository.existsByEmail(EmailAddress("carol@example.com")) shouldBe true
+                    repository.existsByEmail(EmailAddress("missing@example.com")) shouldBe false
+                }
+            }
+
+            it("existsByEmail 은 soft deleted 사용자를 제외한다") {
+                transaction(database) {
+                    repository.save(
+                        basicUser(
+                            id = UserId(8L),
+                            email = EmailAddress("dave@example.com"),
+                            handle = Handle("dave")
+                        )
+                    )
+                    repository.delete(UserId(8L))
+                }
+
+                transaction(database) {
+                    repository.existsByEmail(EmailAddress("dave@example.com")) shouldBe false
+                }
+            }
+
+            it("existsByHandle 은 동일 핸들 존재 여부를 반환한다") {
+                transaction(database) {
+                    repository.save(
+                        basicUser(
+                            id = UserId(9L),
+                            email = EmailAddress("eve@example.com"),
+                            handle = Handle("eve")
+                        )
+                    )
+                }
+
+                transaction(database) {
+                    repository.existsByHandle(Handle("eve")) shouldBe true
+                    repository.existsByHandle(Handle("missing")) shouldBe false
+                }
+            }
+
+            it("existsByHandle 은 soft deleted 사용자를 제외한다") {
+                transaction(database) {
+                    repository.save(
+                        basicUser(
+                            id = UserId(11L),
+                            email = EmailAddress("frank@example.com"),
+                            handle = Handle("frank_deleted")
+                        )
+                    )
+                    repository.delete(UserId(11L))
+                }
+
+                transaction(database) {
+                    repository.existsByHandle(Handle("frank_deleted")) shouldBe false
+                }
+            }
+
             it("save 가 soft delete 된 row 의 deleted_at 을 덮지 않는다") {
                 val originalDeletedAt =
                     transaction(database) {

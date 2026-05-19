@@ -11,6 +11,7 @@ import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.statements.UpsertStatement
+import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.springframework.stereotype.Repository
 
@@ -56,6 +57,22 @@ class ExposedUserRepository :
             .where { (Users.email eq email.value) and notDeleted() }
             .firstOrNull()
             ?.toEntity()
+
+    override fun existsByEmail(email: EmailAddress): Boolean =
+        Users
+            .select(Users.id)
+            .where { (Users.email eq email.value) and notDeleted() }
+            .limit(1)
+            .empty()
+            .not()
+
+    override fun existsByHandle(handle: Handle): Boolean =
+        Users
+            .select(Users.id)
+            .where { (Users.handle eq handle.value) and notDeleted() }
+            .limit(1)
+            .empty()
+            .not()
 
     private fun decodeRole(stored: String): SystemRole =
         runCatching { SystemRole.valueOf(stored) }

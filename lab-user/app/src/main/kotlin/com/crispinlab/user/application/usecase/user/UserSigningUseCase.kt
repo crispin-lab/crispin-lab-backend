@@ -28,17 +28,16 @@ class UserSigningUseCase(
     private val transactionProvider: TransactionProvider
 ) : UserSigning {
     override fun perform(request: Request): Result =
-        transactionProvider
-            .transactional {
-                request
-                    .also {
-                        it.validate()
-                    }.toEntity()
-                    .save()
-                    .also {
-                        it.saveCredential(request.password)
-                    }
-            }.toResult()
+        transactionProvider.transactional {
+            request
+                .also {
+                    it.validate()
+                }.toEntity()
+                .save()
+                .also {
+                    it.saveCredential(request.password)
+                }.toResult()
+        }
 
     private fun Request.validate() {
         if (userRepository.existsByEmail(email)) {
@@ -69,8 +68,13 @@ class UserSigningUseCase(
     }
 
     private fun User.toResult(): Result =
-        Result(
-            userId = id,
-            token = sessionService.issue(id)
-        )
+        sessionService
+            .issue(id)
+            .also { token ->
+                transactionProvider.afterRollback {
+                    sessionService.revoke(token)
+                }
+            }.let {
+                Result(userId = id, token = it)
+            }
 }

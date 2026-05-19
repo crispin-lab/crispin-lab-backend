@@ -7,4 +7,6 @@ class DummyTransactionProvider : TransactionProvider {
         readOnly: Boolean,
         block: () -> T
     ): T = block()
+
+    override fun afterRollback(block: () -> Unit) = Unit
 }

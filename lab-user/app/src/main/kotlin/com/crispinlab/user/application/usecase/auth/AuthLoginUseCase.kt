@@ -24,13 +24,13 @@ class AuthLoginUseCase(
     private val transactionProvider: TransactionProvider
 ) : AuthLogin {
     override fun perform(request: Request): Result =
-        transactionProvider
-            .transactional(readOnly = true) {
-                request
-                    .toEmail()
-                    .toUser()
-                    .verifyPassword(request.password)
-            }.toResult()
+        transactionProvider.transactional(readOnly = true) {
+            request
+                .toEmail()
+                .toUser()
+                .verifyPassword(request.password)
+                .toResult()
+        }
 
     private fun Request.toEmail(): EmailAddress =
         runCatching { EmailAddress(email) }
@@ -51,10 +51,15 @@ class AuthLoginUseCase(
         userCredentialRepository.findPasswordBy(id)?.credential as? Credential.Password
 
     private fun User.toResult(): Result =
-        Result(
-            userId = id,
-            token = sessionService.issue(id)
-        )
+        sessionService
+            .issue(id)
+            .also { token ->
+                transactionProvider.afterRollback {
+                    sessionService.revoke(token)
+                }
+            }.let {
+                Result(userId = id, token = it)
+            }
 
     private fun invalidCredentials(): AuthenticationException =
         AuthenticationException(UserErrorCode.INVALID_CREDENTIALS)

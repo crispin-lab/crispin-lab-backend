@@ -1,6 +1,6 @@
 package com.crispinlab.space.adapter.web.page
 
-import com.crispinlab.space.adapter.web.auth.toViewer
+import com.crispinlab.space.adapter.web.auth.toMember
 import com.crispinlab.space.application.port.incoming.page.PageRegistering
 import com.crispinlab.space.application.port.incoming.page.PageRegistering.Request
 import com.crispinlab.space.application.port.incoming.page.PageRegistering.Result
@@ -25,7 +25,7 @@ class PageRegisteringController(
         auth: Auth
     ): Result =
         body
-            .toRequestWith(auth.toViewer())
+            .toRequestWith(auth.toMember())
             .let {
                 useCase.perform(it)
             }

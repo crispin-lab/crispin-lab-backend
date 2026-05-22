@@ -1,6 +1,6 @@
 package com.crispinlab.space.adapter.web.space
 
-import com.crispinlab.space.adapter.web.auth.toViewer
+import com.crispinlab.space.adapter.web.auth.toMember
 import com.crispinlab.space.application.port.incoming.space.SpaceEditing
 import com.crispinlab.space.application.port.incoming.space.SpaceEditing.Request
 import com.crispinlab.space.application.port.incoming.space.SpaceEditing.Result
@@ -24,7 +24,7 @@ class SpaceEditingController(
         auth: Auth
     ): Result =
         body
-            .toRequestWith(spaceId = spaceId, viewer = auth.toViewer())
+            .toRequestWith(spaceId = spaceId, viewer = auth.toMember())
             .let { useCase.perform(it) }
 
     data class Body(

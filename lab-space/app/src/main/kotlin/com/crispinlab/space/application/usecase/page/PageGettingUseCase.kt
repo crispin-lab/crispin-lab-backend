@@ -6,10 +6,9 @@ import com.crispinlab.space.application.port.incoming.page.PageGetting
 import com.crispinlab.space.application.port.incoming.page.PageGetting.Request
 import com.crispinlab.space.application.port.incoming.page.PageGetting.Result
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
-import com.crispinlab.space.domain.access.Viewer
+import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageErrorCode
-import com.crispinlab.space.domain.page.Visibility
 import org.springframework.stereotype.Service
 
 @Service
@@ -24,21 +23,13 @@ class PageGettingUseCase(
                 .toResult()
         }
 
-    private fun Request.toEntity(): Page =
-        pageRepository
+    private fun Request.toEntity(): Page {
+        val scope = VisibilityScope.of(viewer)
+        return pageRepository
             .findBy(pageId)
-            ?.takeIf { it.isVisibleFor(viewer) }
+            ?.takeIf { scope.allows(it.visibility, it.authorId) }
             ?: throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
-
-    private fun Page.isVisibleFor(viewer: Viewer): Boolean =
-        when (visibility) {
-            Visibility.PUBLIC -> true
-            Visibility.INTERNAL -> viewer.isAuthenticated
-            Visibility.DRAFT -> viewer.isAdmin || isOwnedBy(viewer)
-        }
-
-    private fun Page.isOwnedBy(viewer: Viewer): Boolean =
-        viewer is Viewer.Member && authorId == viewer.userId
+    }
 
     private fun Page.toResult(): Result =
         Result(

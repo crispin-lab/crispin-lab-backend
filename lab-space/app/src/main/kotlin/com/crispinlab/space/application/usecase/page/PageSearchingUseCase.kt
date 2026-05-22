@@ -8,7 +8,6 @@ import com.crispinlab.space.application.port.incoming.page.PageSearching.Summary
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.PageSummary
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
-import com.crispinlab.space.domain.access.Viewer
 import org.springframework.stereotype.Service
 
 @Service
@@ -27,16 +26,9 @@ class PageSearchingUseCase(
                 keyword = keyword,
                 spaceId = spaceId,
                 tagIds = tagIds,
-                scope = viewer.toScope(),
+                scope = VisibilityScope.of(viewer),
                 pageRequest = pageRequest
             ).map { it.toSummary() }
-
-    private fun Viewer.toScope(): VisibilityScope =
-        when {
-            isAdmin -> VisibilityScope.Privileged
-            this is Viewer.Member -> VisibilityScope.Authenticated(userId)
-            else -> VisibilityScope.Anonymous
-        }
 
     private fun PageSummary.toSummary(): Summary =
         Summary(

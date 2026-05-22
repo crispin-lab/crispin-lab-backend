@@ -1,6 +1,6 @@
 package com.crispinlab.space.adapter.web.page
 
-import com.crispinlab.space.adapter.web.auth.toViewer
+import com.crispinlab.space.adapter.web.auth.toMember
 import com.crispinlab.space.application.port.incoming.page.PageEditing
 import com.crispinlab.space.application.port.incoming.page.PageEditing.Request
 import com.crispinlab.space.application.port.incoming.page.PageEditing.Result
@@ -24,7 +24,7 @@ class PageEditingController(
         auth: Auth
     ): Result =
         body
-            .toRequestWith(pageId = pageId, viewer = auth.toViewer())
+            .toRequestWith(pageId = pageId, viewer = auth.toMember())
             .let {
                 useCase.perform(it)
             }

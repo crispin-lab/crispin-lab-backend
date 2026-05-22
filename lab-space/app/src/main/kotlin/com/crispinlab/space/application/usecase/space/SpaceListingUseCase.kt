@@ -6,9 +6,7 @@ import com.crispinlab.space.application.port.incoming.space.SpaceListing
 import com.crispinlab.space.application.port.incoming.space.SpaceListing.Request
 import com.crispinlab.space.application.port.incoming.space.SpaceListing.Summary
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
-import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.space.Space
-import com.crispinlab.space.domain.space.SpaceVisibility
 import org.springframework.stereotype.Service
 
 @Service
@@ -25,12 +23,6 @@ class SpaceListingUseCase(
         spaceRepository
             .findPage(pageRequest, viewer.allowedSpaceVisibilities())
             .map { it.toSummary() }
-
-    private fun Viewer.allowedSpaceVisibilities(): Set<SpaceVisibility> =
-        when (this) {
-            is Viewer.Anonymous -> setOf(SpaceVisibility.PUBLIC)
-            is Viewer.Member -> setOf(SpaceVisibility.PUBLIC, SpaceVisibility.INTERNAL)
-        }
 
     private fun Space.toSummary(): Summary =
         Summary(

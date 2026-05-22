@@ -1,5 +1,6 @@
 package com.crispinlab.app.config
 
+import com.crispinlab.common.logging.LogContext.Field
 import com.crispinlab.common.transaction.TransactionProvider
 import com.crispinlab.user.application.port.outgoing.user.UserRepository
 import com.crispinlab.user.domain.user.EmailAddress
@@ -23,7 +24,11 @@ class AdminBootstrapApplicationRunner(
         val email =
             runCatching { EmailAddress(adminEmail) }
                 .getOrElse {
-                    log.warn("admin.email 형식이 올바르지 않아 promote 를 건너뜁니다.")
+                    log.warn(
+                        "ADMIN 부트스트랩 건너뜀 {}={}",
+                        Field.REASON,
+                        "invalid_email_format"
+                    )
                     return
                 }
         transactionProvider.transactional {
@@ -33,7 +38,7 @@ class AdminBootstrapApplicationRunner(
                 ?.also {
                     it.promoteTo(SystemRole.ADMIN)
                     userRepository.save(it)
-                    log.info("ADMIN 권한을 부여했습니다 (admin.email 일치 사용자).")
+                    log.info("ADMIN 부트스트랩 완료 {}={}", Field.USER_ID, it.id.value)
                 }
         }
     }

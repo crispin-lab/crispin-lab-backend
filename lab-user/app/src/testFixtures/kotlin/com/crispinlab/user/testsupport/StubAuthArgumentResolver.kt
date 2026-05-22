@@ -24,8 +24,11 @@ class StubAuthArgumentResolver : HandlerMethodArgumentResolver {
         binderFactory: WebDataBinderFactory?
     ): Auth {
         val raw = webRequest.getHeader(AUTHORIZATION) ?: throw invalidSession()
-        val payload = raw.removePrefix(BEARER_PREFIX)
-        if (payload == raw || payload.isBlank()) throw invalidSession()
+        if (!raw.regionMatches(0, BEARER_PREFIX, 0, BEARER_PREFIX.length, ignoreCase = true)) {
+            throw invalidSession()
+        }
+        val payload = raw.substring(BEARER_PREFIX.length).trim()
+        if (payload.isEmpty()) throw invalidSession()
         val parts = payload.split(":", limit = 2).takeIf { it.size == 2 } ?: throw invalidSession()
         val userId = parts[0].toLongOrNull() ?: throw invalidSession()
         val role =

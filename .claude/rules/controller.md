@@ -153,7 +153,7 @@ class PageEditingController(
 검증을 UseCase Request 의 `asUserId()` 변환에 미루지 않는 이유: 인증 게이트키퍼와 도메인 변환의 책임을 섞으면 응답 코드·메시지의 의도가 흐려진다. `AuthArgumentResolver` 에서 한 번에 닫는다.
 
 > 모든 실패 경로가 같은 `INVALID_SESSION` 으로 떨어지는 것은 의도 — 헤더 누락/형식 오류/세션 미존재/사용자 미존재를 응답으로 구분하면 enumeration 정보 누출 (`error-messages.md` "정보 노출 방지" 정합).
-
+>
 > `lab-space/app` 의 controller 가 `Auth` 를 사용하려면 `implementation(projects.labUser.app)` 의존 한 줄 + `auth.userId` 를 그대로 `Request.currentUserId` 에 전달. 두 도메인이 `lab-user/domain.UserId` 를 공유하므로 boundary 변환 없음 (`architecture.md` "identity reference cross-domain api 허용").
 
 ## 컨트롤러 테스트 — `ControllerDescribeSpec` 기반

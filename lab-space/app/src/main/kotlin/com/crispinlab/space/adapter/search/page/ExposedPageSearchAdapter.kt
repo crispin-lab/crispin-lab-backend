@@ -87,7 +87,7 @@ class ExposedPageSearchAdapter : PageSearchPort {
             }
 
             is VisibilityScope.Privileged -> {
-                Pages.visibility inList Visibility.entries.map { it.name }
+                Op.TRUE
             }
         }
 

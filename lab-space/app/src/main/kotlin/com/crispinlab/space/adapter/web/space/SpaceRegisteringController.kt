@@ -5,6 +5,7 @@ import com.crispinlab.space.application.port.incoming.space.SpaceRegistering
 import com.crispinlab.space.application.port.incoming.space.SpaceRegistering.Request
 import com.crispinlab.space.application.port.incoming.space.SpaceRegistering.Result
 import com.crispinlab.space.domain.access.Viewer
+import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.user.adapter.web.auth.Auth
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.PostMapping
@@ -37,7 +38,7 @@ class SpaceRegisteringController(
             Request(
                 name = name,
                 description = description,
-                visibility = visibility ?: "INTERNAL",
+                visibility = visibility ?: SpaceVisibility.INTERNAL.name,
                 viewer = viewer
             )
     }

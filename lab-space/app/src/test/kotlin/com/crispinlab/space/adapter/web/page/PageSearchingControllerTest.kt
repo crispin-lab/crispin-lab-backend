@@ -16,6 +16,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
+import org.springframework.http.HttpHeaders
 import org.springframework.restdocs.request.RequestDocumentation.queryParameters
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
@@ -208,6 +209,18 @@ class PageSearchingControllerTest :
                         match { it.viewer == Viewer.Anonymous }
                     )
                 }
+            }
+
+            it("옵셔널 endpoint 라도 Authorization 헤더가 잘못되면 401 로 fail-fast 한다") {
+                controller
+                    .`when`(
+                        get("/v1/pages")
+                            .header(HttpHeaders.AUTHORIZATION, "Bearer not-a-valid-token")
+                    ).then(
+                        status().isUnauthorized,
+                        jsonPath("$.code").value("INVALID_SESSION")
+                    )
+                verify(exactly = 0) { useCase.perform(any()) }
             }
         }
     })

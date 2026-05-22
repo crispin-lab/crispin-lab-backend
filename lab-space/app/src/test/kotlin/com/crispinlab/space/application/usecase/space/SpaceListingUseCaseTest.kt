@@ -129,6 +129,26 @@ class SpaceListingUseCaseTest :
                     )
                 }
             }
+
+            it("ADMIN 도 PUBLIC + INTERNAL visibility 로 조회한다 (Space 는 ADMIN-only visibility 없음)") {
+                every { spaceRepository.findPage(any(), any()) } returns
+                    PageResult.empty(PageRequest.firstPage())
+
+                useCase.perform(
+                    basicRequest(
+                        viewer = Viewer.Member(userId = UserId(100L), isAdmin = true)
+                    )
+                )
+
+                verify {
+                    spaceRepository.findPage(
+                        any(),
+                        withArg<Set<SpaceVisibility>> {
+                            it shouldBe setOf(SpaceVisibility.PUBLIC, SpaceVisibility.INTERNAL)
+                        }
+                    )
+                }
+            }
         }
     }) {
     companion object {

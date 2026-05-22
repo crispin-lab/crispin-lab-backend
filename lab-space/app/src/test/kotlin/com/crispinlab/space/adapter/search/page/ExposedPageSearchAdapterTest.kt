@@ -58,6 +58,8 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = emptyList(),
+                            visibilities = setOf(Visibility.PUBLIC),
+                            draftAuthorId = null,
                             pageRequest = PageRequest.firstPage()
                         )
                     }
@@ -89,6 +91,8 @@ class ExposedPageSearchAdapterTest :
                             keyword = "회고",
                             spaceId = null,
                             tagIds = emptyList(),
+                            visibilities = setOf(Visibility.PUBLIC),
+                            draftAuthorId = null,
                             pageRequest = PageRequest.firstPage()
                         )
                     }
@@ -110,6 +114,8 @@ class ExposedPageSearchAdapterTest :
                             keyword = "90%",
                             spaceId = null,
                             tagIds = emptyList(),
+                            visibilities = setOf(Visibility.PUBLIC),
+                            draftAuthorId = null,
                             pageRequest = PageRequest.firstPage()
                         )
                     }
@@ -121,6 +127,8 @@ class ExposedPageSearchAdapterTest :
                             keyword = "snake_case",
                             spaceId = null,
                             tagIds = emptyList(),
+                            visibilities = setOf(Visibility.PUBLIC),
+                            draftAuthorId = null,
                             pageRequest = PageRequest.firstPage()
                         )
                     }
@@ -147,6 +155,8 @@ class ExposedPageSearchAdapterTest :
                             keyword = "회고",
                             spaceId = null,
                             tagIds = emptyList(),
+                            visibilities = setOf(Visibility.PUBLIC),
+                            draftAuthorId = null,
                             pageRequest = PageRequest.firstPage()
                         )
                     }
@@ -167,6 +177,8 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = SpaceId(20L),
                             tagIds = emptyList(),
+                            visibilities = setOf(Visibility.PUBLIC),
+                            draftAuthorId = null,
                             pageRequest = PageRequest.firstPage()
                         )
                     }
@@ -191,6 +203,8 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = listOf(TagId(100L), TagId(200L)),
+                            visibilities = setOf(Visibility.PUBLIC),
+                            draftAuthorId = null,
                             pageRequest = PageRequest.firstPage()
                         )
                     }
@@ -213,6 +227,8 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = listOf(TagId(100L), TagId(200L), TagId(300L)),
+                            visibilities = setOf(Visibility.PUBLIC),
+                            draftAuthorId = null,
                             pageRequest = PageRequest.firstPage()
                         )
                     }
@@ -233,6 +249,8 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = listOf(TagId(999L)),
+                            visibilities = setOf(Visibility.PUBLIC),
+                            draftAuthorId = null,
                             pageRequest = PageRequest.firstPage()
                         )
                     }
@@ -263,6 +281,8 @@ class ExposedPageSearchAdapterTest :
                             keyword = "회고",
                             spaceId = SpaceId(10L),
                             tagIds = listOf(TagId(100L)),
+                            visibilities = setOf(Visibility.PUBLIC),
+                            draftAuthorId = null,
                             pageRequest = PageRequest.firstPage()
                         )
                     }
@@ -288,6 +308,8 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = emptyList(),
+                            visibilities = setOf(Visibility.PUBLIC),
+                            draftAuthorId = null,
                             pageRequest = PageRequest(page = 1, size = 2)
                         )
                     }
@@ -313,6 +335,8 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = emptyList(),
+                            visibilities = setOf(Visibility.PUBLIC),
+                            draftAuthorId = null,
                             pageRequest = PageRequest.firstPage()
                         )
                     }
@@ -339,6 +363,8 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = listOf(TagId(100L)),
+                            visibilities = setOf(Visibility.PUBLIC),
+                            draftAuthorId = null,
                             pageRequest = PageRequest.firstPage()
                         )
                     }

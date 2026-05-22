@@ -11,6 +11,7 @@ import com.crispinlab.space.domain.page.PageLink
 import com.crispinlab.space.domain.page.PageRevision
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicPage
+import com.crispinlab.user.domain.user.SystemRole
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -115,13 +116,15 @@ class PageEditingUseCaseTest :
             pageId: String = "1",
             title: String = "새 제목",
             content: String = "새 본문",
-            currentUserId: UserId = UserId(100L)
+            currentUserId: UserId = UserId(100L),
+            currentUserRole: SystemRole = SystemRole.USER
         ): Request =
             Request(
                 pageId = pageId,
                 title = title,
                 content = content,
-                currentUserId = currentUserId
+                currentUserId = currentUserId,
+                currentUserRole = currentUserRole
             )
     }
 }

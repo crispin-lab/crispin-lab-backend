@@ -33,7 +33,7 @@ class SpaceListingUseCaseTest :
                         basicSpace(id = SpaceId(2L), name = "최근"),
                         basicSpace(id = SpaceId(1L), name = "이전")
                     )
-                every { spaceRepository.findPage(any()) } returns
+                every { spaceRepository.findPage(any(), any()) } returns
                     PageResult(
                         items = spaces,
                         page = 2,
@@ -59,13 +59,14 @@ class SpaceListingUseCaseTest :
                         withArg {
                             it.page shouldBe 2
                             it.size shouldBe 5
-                        }
+                        },
+                        any()
                     )
                 }
             }
 
             it("결과가 비어 있어도 빈 페이지를 반환한다") {
-                every { spaceRepository.findPage(any()) } returns
+                every { spaceRepository.findPage(any(), any()) } returns
                     PageResult(
                         items = emptyList(),
                         page = 0,

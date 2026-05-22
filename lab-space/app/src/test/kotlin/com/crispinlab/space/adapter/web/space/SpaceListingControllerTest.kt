@@ -108,16 +108,6 @@ class SpaceListingControllerTest :
                     )
             }
 
-            it("Authorization 토큰이 없으면 401 을 반환한다") {
-                controller
-                    .`when`(get("/v1/spaces"))
-                    .then(
-                        status().isUnauthorized,
-                        jsonPath("$.code").value("INVALID_SESSION")
-                    )
-                verify(exactly = 0) { useCase.perform(any()) }
-            }
-
             it("page 가 음수면 400 과 한국어 메시지를 반환한다") {
                 controller
                     .`when`(

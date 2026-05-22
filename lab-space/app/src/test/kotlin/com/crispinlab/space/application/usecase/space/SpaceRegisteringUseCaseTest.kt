@@ -6,6 +6,7 @@ import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.domain.space.Space
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.testsupport.DummyTransactionProvider
+import com.crispinlab.user.domain.user.SystemRole
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -60,13 +61,15 @@ class SpaceRegisteringUseCaseTest :
             name: String = "팀 위키",
             description: String = "공유 공간",
             visibility: String = "INTERNAL",
-            currentUserId: UserId = UserId(100L)
+            currentUserId: UserId = UserId(100L),
+            currentUserRole: SystemRole = SystemRole.ADMIN
         ): Request =
             Request(
                 name = name,
                 description = description,
                 visibility = visibility,
-                currentUserId = currentUserId
+                currentUserId = currentUserId,
+                currentUserRole = currentUserRole
             )
     }
 }

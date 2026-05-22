@@ -11,6 +11,7 @@ import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.space.SpaceId.Companion.asSpaceId
 import com.crispinlab.space.domain.tag.TagId
 import com.crispinlab.space.domain.tag.TagId.Companion.asTagId
+import com.crispinlab.user.domain.user.SystemRole
 import com.crispinlab.user.domain.user.UserId
 import java.time.Instant
 
@@ -21,7 +22,8 @@ interface PageSearching : UseCase<Request, PageResult<Summary>> {
         tagIds: List<String>,
         page: Int = 0,
         size: Int = DEFAULT_SIZE,
-        val currentUserId: UserId
+        val currentUserId: UserId?,
+        val currentUserRole: SystemRole?
     ) {
         val keyword: String? = keyword?.trim()?.takeIf { it.isNotEmpty() }
         val spaceId: SpaceId? = spaceId?.asSpaceId()

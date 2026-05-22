@@ -8,6 +8,9 @@ import com.crispinlab.space.application.port.incoming.page.PageGetting.Result
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageErrorCode
+import com.crispinlab.space.domain.page.Visibility
+import com.crispinlab.user.domain.user.SystemRole
+import com.crispinlab.user.domain.user.UserId
 import org.springframework.stereotype.Service
 
 @Service
@@ -18,24 +21,25 @@ class PageGettingUseCase(
     override fun perform(request: Request): Result =
         transactionProvider.transactional(readOnly = true) {
             request
-                .also {
-                    it.validate()
-                }.toEntity()
+                .toEntity()
                 .toResult()
         }
 
-    private fun Request.validate() {
-        /*
-        todo    :: visibility·권한 모델 도입 시 외부 의존 검증을 둘 자리. 현재는 누구나 조회 가능.
-         author :: heechoel shin
-         date   :: 2026-05-13T00:00:00KST
-         ticket :: LAB-22
-         */
-    }
-
     private fun Request.toEntity(): Page =
-        pageRepository.findBy(pageId)
+        pageRepository
+            .findBy(pageId)
+            ?.takeIf { it.isVisibleFor(currentUserId, currentUserRole) }
             ?: throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
+
+    private fun Page.isVisibleFor(
+        userId: UserId?,
+        role: SystemRole?
+    ): Boolean =
+        when (visibility) {
+            Visibility.PUBLIC -> true
+            Visibility.INTERNAL -> userId != null
+            Visibility.DRAFT -> role == SystemRole.ADMIN || (userId != null && authorId == userId)
+        }
 
     private fun Page.toResult(): Result =
         Result(

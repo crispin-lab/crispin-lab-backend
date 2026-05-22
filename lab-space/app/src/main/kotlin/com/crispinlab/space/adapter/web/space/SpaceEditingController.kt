@@ -4,6 +4,7 @@ import com.crispinlab.space.application.port.incoming.space.SpaceEditing
 import com.crispinlab.space.application.port.incoming.space.SpaceEditing.Request
 import com.crispinlab.space.application.port.incoming.space.SpaceEditing.Result
 import com.crispinlab.user.adapter.web.auth.Auth
+import com.crispinlab.user.domain.user.SystemRole
 import com.crispinlab.user.domain.user.UserId
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PutMapping
@@ -23,7 +24,7 @@ class SpaceEditingController(
         auth: Auth
     ): Result =
         body
-            .toRequestWith(spaceId = spaceId, userId = auth.userId)
+            .toRequestWith(spaceId = spaceId, userId = auth.userId, role = auth.role)
             .let { useCase.perform(it) }
 
     data class Body(
@@ -33,14 +34,16 @@ class SpaceEditingController(
     ) {
         fun toRequestWith(
             spaceId: String,
-            userId: UserId
+            userId: UserId,
+            role: SystemRole
         ): Request =
             Request(
                 spaceId = spaceId,
                 name = name,
                 description = description,
                 visibility = visibility,
-                currentUserId = userId
+                currentUserId = userId,
+                currentUserRole = role
             )
     }
 }

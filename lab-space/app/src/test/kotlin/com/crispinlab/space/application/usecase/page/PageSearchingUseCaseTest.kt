@@ -10,6 +10,7 @@ import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.tag.TagId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.DummyTransactionProvider
+import com.crispinlab.user.domain.user.SystemRole
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -50,6 +51,8 @@ class PageSearchingUseCaseTest :
                         keyword = "회고",
                         spaceId = SpaceId(10L),
                         tagIds = listOf(TagId(100L), TagId(200L)),
+                        visibilities = any(),
+                        draftAuthorId = any(),
                         pageRequest = any()
                     )
                 } returns
@@ -78,8 +81,10 @@ class PageSearchingUseCaseTest :
                         keyword = "회고",
                         spaceId = SpaceId(10L),
                         tagIds = listOf(TagId(100L), TagId(200L)),
+                        visibilities = any(),
+                        draftAuthorId = any(),
                         pageRequest =
-                            withArg {
+                            withArg<com.crispinlab.common.pagination.PageRequest> {
                                 it.page shouldBe 0
                                 it.size shouldBe 20
                             }
@@ -93,6 +98,8 @@ class PageSearchingUseCaseTest :
                         keyword = null,
                         spaceId = null,
                         tagIds = emptyList(),
+                        visibilities = any(),
+                        draftAuthorId = any(),
                         pageRequest = any()
                     )
                 } returns PageResult.empty(basicRequest().pageRequest)
@@ -104,6 +111,8 @@ class PageSearchingUseCaseTest :
                         keyword = null,
                         spaceId = null,
                         tagIds = emptyList(),
+                        visibilities = any(),
+                        draftAuthorId = any(),
                         pageRequest = any()
                     )
                 }
@@ -115,6 +124,8 @@ class PageSearchingUseCaseTest :
                         keyword = null,
                         spaceId = null,
                         tagIds = emptyList(),
+                        visibilities = any(),
+                        draftAuthorId = any(),
                         pageRequest = any()
                     )
                 } returns PageResult.empty(basicRequest().pageRequest)
@@ -160,7 +171,8 @@ class PageSearchingUseCaseTest :
             tagIds: List<String> = emptyList(),
             page: Int = 0,
             size: Int = DEFAULT_SIZE,
-            currentUserId: UserId = UserId(100L)
+            currentUserId: UserId? = UserId(100L),
+            currentUserRole: SystemRole? = SystemRole.USER
         ): Request =
             Request(
                 keyword = keyword,
@@ -168,7 +180,8 @@ class PageSearchingUseCaseTest :
                 tagIds = tagIds,
                 page = page,
                 size = size,
-                currentUserId = currentUserId
+                currentUserId = currentUserId,
+                currentUserRole = currentUserRole
             )
     }
 }

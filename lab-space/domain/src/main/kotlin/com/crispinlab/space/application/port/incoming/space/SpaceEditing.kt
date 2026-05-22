@@ -7,6 +7,7 @@ import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.space.SpaceId.Companion.asSpaceId
 import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.domain.space.SpaceVisibility.Companion.asSpaceVisibility
+import com.crispinlab.user.domain.user.SystemRole
 import com.crispinlab.user.domain.user.UserId
 import java.time.Instant
 
@@ -16,7 +17,8 @@ interface SpaceEditing : UseCase<Request, Result> {
         val name: String? = null,
         val description: String? = null,
         visibility: String? = null,
-        val currentUserId: UserId
+        val currentUserId: UserId,
+        val currentUserRole: SystemRole
     ) {
         val spaceId: SpaceId = spaceId.asSpaceId()
         val visibility: SpaceVisibility? = visibility?.asSpaceVisibility()

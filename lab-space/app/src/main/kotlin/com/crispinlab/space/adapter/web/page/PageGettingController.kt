@@ -17,11 +17,12 @@ class PageGettingController(
     @GetMapping
     fun get(
         @PathVariable pageId: String,
-        auth: Auth
+        auth: Auth?
     ): Result =
         Request(
             pageId = pageId,
-            currentUserId = auth.userId
+            currentUserId = auth?.userId,
+            currentUserRole = auth?.role
         ).let {
             useCase.perform(it)
         }

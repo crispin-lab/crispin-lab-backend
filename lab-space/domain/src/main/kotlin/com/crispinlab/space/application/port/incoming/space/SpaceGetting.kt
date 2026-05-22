@@ -12,7 +12,7 @@ import java.time.Instant
 interface SpaceGetting : UseCase<Request, Result> {
     class Request(
         spaceId: String,
-        val currentUserId: UserId
+        val currentUserId: UserId?
     ) {
         val spaceId: SpaceId = spaceId.asSpaceId()
     }

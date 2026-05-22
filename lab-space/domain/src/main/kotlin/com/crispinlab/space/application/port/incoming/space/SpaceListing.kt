@@ -15,7 +15,7 @@ interface SpaceListing : UseCase<Request, PageResult<Summary>> {
     class Request(
         page: Int = 0,
         size: Int = DEFAULT_SIZE,
-        val currentUserId: UserId
+        val currentUserId: UserId?
     ) {
         val pageRequest: PageRequest =
             PageRequest(

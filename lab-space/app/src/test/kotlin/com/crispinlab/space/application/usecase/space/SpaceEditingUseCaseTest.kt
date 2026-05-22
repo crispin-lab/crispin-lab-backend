@@ -7,6 +7,7 @@ import com.crispinlab.space.domain.space.Space
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicSpace
+import com.crispinlab.user.domain.user.SystemRole
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -70,13 +71,17 @@ class SpaceEditingUseCaseTest :
             spaceId: String = "1",
             name: String? = null,
             description: String? = null,
-            currentUserId: UserId = UserId(100L)
+            visibility: String? = null,
+            currentUserId: UserId = UserId(100L),
+            currentUserRole: SystemRole = SystemRole.ADMIN
         ): Request =
             Request(
                 spaceId = spaceId,
                 name = name,
                 description = description,
-                currentUserId = currentUserId
+                visibility = visibility,
+                currentUserId = currentUserId,
+                currentUserRole = currentUserRole
             )
     }
 }

@@ -11,6 +11,8 @@ import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.domain.space.SpaceVisibility.Companion.asSpaceVisibility
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.statements.UpsertStatement
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.springframework.stereotype.Repository
@@ -51,15 +53,21 @@ class ExposedSpaceRepository :
         builder[Spaces.deletedAt] = entity.deletedAt
     }
 
-    override fun findPage(pageRequest: PageRequest): PageResult<Space> =
-        Spaces
+    override fun findPage(
+        pageRequest: PageRequest,
+        visibilities: Set<SpaceVisibility>
+    ): PageResult<Space> {
+        if (visibilities.isEmpty()) return PageResult.empty(pageRequest)
+        return Spaces
             .selectAll()
-            .where { notDeleted() }
-            .toPageResult(
+            .where {
+                notDeleted() and (Spaces.visibility inList visibilities.map { it.name })
+            }.toPageResult(
                 pageRequest,
                 Spaces.createdAt to SortOrder.DESC,
                 Spaces.id to SortOrder.DESC
             ) { it.toEntity() }
+    }
 
     private fun decodeVisibility(stored: String): SpaceVisibility =
         runCatching { stored.asSpaceVisibility() }

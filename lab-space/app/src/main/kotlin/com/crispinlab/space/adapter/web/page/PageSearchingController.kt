@@ -23,7 +23,7 @@ class PageSearchingController(
         @RequestParam(required = false) tag: List<String>?,
         @RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "$DEFAULT_SIZE") size: Int,
-        auth: Auth
+        auth: Auth?
     ): PageResult<Summary> =
         Request(
             keyword = query,
@@ -31,6 +31,7 @@ class PageSearchingController(
             tagIds = tag.orEmpty(),
             page = page,
             size = size,
-            currentUserId = auth.userId
+            currentUserId = auth?.userId,
+            currentUserRole = auth?.role
         ).let { useCase.perform(it) }
 }

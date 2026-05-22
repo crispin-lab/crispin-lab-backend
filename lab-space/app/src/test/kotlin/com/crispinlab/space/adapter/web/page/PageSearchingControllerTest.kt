@@ -131,16 +131,6 @@ class PageSearchingControllerTest :
                 requestSlot.captured.tagIds.map { it.value } shouldBe listOf(100L, 200L, 300L)
             }
 
-            it("Authorization 토큰이 없으면 401 을 반환한다") {
-                controller
-                    .`when`(get("/v1/pages"))
-                    .then(
-                        status().isUnauthorized,
-                        jsonPath("$.code").value("INVALID_SESSION")
-                    )
-                verify(exactly = 0) { useCase.perform(any()) }
-            }
-
             it("space 형식이 숫자가 아니면 400 을 반환한다") {
                 controller
                     .`when`(

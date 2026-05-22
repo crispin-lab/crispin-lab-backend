@@ -6,6 +6,7 @@ import com.crispinlab.space.application.port.incoming.space.SpaceRegistering.Res
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.domain.space.SpaceVisibility.Companion.asSpaceVisibility
+import com.crispinlab.user.domain.user.SystemRole
 import com.crispinlab.user.domain.user.UserId
 
 interface SpaceRegistering : UseCase<Request, Result> {
@@ -13,7 +14,8 @@ interface SpaceRegistering : UseCase<Request, Result> {
         val name: String,
         val description: String,
         visibility: String,
-        val currentUserId: UserId
+        val currentUserId: UserId,
+        val currentUserRole: SystemRole
     ) {
         val visibility: SpaceVisibility = visibility.asSpaceVisibility()
     }

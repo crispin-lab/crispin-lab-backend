@@ -3,6 +3,7 @@ package com.crispinlab.space.adapter.persistence.space
 import com.crispinlab.common.pagination.PageRequest
 import com.crispinlab.common.persistence.PostgresTestContext
 import com.crispinlab.space.domain.space.SpaceId
+import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.Fixtures.basicSpace
 import io.kotest.core.spec.style.DescribeSpec
@@ -90,7 +91,11 @@ class ExposedSpaceRepositoryTest :
                 }
 
                 transaction(database) {
-                    val result = repository.findPage(PageRequest(page = 0, size = 10))
+                    val result =
+                        repository.findPage(
+                            PageRequest(page = 0, size = 10),
+                            SpaceVisibility.entries.toSet()
+                        )
                     result.totalElements shouldBe 1L
                     result.items.map { it.id } shouldBe listOf(SpaceId(41L))
                 }
@@ -127,7 +132,8 @@ class ExposedSpaceRepositoryTest :
                             PageRequest(
                                 page = 0,
                                 size = 10
-                            )
+                            ),
+                            SpaceVisibility.entries.toSet()
                         )
 
                     result.totalElements shouldBe 3L
@@ -155,7 +161,8 @@ class ExposedSpaceRepositoryTest :
                             PageRequest(
                                 page = 1,
                                 size = 2
-                            )
+                            ),
+                            SpaceVisibility.entries.toSet()
                         )
 
                     secondPage.page shouldBe 1
@@ -173,7 +180,8 @@ class ExposedSpaceRepositoryTest :
                             PageRequest(
                                 page = 0,
                                 size = 10
-                            )
+                            ),
+                            SpaceVisibility.entries.toSet()
                         )
 
                     result.items shouldBe emptyList()
@@ -264,7 +272,8 @@ class ExposedSpaceRepositoryTest :
                             PageRequest(
                                 page = 0,
                                 size = 10
-                            )
+                            ),
+                            SpaceVisibility.entries.toSet()
                         )
 
                     result.items.map { it.id } shouldBe

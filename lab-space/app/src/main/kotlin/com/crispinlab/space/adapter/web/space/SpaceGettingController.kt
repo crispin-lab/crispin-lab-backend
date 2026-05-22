@@ -17,8 +17,8 @@ class SpaceGettingController(
     @GetMapping
     fun get(
         @PathVariable spaceId: String,
-        auth: Auth
+        auth: Auth?
     ): Result =
-        Request(spaceId = spaceId, currentUserId = auth.userId)
+        Request(spaceId = spaceId, currentUserId = auth?.userId)
             .let { useCase.perform(it) }
 }

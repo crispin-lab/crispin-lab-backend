@@ -23,7 +23,8 @@ class PageDeletingController(
     ) {
         Request(
             pageId = pageId,
-            currentUserId = auth.userId
+            currentUserId = auth.userId,
+            currentUserRole = auth.role
         ).let {
             useCase.perform(it)
         }

@@ -3,8 +3,10 @@ package com.crispinlab.space.application.port.outgoing.page
 import com.crispinlab.common.pagination.PageRequest
 import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.domain.page.PageId
+import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.tag.TagId
+import com.crispinlab.user.domain.user.UserId
 import java.time.Instant
 
 interface PageSearchPort {
@@ -12,6 +14,8 @@ interface PageSearchPort {
         keyword: String?,
         spaceId: SpaceId?,
         tagIds: Collection<TagId>,
+        visibilities: Set<Visibility>,
+        draftAuthorId: UserId?,
         pageRequest: PageRequest
     ): PageResult<PageSummary>
 

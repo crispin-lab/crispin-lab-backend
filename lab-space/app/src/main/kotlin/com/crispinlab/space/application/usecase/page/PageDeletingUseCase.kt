@@ -7,6 +7,7 @@ import com.crispinlab.space.application.port.incoming.page.PageDeleting.Request
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageErrorCode
+import com.crispinlab.user.domain.user.SystemRole
 import org.springframework.stereotype.Service
 
 @Service
@@ -26,7 +27,7 @@ class PageDeletingUseCase(
         pageRepository
             .findBy(pageId)
             ?.takeIf {
-                it.authorId == currentUserId
+                currentUserRole == SystemRole.ADMIN || it.authorId == currentUserId
             } ?: throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
 
     private fun Page.withdraw() {

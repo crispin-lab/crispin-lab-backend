@@ -70,15 +70,5 @@ class SpaceGettingControllerTest :
                         jsonPath("$.message").value("스페이스를 찾을 수 없습니다.")
                     )
             }
-
-            it("Authorization 토큰이 없으면 401 을 반환한다") {
-                controller
-                    .`when`(get("/v1/spaces/{spaceId}", 1))
-                    .then(
-                        status().isUnauthorized,
-                        jsonPath("$.code").value("INVALID_SESSION")
-                    )
-                verify(exactly = 0) { useCase.perform(any()) }
-            }
         }
     })

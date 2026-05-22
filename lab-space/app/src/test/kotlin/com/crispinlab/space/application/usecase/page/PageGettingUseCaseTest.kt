@@ -5,6 +5,7 @@ import com.crispinlab.space.application.port.incoming.page.PageGetting.Request
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicPage
+import com.crispinlab.user.domain.user.SystemRole
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -52,7 +53,13 @@ class PageGettingUseCaseTest :
     companion object {
         fun basicRequest(
             pageId: String = "1",
-            currentUserId: UserId = UserId(100L)
-        ): Request = Request(pageId = pageId, currentUserId = currentUserId)
+            currentUserId: UserId? = UserId(100L),
+            currentUserRole: SystemRole? = SystemRole.USER
+        ): Request =
+            Request(
+                pageId = pageId,
+                currentUserId = currentUserId,
+                currentUserRole = currentUserRole
+            )
     }
 }

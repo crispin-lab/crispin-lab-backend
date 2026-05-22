@@ -20,11 +20,11 @@ class SpaceListingController(
     fun list(
         @RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "$DEFAULT_SIZE") size: Int,
-        auth: Auth
+        auth: Auth?
     ): PageResult<Summary> =
         Request(
             page = page,
             size = size,
-            currentUserId = auth.userId
+            currentUserId = auth?.userId
         ).let { useCase.perform(it) }
 }

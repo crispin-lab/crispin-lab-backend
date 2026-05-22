@@ -153,8 +153,35 @@ class PageEditingController(
 검증을 UseCase Request 의 `asUserId()` 변환에 미루지 않는 이유: 인증 게이트키퍼와 도메인 변환의 책임을 섞으면 응답 코드·메시지의 의도가 흐려진다. `AuthArgumentResolver` 에서 한 번에 닫는다.
 
 > 모든 실패 경로가 같은 `INVALID_SESSION` 으로 떨어지는 것은 의도 — 헤더 누락/형식 오류/세션 미존재/사용자 미존재를 응답으로 구분하면 enumeration 정보 누출 (`error-messages.md` "정보 노출 방지" 정합).
->
-> `lab-space/app` 의 controller 가 `Auth` 를 사용하려면 `implementation(projects.labUser.app)` 의존 한 줄 + `auth.userId` 를 그대로 `Request.currentUserId` 에 전달. 두 도메인이 `lab-user/domain.UserId` 를 공유하므로 boundary 변환 없음 (`architecture.md` "identity reference cross-domain api 허용").
+
+### 옵셔널 인증 endpoint — `auth: Auth?`
+
+비로그인 사용자도 PUBLIC 리소스를 볼 수 있어야 하는 GET endpoint 는 controller signature 를 `auth: Auth?` 로 받는다. resolver 가 `parameter.isOptional` (Kotlin nullable) 을 보고 분기:
+
+- **헤더 자체가 없음** → `null` 반환 (anonymous 흐름)
+- **헤더가 있는데 invalid** (만료/위변조/세션 miss/사용자 미존재) → `AuthenticationException` (401) 그대로 throw
+
+invalid 토큰을 silently null 로 떨어뜨리지 않는 이유: 클라이언트가 세션 만료를 인지 못 해 자동 재로그인 트리거가 안 걸린다. nullable 타입 자체가 시그널이라 별도 어노테이션 신설 안 함.
+
+### `Auth → 도메인 자체 access type` 변환
+
+다른 도메인의 controller (예: `lab-space/app`) 가 권한을 다룰 때 `Auth` 를 UseCase Request 에 그대로 넘기지 않는다. 도메인이 자기 access control 모델 (예: `Viewer` sealed type) 을 두고, controller 가 변환한다.
+
+```kotlin
+// lab-space/app/.../adapter/web/auth/AuthViewerMapping.kt
+fun Auth.toMember(): Viewer.Member =
+    Viewer.Member(userId = userId, isAdmin = isAdmin)
+
+fun Auth?.toViewer(): Viewer =
+    this?.toMember() ?: Viewer.Anonymous
+```
+
+- **인증 필수 endpoint** (`auth: Auth`): `auth.toMember()` — `Viewer.Member` (non-null) 로 변환, Request 는 `viewer: Viewer.Member` 로 받는다. sealed variant 직접 시그니처 노출로 호출 측이 Anonymous 케이스를 못 만든다.
+- **인증 옵셔널 endpoint** (`auth: Auth?`): `auth.toViewer()` — `Viewer` (sealed parent) 로 변환, Request 는 `viewer: Viewer` 로 받는다.
+
+이름 분리 (`toMember` 가 member, `toViewer` 가 sealed parent) 로 receiver 가 nullable / non-null 인지가 호출부에서 명확. `Auth.toViewer()` / `Auth?.toViewer()` 같은 member/extension 동명 공존을 피한다.
+
+도메인 모듈 (`lab-space/domain`) 은 `Auth` / `SystemRole` 을 직접 import 하지 않는다 — cross-domain 의존을 `UserId` (EntityId) 한 종류로 환원 (`architecture.md` "도메인 자체 access control 컨셉" 참조).
 
 ## 컨트롤러 테스트 — `ControllerDescribeSpec` 기반
 

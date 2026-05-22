@@ -221,6 +221,66 @@ class PageEditingUseCase(
 - UseCase 단위 테스트에서는 `lab-space/app/testsupport` 의 `DummyTransactionProvider` (block 을 그대로 실행) 를 주입해 트랜잭션 매니저 없이 검증한다. (첫 UseCase 티켓에서 testsupport 추가)
 - `DefaultTransactionProvider` 자체의 회귀(commit/rollback/readOnly) 는 `lab-common-infra` 의 통합 테스트가 책임진다.
 
+## 권한 검증 (Viewer + ForbiddenException + IDOR)
+
+권한 정책은 controller 가 매핑한 도메인 자체 access type (예: `Viewer`) 을 Request 가 받아 UseCase 가 분기하는 형태로 짠다. cross-domain 의존을 `UserId` (EntityId) 한 종류로 환원하고, role 분류 같은 user-domain 의 개념은 어댑터 경계에 머문다 (`controller.md` "Auth → 도메인 자체 access type 변환" / `architecture.md` "도메인 자체 access control 컨셉" 참조).
+
+### ADMIN gate — `ForbiddenException`
+
+자원의 존재 자체가 클라이언트에게 노출되어도 무방한 admin-only 동작 (예: `SpaceRegistering` / `SpaceEditing` / `SpaceDeleting`) 은 `validate()` 에서 명시적 403 으로 차단:
+
+```kotlin
+private fun Request.validate() {
+    if (!viewer.isAdmin) {
+        throw ForbiddenException(SpaceErrorCode.SPACE_ADMIN_ONLY)
+    }
+}
+```
+
+Request 시그니처는 `viewer: Viewer.Member` (sealed variant 직접) — Anonymous 케이스 자체가 표현 불가, controller 가 인증 필수 endpoint 에서만 호출됨.
+
+### IDOR 보호 — `findBy + takeIf` 통합
+
+자원의 존재가 권한에 따라 다르게 노출되어야 하는 경우 (예: `PageEditing` / `PageDeleting` — 다른 사용자의 DRAFT) 는 ForbiddenException 으로 분리하지 않고 NotFoundException 으로 통합한다 (`error-messages.md` 정합):
+
+```kotlin
+private fun Request.toEntity(): Page =
+    pageRepository
+        .findBy(pageId)
+        ?.takeIf { viewer.isAdmin || it.authorId == viewer.userId }
+        ?: throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
+```
+
+### Visibility 정책 — sealed type 으로 단일 진실
+
+PUBLIC / INTERNAL / DRAFT 같이 자원 자체에 visibility 가 있는 경우, 단건 조회 (`Getting`) 와 검색 (`Searching`) 두 곳에 정책이 중복 인코딩되기 쉽다. **port 의 sealed type 안에 `allows(visibility, authorId)` 같은 정책 함수를 두고 두 UseCase 가 같은 함수를 호출**하게 한다.
+
+```kotlin
+// PageSearchPort
+sealed interface VisibilityScope {
+    fun allows(visibility: Visibility, authorId: UserId): Boolean
+
+    data object Anonymous : VisibilityScope { ... }
+    data class Authenticated(val viewerId: UserId) : VisibilityScope { ... }
+    data object Privileged : VisibilityScope { ... }
+
+    companion object {
+        fun of(viewer: Viewer): VisibilityScope = ...
+    }
+}
+
+// PageGettingUseCase (단건)
+val scope = VisibilityScope.of(viewer)
+pageRepository.findBy(pageId)
+    ?.takeIf { scope.allows(it.visibility, it.authorId) }
+    ?: throw NotFoundException(...)
+
+// PageSearchingUseCase (검색)
+pageSearchPort.search(..., scope = VisibilityScope.of(viewer), ...)
+```
+
+이렇게 두면 SQL 어댑터 (검색) 와 메모리 단건 체크가 같은 sealed type 위에서 결정되어, 한 정책 변경이 두 흐름에 자동 전파된다. 정책이 단순한 경우 (예: Space 의 PUBLIC/INTERNAL 만) 는 sealed type 까지 가지 않고 같은 application 패키지의 internal helper (`Viewer.allowedSpaceVisibilities(): Set<SpaceVisibility>`) 한 곳에 두는 것으로 충분.
+
 ## perform 작성 시 자주 빠뜨리는 것
 
 - **세부 분기를 perform 에 노출** — `if (tokens.isNotEmpty()) ...` 같은 사전 조건은 호출되는 함수 내부로. perform 은 흐름만.

@@ -76,7 +76,7 @@ package com.crispinlab.space.adapter.persistence.page
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageId
-import com.crispinlab.space.domain.user.UserId
+import com.crispinlab.user.domain.user.UserId
 import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.page.Visibility.Companion.asVisibility
 import org.jetbrains.exposed.sql.ResultRow

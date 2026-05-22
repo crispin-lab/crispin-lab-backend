@@ -6,7 +6,7 @@ import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.PageId.Companion.asPageId
 import com.crispinlab.space.domain.tag.TagId
 import com.crispinlab.space.domain.tag.TagId.Companion.asTagId
-import com.crispinlab.space.domain.user.UserId
+import com.crispinlab.user.domain.user.UserId
 
 interface PageTagDetaching : UseCase<Request, Unit> {
     class Request(

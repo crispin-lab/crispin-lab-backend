@@ -7,6 +7,7 @@ import com.crispinlab.space.application.port.incoming.space.SpaceEditing.Result
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
+import com.crispinlab.user.testsupport.withAuth
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -35,7 +36,7 @@ class SpaceEditingControllerTest :
                 controller
                     .`when`(
                         put("/v1/spaces/{spaceId}", 1)
-                            .withUserHeader()
+                            .withAuth()
                             .body(mapOf("name" to "새 이름", "description" to "새 설명"))
                     ).then(
                         status().isOk,
@@ -44,7 +45,7 @@ class SpaceEditingControllerTest :
                         jsonPath("$.description").value("새 설명"),
                         jsonPath("$.updatedAt").exists()
                     ).document(
-                        userHeaderRequired(),
+                        authHeaderRequired(),
                         requestFields {
                             "name".string("변경할 이름", optional = true)
                             "description".string("변경할 설명", optional = true)
@@ -58,22 +59,15 @@ class SpaceEditingControllerTest :
                     )
             }
 
-            it("X-User-Id 헤더가 없으면 400 을 반환한다") {
+            it("Authorization 토큰이 없으면 401 을 반환한다") {
                 controller
                     .`when`(
                         put("/v1/spaces/{spaceId}", 1)
                             .body(mapOf("name" to "새 이름", "description" to "새 설명"))
-                    ).then(status().isBadRequest)
-                verify(exactly = 0) { useCase.perform(any()) }
-            }
-
-            it("X-User-Id 가 숫자가 아니면 400 을 반환한다") {
-                controller
-                    .`when`(
-                        put("/v1/spaces/{spaceId}", 1)
-                            .withUserHeader(userId = "not-a-number")
-                            .body(mapOf("name" to "새 이름", "description" to "새 설명"))
-                    ).then(status().isBadRequest)
+                    ).then(
+                        status().isUnauthorized,
+                        jsonPath("$.code").value("INVALID_SESSION")
+                    )
                 verify(exactly = 0) { useCase.perform(any()) }
             }
         }

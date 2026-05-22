@@ -47,11 +47,14 @@ set -a && source .env && set +a  # 현재 셸에 .env 값을 export — bootRun 
 | `POSTGRES_DB` | `lab` | Postgres 데이터베이스 이름 |
 | `POSTGRES_USER` | `lab` | Postgres 사용자명 |
 | `POSTGRES_PASSWORD` | `lab` | Postgres 비밀번호 (로컬 전용) |
+| `ADMIN_EMAIL` | 빈 값 | `AdminBootstrapApplicationRunner` 가 부팅 시 일치하는 user 를 `SystemRole.ADMIN` 으로 promote. 미설정 / blank 시 noop. |
 
 `app/src/main/resources/application.yml` 의 datasource:
 
 - `POSTGRES_USER` / `POSTGRES_PASSWORD` — **fallback 없음**. 미설정 시 Spring 이 `Could not resolve placeholder` 로 즉시 실패. 운영에서 자격증명 누락 시 dev default 로 silently 붙는 사고를 막는다.
 - `POSTGRES_HOST` (default `localhost`) / `POSTGRES_PORT` (default `5432`) / `POSTGRES_DB` (default `lab`) — fallback 있음. 컨테이너로 띄울 때만 host 를 `host.docker.internal` 또는 compose network 의 서비스명으로 override.
+
+`admin.email` 은 fallback 빈 값 (`${ADMIN_EMAIL:}`) — 미설정 부팅이 정상. runner 의 promote 는 idempotent (이미 ADMIN 이면 save 호출 없음). 첫 ADMIN 만들 때만 잠시 env 를 채워 부팅한 뒤 다시 비우는 운영 흐름 가정.
 
 Redis 는 현재 인증/포트 옵션이 모두 default 라 `.env` 키가 없다. AUTH 또는 다른 인스턴스 분리가 필요해지면 그때 `REDIS_*` 키를 도입한다.
 

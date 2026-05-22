@@ -8,6 +8,7 @@ import com.crispinlab.space.domain.space.SpaceErrorCode
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
+import com.crispinlab.user.testsupport.withAuth
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -36,13 +37,13 @@ class SpaceGettingControllerTest :
 
                 controller
                     .`when`(
-                        get("/v1/spaces/{spaceId}", 1).withUserHeader()
+                        get("/v1/spaces/{spaceId}", 1).withAuth()
                     ).then(
                         status().isOk,
                         jsonPath("$.spaceId").value("1"),
                         jsonPath("$.name").value("팀 위키")
                     ).document(
-                        userHeaderRequired(),
+                        authHeaderRequired(),
                         responseFields {
                             "spaceId".string("스페이스 식별자")
                             "name".string("이름")
@@ -59,7 +60,7 @@ class SpaceGettingControllerTest :
 
                 controller
                     .`when`(
-                        get("/v1/spaces/{spaceId}", 999).withUserHeader()
+                        get("/v1/spaces/{spaceId}", 999).withAuth()
                     ).then(
                         status().isNotFound,
                         jsonPath("$.code").value("SPACE_NOT_FOUND"),
@@ -67,17 +68,13 @@ class SpaceGettingControllerTest :
                     )
             }
 
-            it("X-User-Id 헤더가 없으면 400 을 반환한다") {
+            it("Authorization 토큰이 없으면 401 을 반환한다") {
                 controller
                     .`when`(get("/v1/spaces/{spaceId}", 1))
-                    .then(status().isBadRequest)
-                verify(exactly = 0) { useCase.perform(any()) }
-            }
-
-            it("X-User-Id 가 숫자가 아니면 400 을 반환한다") {
-                controller
-                    .`when`(get("/v1/spaces/{spaceId}", 1).withUserHeader(userId = "not-a-number"))
-                    .then(status().isBadRequest)
+                    .then(
+                        status().isUnauthorized,
+                        jsonPath("$.code").value("INVALID_SESSION")
+                    )
                 verify(exactly = 0) { useCase.perform(any()) }
             }
         }

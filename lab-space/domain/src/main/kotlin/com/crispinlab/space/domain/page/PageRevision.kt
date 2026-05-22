@@ -1,7 +1,7 @@
 package com.crispinlab.space.domain.page
 
 import com.crispinlab.common.domain.Entity
-import com.crispinlab.space.domain.user.UserId
+import com.crispinlab.user.domain.user.UserId
 import java.time.Instant
 
 class PageRevision(

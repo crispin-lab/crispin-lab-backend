@@ -10,4 +10,5 @@ tasks.named<Jar>("jar") {
 dependencies {
     api(projects.labCommonDomain)
     api(projects.labCommonPort)
+    api(projects.labUser.domain)
 }

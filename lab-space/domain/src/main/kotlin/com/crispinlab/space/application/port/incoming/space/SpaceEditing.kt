@@ -5,7 +5,7 @@ import com.crispinlab.space.application.port.incoming.space.SpaceEditing.Request
 import com.crispinlab.space.application.port.incoming.space.SpaceEditing.Result
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.space.SpaceId.Companion.asSpaceId
-import com.crispinlab.space.domain.user.UserId
+import com.crispinlab.user.domain.user.UserId
 import java.time.Instant
 
 interface SpaceEditing : UseCase<Request, Result> {

@@ -1,10 +1,10 @@
 package com.crispinlab.space.adapter.web.space
 
-import com.crispinlab.space.adapter.web.auth.Auth
 import com.crispinlab.space.application.port.incoming.space.SpaceRegistering
 import com.crispinlab.space.application.port.incoming.space.SpaceRegistering.Request
 import com.crispinlab.space.application.port.incoming.space.SpaceRegistering.Result
-import com.crispinlab.space.domain.user.UserId
+import com.crispinlab.user.adapter.web.auth.Auth
+import com.crispinlab.user.domain.user.UserId
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody

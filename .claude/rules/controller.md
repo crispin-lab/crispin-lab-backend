@@ -142,14 +142,19 @@ class PageEditingController(
 
 ## Auth 인증 컨텍스트 추출
 
-`adapter/web/auth/AuthArgumentResolver` 가 `X-User-Id` 헤더를 받아 `Auth(userId)` 로 변환한다 (현재 임시 — 토큰 기반 인증 도입 시 같은 ArgumentResolver 만 갈아끼운다). 두 가지 책임을 어댑터 경계에서 끝낸다:
+`lab-user/app/.../adapter/web/auth/AuthArgumentResolver` 가 `Authorization: Bearer {token}` 헤더를 받아 `Auth(userId, role)` 로 변환한다. user 도메인이 auth 의 owner 이므로 resolver / `Auth` 타입 모두 lab-user/app 에 위치한다 (`architecture.md` "lab-user/app — cross-cutting auth provider" 참조). 흐름은 어댑터 경계에서 끝난다:
 
-1. **헤더 존재 확인** — 없으면 `IllegalArgumentException("사용자 인증이 필요합니다.")` → 400.
-2. **형식 검증** — `toLongOrNull()` 로 숫자 변환 가능 여부만 확인. 실패 시 같은 메시지로 400.
+1. **헤더 존재 + Bearer prefix 확인** — 누락/형식 오류 → `AuthenticationException(SessionErrorCode.INVALID_SESSION)` → 401.
+2. **토큰 형식 검증** — `SessionToken(raw)` 의 init 가 `sess_<43-base64>` 규약을 검증. 실패 시 401.
+3. **세션 lookup** — `SessionService.find(token)` 가 `null` → 401. 같은 호출이 sliding EXPIRE 를 갱신한다 (`RedisSessionService` 내부).
+4. **사용자 lookup** — `UserRepository.findBy(userId)` 가 `null` (계정 삭제 등) → 401.
+5. **Auth 조립** — `Auth(userId = user.id, role = user.role)`. `Auth.isAdmin()` 확장으로 ADMIN 여부 조회.
 
 검증을 UseCase Request 의 `asUserId()` 변환에 미루지 않는 이유: 인증 게이트키퍼와 도메인 변환의 책임을 섞으면 응답 코드·메시지의 의도가 흐려진다. `AuthArgumentResolver` 에서 한 번에 닫는다.
 
-> 임시 헤더 인증 단계에서는 두 실패 모두 400(`IllegalArgumentException`) 으로 응답한다. 토큰 인증 도입 PR 에서 401(`Unauthorized`) 로 정정하고 controller 테스트의 `isBadRequest()` 단언도 함께 갱신할 것 — RFC 7235 정합.
+> 모든 실패 경로가 같은 `INVALID_SESSION` 으로 떨어지는 것은 의도 — 헤더 누락/형식 오류/세션 미존재/사용자 미존재를 응답으로 구분하면 enumeration 정보 누출 (`error-messages.md` "정보 노출 방지" 정합).
+>
+> `lab-space/app` 의 controller 가 `Auth` 를 사용하려면 `implementation(projects.labUser.app)` 의존 한 줄 + `auth.userId` 를 그대로 `Request.currentUserId` 에 전달. 두 도메인이 `lab-user/domain.UserId` 를 공유하므로 boundary 변환 없음 (`architecture.md` "identity reference cross-domain api 허용").
 
 ## 컨트롤러 테스트 — `ControllerDescribeSpec` 기반
 
@@ -169,13 +174,13 @@ class SpaceRegisteringControllerTest :
 
                 controller.`when`(
                     post("/v1/spaces")
-                        .withUserHeader()
+                        .withAuth()
                         .body(mapOf("name" to "팀 위키", "description" to "공유"))
                 ).then(
                     status().isCreated,
                     jsonPath("$.spaceId").value("42")
                 ).document(
-                    userHeaderRequired(),
+                    authHeaderRequired(),
                     requestFields {
                         "name".string("스페이스 이름")
                         "description".string("스페이스 설명")
@@ -193,7 +198,8 @@ class SpaceRegisteringControllerTest :
 
 - **standalone MockMvc** — `@WebMvcTest` 슬라이스나 `@SpringBootTest` 컨텍스트 없이 `MockMvcBuilders.standaloneSetup` 으로 controller 인스턴스를 직접 띄운다. spec 부팅이 가볍고, `argumentResolvers`/`controllerAdvices` 가 명시적으로 wiring 된다.
 - **OpenAPI 메타데이터는 자동** — `tag` 는 `ControllerDescribeSpec` 생성자에서 받은 값(`"Space"` 등) 이 모든 endpoint 에 자동 적용. `description` 은 `describe(...)` 의 문자열이 자동으로 들어가, `"스페이스 생성"`/`"스페이스 단건 조회"` 같은 한국어 그룹핑이 Swagger UI 에 그대로 노출된다. `summary` 를 따로 명시할 필요 없음.
-- **DSL 만으로 OpenAPI 산출** — `requestFields {}` / `responseFields {}` / `pagingParameters()` / `userHeaderRequired()` 같은 헬퍼만 `document(...)` 에 넘기면 `openapi3.json` 에 path parameter·header·request body·response body 가 자동으로 박힌다.
+- **DSL 만으로 OpenAPI 산출** — `requestFields {}` / `responseFields {}` / `pagingParameters()` / `authHeaderRequired()` 같은 헬퍼만 `document(...)` 에 넘기면 `openapi3.json` 에 path parameter·header·request body·response body 가 자동으로 박힌다.
+- **인증 stub** — production `AuthArgumentResolver` 는 SessionService + UserRepository 를 의존해서 controller test 마다 wiring 하면 무거워진다. `lab-user/app` 의 testFixtures 가 `StubAuthArgumentResolver` 를 제공해 `Authorization: Bearer userId:role` 포맷의 토큰을 직접 파싱한다 — production 과 동일 헤더 shape, 가벼움. domain 의 `<Domain>AppControllerDescribeSpec` 베이스가 `argumentResolvers = listOf(StubAuthArgumentResolver())` 로 등록. `withAuth(userId, role)` 확장이 헤더를 세팅한다. 토큰 형식 / Redis 세션 / DB user 검증의 회귀는 `AuthArgumentResolverTest` (lab-user/app) 가 책임.
 - **mock 라이프사이클** — spec 단위 mock 을 사용할 때는 반드시 `beforeEach { clearMocks(useCase) }` — invocation 누적이 다른 case 의 `verify(exactly = N)` 를 흔든다.
 - **path variable 분리** — `get("/v1/spaces/{spaceId}", 1)` 처럼 URI 템플릿 + vararg 로 호출. `get("/v1/spaces/1")` 처럼 hardcoded 하면 산출된 `paths` 키가 `/v1/spaces/1` 로 굳어진다.
 - **document 는 정상 케이스만** — 4xx/5xx 회귀(헤더 누락, NotFound 등) 는 `.then(status().isBadRequest)` + `verify(exactly = 0) { useCase.perform(any()) }` 로 마무리. document 산출은 정상 응답 한 케이스로 충분.

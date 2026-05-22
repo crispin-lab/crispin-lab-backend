@@ -6,6 +6,7 @@ import com.crispinlab.space.application.port.incoming.tag.TagRegistering
 import com.crispinlab.space.application.port.incoming.tag.TagRegistering.Result
 import com.crispinlab.space.domain.tag.TagId
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
+import com.crispinlab.user.testsupport.withAuth
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -36,13 +37,13 @@ class TagRegisteringControllerTest :
                 controller
                     .`when`(
                         post("/v1/tags")
-                            .withUserHeader()
+                            .withAuth()
                             .body(mapOf("spaceId" to "10", "name" to "kotlin"))
                     ).then(
                         status().isCreated,
                         jsonPath("$.tagId").value("42")
                     ).document(
-                        userHeaderRequired(),
+                        authHeaderRequired(),
                         requestFields {
                             "spaceId".string("스페이스 식별자")
                             "name".string("태그 이름")
@@ -63,12 +64,15 @@ class TagRegisteringControllerTest :
                 }
             }
 
-            it("X-User-Id 헤더가 없으면 400 을 반환한다") {
+            it("Authorization 토큰이 없으면 401 을 반환한다") {
                 controller
                     .`when`(
                         post("/v1/tags")
                             .body(mapOf("spaceId" to "10", "name" to "kotlin"))
-                    ).then(status().isBadRequest)
+                    ).then(
+                        status().isUnauthorized,
+                        jsonPath("$.code").value("INVALID_SESSION")
+                    )
                 verify(exactly = 0) { useCase.perform(any()) }
             }
 
@@ -76,7 +80,7 @@ class TagRegisteringControllerTest :
                 controller
                     .`when`(
                         post("/v1/tags")
-                            .withUserHeader()
+                            .withAuth()
                             .body(mapOf("spaceId" to "not-a-number", "name" to "kotlin"))
                     ).then(status().isBadRequest)
                 verify(exactly = 0) { useCase.perform(any()) }

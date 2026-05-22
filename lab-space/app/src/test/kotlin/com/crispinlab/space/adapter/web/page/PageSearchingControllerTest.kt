@@ -8,6 +8,7 @@ import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
+import com.crispinlab.user.testsupport.withAuth
 import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
 import io.mockk.every
@@ -53,7 +54,7 @@ class PageSearchingControllerTest :
                 controller
                     .`when`(
                         get("/v1/pages")
-                            .withUserHeader()
+                            .withAuth()
                             .param("query", "회고")
                             .param("space", "10")
                             .param("tag", "100", "200")
@@ -69,7 +70,7 @@ class PageSearchingControllerTest :
                         jsonPath("$.size").value(20),
                         jsonPath("$.totalElements").value(2)
                     ).document(
-                        userHeaderRequired(),
+                        authHeaderRequired(),
                         queryParameters(
                             "query" isParameterFor "검색 키워드 (제목·본문 LIKE)" isOptional true,
                             "space" isParameterFor "스페이스 ID 필터" isOptional true,
@@ -102,7 +103,7 @@ class PageSearchingControllerTest :
                     )
 
                 controller
-                    .`when`(get("/v1/pages").withUserHeader())
+                    .`when`(get("/v1/pages").withAuth())
                     .then(
                         status().isOk,
                         jsonPath("$.items.length()").value(0),
@@ -123,17 +124,20 @@ class PageSearchingControllerTest :
                 controller
                     .`when`(
                         get("/v1/pages")
-                            .withUserHeader()
+                            .withAuth()
                             .param("tag", "100", "200", "300")
                     ).then(status().isOk)
 
                 requestSlot.captured.tagIds.map { it.value } shouldBe listOf(100L, 200L, 300L)
             }
 
-            it("X-User-Id 헤더가 없으면 400 을 반환한다") {
+            it("Authorization 토큰이 없으면 401 을 반환한다") {
                 controller
                     .`when`(get("/v1/pages"))
-                    .then(status().isBadRequest)
+                    .then(
+                        status().isUnauthorized,
+                        jsonPath("$.code").value("INVALID_SESSION")
+                    )
                 verify(exactly = 0) { useCase.perform(any()) }
             }
 
@@ -141,7 +145,7 @@ class PageSearchingControllerTest :
                 controller
                     .`when`(
                         get("/v1/pages")
-                            .withUserHeader()
+                            .withAuth()
                             .param("space", "abc")
                     ).then(
                         status().isBadRequest,
@@ -154,7 +158,7 @@ class PageSearchingControllerTest :
                 controller
                     .`when`(
                         get("/v1/pages")
-                            .withUserHeader()
+                            .withAuth()
                             .param("tag", "xx")
                     ).then(
                         status().isBadRequest,
@@ -167,7 +171,7 @@ class PageSearchingControllerTest :
                 controller
                     .`when`(
                         get("/v1/pages")
-                            .withUserHeader()
+                            .withAuth()
                             .param("page", "-1")
                     ).then(
                         status().isBadRequest,
@@ -182,7 +186,7 @@ class PageSearchingControllerTest :
                     controller
                         .`when`(
                             get("/v1/pages")
-                                .withUserHeader()
+                                .withAuth()
                                 .param("size", invalidSize)
                         ).then(
                             status().isBadRequest,

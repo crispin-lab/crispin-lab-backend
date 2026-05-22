@@ -5,9 +5,9 @@ import com.crispinlab.space.application.port.incoming.comment.CommentDeleting.Re
 import com.crispinlab.space.application.port.outgoing.comment.CommentRepository
 import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.domain.page.PageId
-import com.crispinlab.space.domain.user.UserId
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicComment
+import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.mockk.clearMocks

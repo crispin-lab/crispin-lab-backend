@@ -7,7 +7,7 @@ import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.application.port.incoming.space.SpaceListing.Request
 import com.crispinlab.space.application.port.incoming.space.SpaceListing.Summary
 import com.crispinlab.space.domain.space.SpaceId
-import com.crispinlab.space.domain.user.UserId
+import com.crispinlab.user.domain.user.UserId
 import java.time.Instant
 
 interface SpaceListing : UseCase<Request, PageResult<Summary>> {

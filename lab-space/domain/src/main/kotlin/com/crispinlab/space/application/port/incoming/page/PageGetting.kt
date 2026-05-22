@@ -6,7 +6,7 @@ import com.crispinlab.space.application.port.incoming.page.PageGetting.Result
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.PageId.Companion.asPageId
 import com.crispinlab.space.domain.space.SpaceId
-import com.crispinlab.space.domain.user.UserId
+import com.crispinlab.user.domain.user.UserId
 import java.time.Instant
 
 interface PageGetting : UseCase<Request, Result> {

@@ -8,10 +8,10 @@ import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.tag.PageTag
 import com.crispinlab.space.domain.tag.TagId
-import com.crispinlab.space.domain.user.UserId
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicPage
 import com.crispinlab.space.testsupport.Fixtures.basicTag
+import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe

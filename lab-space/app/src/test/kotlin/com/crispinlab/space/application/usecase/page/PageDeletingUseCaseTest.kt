@@ -3,9 +3,9 @@ package com.crispinlab.space.application.usecase.page
 import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.space.application.port.incoming.page.PageDeleting.Request
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
-import com.crispinlab.space.domain.user.UserId
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicPage
+import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.mockk.clearMocks

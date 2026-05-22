@@ -4,9 +4,9 @@ import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.space.application.port.incoming.space.SpaceDeleting.Request
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.domain.space.SpaceId
-import com.crispinlab.space.domain.user.UserId
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicSpace
+import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.mockk.clearMocks

@@ -8,6 +8,7 @@ abstract class UserAppControllerDescribeSpec(
     body: ControllerDescribeSpec.() -> Unit
 ) : ControllerDescribeSpec(
         tag = tag,
+        argumentResolvers = listOf(StubAuthArgumentResolver()),
         controllerAdvices = listOf(GlobalExceptionHandler()),
         body = body
     )

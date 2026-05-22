@@ -9,7 +9,7 @@ import com.crispinlab.space.application.port.incoming.comment.CommentListing.Sum
 import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.PageId.Companion.asPageId
-import com.crispinlab.space.domain.user.UserId
+import com.crispinlab.user.domain.user.UserId
 import java.time.Instant
 
 interface CommentListing : UseCase<Request, PageResult<Summary>> {

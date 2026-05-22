@@ -7,6 +7,7 @@ import com.crispinlab.space.application.port.incoming.comment.CommentEditing.Res
 import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
+import com.crispinlab.user.testsupport.withAuth
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -43,14 +44,14 @@ class CommentEditingControllerTest :
                 controller
                     .`when`(
                         put("/v1/pages/{pageId}/comments/{commentId}", 10, 7)
-                            .withUserHeader()
+                            .withAuth()
                             .body(mapOf("body" to "수정된 댓글"))
                     ).then(
                         status().isOk,
                         jsonPath("$.commentId").value("7"),
                         jsonPath("$.body").value("수정된 댓글")
                     ).document(
-                        userHeaderRequired(),
+                        authHeaderRequired(),
                         requestFields {
                             "body".string("수정된 본문")
                         },
@@ -73,12 +74,15 @@ class CommentEditingControllerTest :
                 }
             }
 
-            it("X-User-Id 헤더가 없으면 400 을 반환한다") {
+            it("Authorization 토큰이 없으면 401 을 반환한다") {
                 controller
                     .`when`(
                         put("/v1/pages/{pageId}/comments/{commentId}", 10, 7)
                             .body(mapOf("body" to "수정된 댓글"))
-                    ).then(status().isBadRequest)
+                    ).then(
+                        status().isUnauthorized,
+                        jsonPath("$.code").value("INVALID_SESSION")
+                    )
                 verify(exactly = 0) { useCase.perform(any()) }
             }
 
@@ -86,7 +90,7 @@ class CommentEditingControllerTest :
                 controller
                     .`when`(
                         put("/v1/pages/{pageId}/comments/{commentId}", 10, "not-a-number")
-                            .withUserHeader()
+                            .withAuth()
                             .body(mapOf("body" to "수정된 댓글"))
                     ).then(status().isBadRequest)
                 verify(exactly = 0) { useCase.perform(any()) }

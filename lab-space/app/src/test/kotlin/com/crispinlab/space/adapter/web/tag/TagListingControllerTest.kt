@@ -10,6 +10,7 @@ import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.tag.TagId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
+import com.crispinlab.user.testsupport.withAuth
 import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
 import io.mockk.every
@@ -54,7 +55,7 @@ class TagListingControllerTest :
                 controller
                     .`when`(
                         get("/v1/spaces/{spaceId}/tags", 10)
-                            .withUserHeader()
+                            .withAuth()
                             .param("page", "0")
                             .param("size", "20")
                     ).then(
@@ -66,7 +67,7 @@ class TagListingControllerTest :
                         jsonPath("$.totalElements").value(2),
                         jsonPath("$.hasNext").value(false)
                     ).document(
-                        userHeaderRequired(),
+                        authHeaderRequired(),
                         pagingParameters(),
                         responseFields {
                             "items".array("태그 목록") {
@@ -96,7 +97,7 @@ class TagListingControllerTest :
                     )
 
                 controller
-                    .`when`(get("/v1/spaces/{spaceId}/tags", 10).withUserHeader())
+                    .`when`(get("/v1/spaces/{spaceId}/tags", 10).withAuth())
                     .then(
                         status().isOk,
                         jsonPath("$.items.length()").value(0),
@@ -106,17 +107,20 @@ class TagListingControllerTest :
                 capturedRequest.captured.pageRequest.size shouldBe DEFAULT_SIZE
             }
 
-            it("X-User-Id 헤더가 없으면 400 을 반환한다") {
+            it("Authorization 토큰이 없으면 401 을 반환한다") {
                 controller
                     .`when`(get("/v1/spaces/{spaceId}/tags", 10))
-                    .then(status().isBadRequest)
+                    .then(
+                        status().isUnauthorized,
+                        jsonPath("$.code").value("INVALID_SESSION")
+                    )
                 verify(exactly = 0) { useCase.perform(any()) }
             }
 
             it("spaceId 형식이 숫자가 아니면 400 을 반환한다") {
                 controller
                     .`when`(
-                        get("/v1/spaces/{spaceId}/tags", "not-a-number").withUserHeader()
+                        get("/v1/spaces/{spaceId}/tags", "not-a-number").withAuth()
                     ).then(status().isBadRequest)
                 verify(exactly = 0) { useCase.perform(any()) }
             }
@@ -125,7 +129,7 @@ class TagListingControllerTest :
                 controller
                     .`when`(
                         get("/v1/spaces/{spaceId}/tags", 10)
-                            .withUserHeader()
+                            .withAuth()
                             .param("page", "-1")
                     ).then(
                         status().isBadRequest,

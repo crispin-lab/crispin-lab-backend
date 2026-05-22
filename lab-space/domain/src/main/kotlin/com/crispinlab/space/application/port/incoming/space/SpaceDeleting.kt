@@ -4,7 +4,7 @@ import com.crispinlab.common.application.UseCase
 import com.crispinlab.space.application.port.incoming.space.SpaceDeleting.Request
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.space.SpaceId.Companion.asSpaceId
-import com.crispinlab.space.domain.user.UserId
+import com.crispinlab.user.domain.user.UserId
 
 interface SpaceDeleting : UseCase<Request, Unit> {
     class Request(

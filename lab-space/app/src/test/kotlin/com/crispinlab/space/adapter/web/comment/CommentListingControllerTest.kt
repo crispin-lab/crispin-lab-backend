@@ -6,9 +6,10 @@ import com.crispinlab.space.application.port.incoming.comment.CommentListing
 import com.crispinlab.space.application.port.incoming.comment.CommentListing.Summary
 import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.domain.page.PageId
-import com.crispinlab.space.domain.user.UserId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
+import com.crispinlab.user.domain.user.UserId
+import com.crispinlab.user.testsupport.withAuth
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -55,7 +56,7 @@ class CommentListingControllerTest :
                 controller
                     .`when`(
                         get("/v1/pages/{pageId}/comments", 10)
-                            .withUserHeader()
+                            .withAuth()
                             .param("page", "0")
                             .param("size", "20")
                     ).then(
@@ -66,7 +67,7 @@ class CommentListingControllerTest :
                         jsonPath("$.totalElements").value(2),
                         jsonPath("$.hasNext").value(false)
                     ).document(
-                        userHeaderRequired(),
+                        authHeaderRequired(),
                         pagingParameters(),
                         responseFields {
                             "items".array("댓글 목록") {
@@ -97,7 +98,7 @@ class CommentListingControllerTest :
                     )
 
                 controller
-                    .`when`(get("/v1/pages/{pageId}/comments", 10).withUserHeader())
+                    .`when`(get("/v1/pages/{pageId}/comments", 10).withAuth())
                     .then(
                         status().isOk,
                         jsonPath("$.items.length()").value(0),
@@ -105,17 +106,20 @@ class CommentListingControllerTest :
                     )
             }
 
-            it("X-User-Id 헤더가 없으면 400 을 반환한다") {
+            it("Authorization 토큰이 없으면 401 을 반환한다") {
                 controller
                     .`when`(get("/v1/pages/{pageId}/comments", 10))
-                    .then(status().isBadRequest)
+                    .then(
+                        status().isUnauthorized,
+                        jsonPath("$.code").value("INVALID_SESSION")
+                    )
                 verify(exactly = 0) { useCase.perform(any()) }
             }
 
             it("pageId 형식이 숫자가 아니면 400 을 반환한다") {
                 controller
                     .`when`(
-                        get("/v1/pages/{pageId}/comments", "not-a-number").withUserHeader()
+                        get("/v1/pages/{pageId}/comments", "not-a-number").withAuth()
                     ).then(status().isBadRequest)
                 verify(exactly = 0) { useCase.perform(any()) }
             }
@@ -124,7 +128,7 @@ class CommentListingControllerTest :
                 controller
                     .`when`(
                         get("/v1/pages/{pageId}/comments", 10)
-                            .withUserHeader()
+                            .withAuth()
                             .param("page", "-1")
                     ).then(
                         status().isBadRequest,

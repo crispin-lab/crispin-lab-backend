@@ -3,7 +3,7 @@ package com.crispinlab.space.domain.comment
 import com.crispinlab.common.domain.Entity
 import com.crispinlab.common.domain.SoftDeletable
 import com.crispinlab.space.domain.page.PageId
-import com.crispinlab.space.domain.user.UserId
+import com.crispinlab.user.domain.user.UserId
 import java.time.Instant
 import java.time.Instant.now
 

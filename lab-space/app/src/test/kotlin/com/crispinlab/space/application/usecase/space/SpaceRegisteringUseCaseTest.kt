@@ -1,5 +1,6 @@
 package com.crispinlab.space.application.usecase.space
 
+import com.crispinlab.common.exception.ForbiddenException
 import com.crispinlab.common.id.IdGenerator
 import com.crispinlab.space.application.port.incoming.space.SpaceRegistering.Request
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
@@ -51,6 +52,13 @@ class SpaceRegisteringUseCaseTest :
 
                 shouldThrow<IllegalArgumentException> {
                     useCase.perform(basicRequest(name = "", description = ""))
+                }
+                verify(exactly = 0) { spaceRepository.save(any()) }
+            }
+
+            it("USER 가 호출하면 ForbiddenException 으로 차단되고 저장이 일어나지 않는다") {
+                shouldThrow<ForbiddenException> {
+                    useCase.perform(basicRequest(currentUserRole = SystemRole.USER))
                 }
                 verify(exactly = 0) { spaceRepository.save(any()) }
             }

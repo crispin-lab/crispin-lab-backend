@@ -1,5 +1,6 @@
 package com.crispinlab.space.application.usecase.space
 
+import com.crispinlab.common.exception.ForbiddenException
 import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.space.application.port.incoming.space.SpaceEditing.Request
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
@@ -17,6 +18,7 @@ import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import io.mockk.verify
 
 class SpaceEditingUseCaseTest :
     DescribeSpec({
@@ -63,6 +65,13 @@ class SpaceEditingUseCaseTest :
                 shouldThrow<NotFoundException> {
                     useCase.perform(basicRequest(name = "x"))
                 }
+            }
+
+            it("USER 가 호출하면 ForbiddenException 으로 차단되고 저장이 일어나지 않는다") {
+                shouldThrow<ForbiddenException> {
+                    useCase.perform(basicRequest(name = "x", currentUserRole = SystemRole.USER))
+                }
+                verify(exactly = 0) { spaceRepository.save(any()) }
             }
         }
     }) {

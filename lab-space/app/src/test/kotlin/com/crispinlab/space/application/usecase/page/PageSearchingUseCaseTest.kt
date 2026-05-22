@@ -162,6 +162,107 @@ class PageSearchingUseCaseTest :
                     basicRequest(size = 201)
                 }
             }
+
+            it("비로그인 상태에서는 PUBLIC 만 visibility 로 전달된다") {
+                every {
+                    pageSearchPort.search(
+                        keyword = any(),
+                        spaceId = any(),
+                        tagIds = any(),
+                        visibilities = any(),
+                        draftAuthorId = any(),
+                        pageRequest = any()
+                    )
+                } returns PageResult.empty(basicRequest().pageRequest)
+
+                useCase.perform(basicRequest(currentUserId = null, currentUserRole = null))
+
+                verify {
+                    pageSearchPort.search(
+                        keyword = any(),
+                        spaceId = any(),
+                        tagIds = any(),
+                        visibilities =
+                            withArg<Set<com.crispinlab.space.domain.page.Visibility>> {
+                                it shouldBe
+                                    setOf(com.crispinlab.space.domain.page.Visibility.PUBLIC)
+                            },
+                        draftAuthorId = isNull(),
+                        pageRequest = any()
+                    )
+                }
+            }
+
+            it("USER 는 PUBLIC + INTERNAL + 본인 DRAFT 로 검색한다") {
+                every {
+                    pageSearchPort.search(
+                        keyword = any(),
+                        spaceId = any(),
+                        tagIds = any(),
+                        visibilities = any(),
+                        draftAuthorId = any(),
+                        pageRequest = any()
+                    )
+                } returns PageResult.empty(basicRequest().pageRequest)
+
+                useCase.perform(
+                    basicRequest(currentUserId = UserId(100L), currentUserRole = SystemRole.USER)
+                )
+
+                verify {
+                    pageSearchPort.search(
+                        keyword = any(),
+                        spaceId = any(),
+                        tagIds = any(),
+                        visibilities =
+                            withArg<Set<com.crispinlab.space.domain.page.Visibility>> {
+                                it shouldBe
+                                    setOf(
+                                        com.crispinlab.space.domain.page.Visibility.PUBLIC,
+                                        com.crispinlab.space.domain.page.Visibility.INTERNAL
+                                    )
+                            },
+                        draftAuthorId = UserId(100L),
+                        pageRequest = any()
+                    )
+                }
+            }
+
+            it("ADMIN 은 모든 visibility 로 검색하고 draftAuthorId 는 null 이다") {
+                every {
+                    pageSearchPort.search(
+                        keyword = any(),
+                        spaceId = any(),
+                        tagIds = any(),
+                        visibilities = any(),
+                        draftAuthorId = any(),
+                        pageRequest = any()
+                    )
+                } returns PageResult.empty(basicRequest().pageRequest)
+
+                useCase.perform(
+                    basicRequest(currentUserId = UserId(100L), currentUserRole = SystemRole.ADMIN)
+                )
+
+                verify {
+                    pageSearchPort.search(
+                        keyword = any(),
+                        spaceId = any(),
+                        tagIds = any(),
+                        visibilities =
+                            withArg<Set<com.crispinlab.space.domain.page.Visibility>> {
+                                it shouldBe
+                                    setOf(
+                                        com.crispinlab.space.domain.page.Visibility.PUBLIC,
+                                        com.crispinlab.space.domain.page.Visibility.INTERNAL,
+                                        com.crispinlab.space.domain.page.Visibility.DRAFT
+                                    )
+                            },
+                        draftAuthorId = isNull(),
+                        pageRequest = any()
+                    )
+                }
+            }
         }
     }) {
     companion object {

@@ -70,5 +70,29 @@ class SpaceGettingControllerTest :
                         jsonPath("$.message").value("스페이스를 찾을 수 없습니다.")
                     )
             }
+
+            it("비로그인 상태에서도 PUBLIC 스페이스는 200 으로 응답한다") {
+                every { useCase.perform(any()) } returns
+                    Result(
+                        spaceId = SpaceId(1L),
+                        name = "공개 스페이스",
+                        description = "누구나 볼 수 있음",
+                        visibility = SpaceVisibility.PUBLIC,
+                        createdAt = DUMMY_INSTANT,
+                        updatedAt = DUMMY_INSTANT
+                    )
+
+                controller
+                    .`when`(get("/v1/spaces/{spaceId}", 1))
+                    .then(
+                        status().isOk,
+                        jsonPath("$.visibility").value("PUBLIC")
+                    )
+                verify {
+                    useCase.perform(
+                        match { it.currentUserId == null }
+                    )
+                }
+            }
         }
     })

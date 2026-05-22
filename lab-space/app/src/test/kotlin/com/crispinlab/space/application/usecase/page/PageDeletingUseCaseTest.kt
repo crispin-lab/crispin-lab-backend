@@ -53,6 +53,22 @@ class PageDeletingUseCaseTest :
                 }
                 verify(exactly = 0) { pageRepository.delete(any()) }
             }
+
+            it("ADMIN 은 작성자가 아니어도 삭제 가능하다") {
+                val page = basicPage(authorId = UserId(200L))
+                every { pageRepository.findBy(page.id) } returns page
+                justRun { pageRepository.delete(page.id) }
+
+                useCase.perform(
+                    basicRequest(
+                        pageId = page.id.value.toString(),
+                        currentUserId = UserId(100L),
+                        currentUserRole = SystemRole.ADMIN
+                    )
+                )
+
+                verify(exactly = 1) { pageRepository.delete(page.id) }
+            }
         }
     }) {
     companion object {

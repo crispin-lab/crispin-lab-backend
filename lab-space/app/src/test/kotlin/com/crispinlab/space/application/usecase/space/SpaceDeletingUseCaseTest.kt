@@ -1,5 +1,6 @@
 package com.crispinlab.space.application.usecase.space
 
+import com.crispinlab.common.exception.ForbiddenException
 import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.space.application.port.incoming.space.SpaceDeleting.Request
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
@@ -41,6 +42,13 @@ class SpaceDeletingUseCaseTest :
 
                 shouldThrow<NotFoundException> {
                     useCase.perform(basicRequest())
+                }
+                verify(exactly = 0) { spaceRepository.delete(any()) }
+            }
+
+            it("USER 가 호출하면 ForbiddenException 으로 차단되고 delete 가 일어나지 않는다") {
+                shouldThrow<ForbiddenException> {
+                    useCase.perform(basicRequest(currentUserRole = SystemRole.USER))
                 }
                 verify(exactly = 0) { spaceRepository.delete(any()) }
             }

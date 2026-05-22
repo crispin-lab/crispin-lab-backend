@@ -3,6 +3,7 @@ package com.crispinlab.space.application.usecase.space
 import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.space.application.port.incoming.space.SpaceGetting.Request
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
+import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicSpace
 import com.crispinlab.user.domain.user.UserId
@@ -46,12 +47,40 @@ class SpaceGettingUseCaseTest :
                     basicRequest(spaceId = "not-a-number")
                 }
             }
+
+            it("비로그인 상태에서 PUBLIC 스페이스는 조회 가능하다") {
+                val space = basicSpace(visibility = SpaceVisibility.PUBLIC)
+                every { spaceRepository.findBy(space.id) } returns space
+
+                val result = useCase.perform(basicRequest(currentUserId = null))
+
+                result.spaceId shouldBe space.id
+                result.visibility shouldBe SpaceVisibility.PUBLIC
+            }
+
+            it("비로그인 상태에서 INTERNAL 스페이스는 NotFoundException 으로 응답한다") {
+                val space = basicSpace(visibility = SpaceVisibility.INTERNAL)
+                every { spaceRepository.findBy(space.id) } returns space
+
+                shouldThrow<NotFoundException> {
+                    useCase.perform(basicRequest(currentUserId = null))
+                }
+            }
+
+            it("로그인 상태에서는 INTERNAL 스페이스도 조회 가능하다") {
+                val space = basicSpace(visibility = SpaceVisibility.INTERNAL)
+                every { spaceRepository.findBy(space.id) } returns space
+
+                val result = useCase.perform(basicRequest())
+
+                result.visibility shouldBe SpaceVisibility.INTERNAL
+            }
         }
     }) {
     companion object {
         fun basicRequest(
             spaceId: String = "1",
-            currentUserId: UserId = UserId(100L)
+            currentUserId: UserId? = UserId(100L)
         ): Request = Request(spaceId = spaceId, currentUserId = currentUserId)
     }
 }

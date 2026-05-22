@@ -109,6 +109,26 @@ class PageEditingUseCaseTest :
                 }
                 verify(exactly = 0) { pageRepository.save(any()) }
             }
+
+            it("ADMIN 은 작성자가 아니어도 수정 가능하다") {
+                val page = basicPage(authorId = UserId(200L), title = "이전")
+                every { pageRepository.findBy(page.id) } returns page
+                every { idGenerator.next() } returnsMany listOf(101L)
+
+                val result =
+                    useCase.perform(
+                        basicRequest(
+                            pageId = page.id.value.toString(),
+                            title = "새 제목",
+                            content = "본문",
+                            currentUserId = UserId(100L),
+                            currentUserRole = SystemRole.ADMIN
+                        )
+                    )
+
+                result.title shouldBe "새 제목"
+                verify(exactly = 1) { pageRepository.save(any()) }
+            }
         }
     }) {
     companion object {

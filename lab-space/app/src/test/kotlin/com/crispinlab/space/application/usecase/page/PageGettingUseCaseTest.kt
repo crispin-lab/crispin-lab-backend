@@ -3,6 +3,7 @@ package com.crispinlab.space.application.usecase.page
 import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.space.application.port.incoming.page.PageGetting.Request
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
+import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicPage
 import com.crispinlab.user.domain.user.SystemRole
@@ -47,6 +48,49 @@ class PageGettingUseCaseTest :
                 shouldThrow<IllegalArgumentException> {
                     basicRequest(pageId = "not-a-number")
                 }
+            }
+
+            it("비로그인 상태에서 PUBLIC 페이지는 조회 가능하다") {
+                val page = basicPage(visibility = Visibility.PUBLIC)
+                every { pageRepository.findBy(page.id) } returns page
+
+                val result =
+                    useCase.perform(basicRequest(currentUserId = null, currentUserRole = null))
+
+                result.pageId shouldBe page.id
+            }
+
+            it("비로그인 상태에서 INTERNAL 페이지는 NotFoundException 으로 응답한다") {
+                val page = basicPage(visibility = Visibility.INTERNAL)
+                every { pageRepository.findBy(page.id) } returns page
+
+                shouldThrow<NotFoundException> {
+                    useCase.perform(basicRequest(currentUserId = null, currentUserRole = null))
+                }
+            }
+
+            it("USER 가 다른 사용자의 DRAFT 페이지를 보면 NotFoundException 으로 응답한다") {
+                val page = basicPage(authorId = UserId(200L), visibility = Visibility.DRAFT)
+                every { pageRepository.findBy(page.id) } returns page
+
+                shouldThrow<NotFoundException> {
+                    useCase.perform(basicRequest(currentUserId = UserId(100L)))
+                }
+            }
+
+            it("ADMIN 은 다른 사용자의 DRAFT 페이지도 조회 가능하다") {
+                val page = basicPage(authorId = UserId(200L), visibility = Visibility.DRAFT)
+                every { pageRepository.findBy(page.id) } returns page
+
+                val result =
+                    useCase.perform(
+                        basicRequest(
+                            currentUserId = UserId(100L),
+                            currentUserRole = SystemRole.ADMIN
+                        )
+                    )
+
+                result.pageId shouldBe page.id
             }
         }
     }) {

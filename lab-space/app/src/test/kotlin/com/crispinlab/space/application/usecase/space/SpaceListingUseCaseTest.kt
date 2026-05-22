@@ -6,6 +6,7 @@ import com.crispinlab.space.application.port.incoming.space.SpaceListing.Request
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.domain.space.Space
 import com.crispinlab.space.domain.space.SpaceId
+import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicSpace
 import com.crispinlab.user.domain.user.UserId
@@ -94,13 +95,51 @@ class SpaceListingUseCaseTest :
                     basicRequest(size = 201)
                 }
             }
+
+            it("비로그인 상태에서는 PUBLIC 만 필터한 visibility 로 조회한다") {
+                every { spaceRepository.findPage(any(), any()) } returns
+                    PageResult.empty(
+                        com.crispinlab.common.pagination.PageRequest
+                            .firstPage()
+                    )
+
+                useCase.perform(basicRequest(currentUserId = null))
+
+                verify {
+                    spaceRepository.findPage(
+                        any(),
+                        withArg<Set<SpaceVisibility>> {
+                            it shouldBe setOf(SpaceVisibility.PUBLIC)
+                        }
+                    )
+                }
+            }
+
+            it("로그인 상태에서는 PUBLIC + INTERNAL visibility 로 조회한다") {
+                every { spaceRepository.findPage(any(), any()) } returns
+                    PageResult.empty(
+                        com.crispinlab.common.pagination.PageRequest
+                            .firstPage()
+                    )
+
+                useCase.perform(basicRequest(currentUserId = UserId(100L)))
+
+                verify {
+                    spaceRepository.findPage(
+                        any(),
+                        withArg<Set<SpaceVisibility>> {
+                            it shouldBe setOf(SpaceVisibility.PUBLIC, SpaceVisibility.INTERNAL)
+                        }
+                    )
+                }
+            }
         }
     }) {
     companion object {
         fun basicRequest(
             page: Int = 0,
             size: Int = DEFAULT_SIZE,
-            currentUserId: UserId = UserId(100L)
+            currentUserId: UserId? = UserId(100L)
         ): Request =
             Request(
                 page = page,

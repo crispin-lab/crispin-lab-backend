@@ -87,5 +87,33 @@ class PageGettingControllerTest :
                     .then(status().isBadRequest)
                 verify(exactly = 0) { useCase.perform(any()) }
             }
+
+            it("비로그인 상태에서도 PUBLIC 페이지는 200 으로 응답한다") {
+                every { useCase.perform(any()) } returns
+                    Result(
+                        pageId = PageId(1L),
+                        spaceId = SpaceId(10L),
+                        parentPageId = null,
+                        authorId = UserId(100L),
+                        title = "공개 페이지",
+                        content = "본문",
+                        visibility = "PUBLIC",
+                        currentVersion = 1,
+                        createdAt = DUMMY_INSTANT,
+                        updatedAt = DUMMY_INSTANT
+                    )
+
+                controller
+                    .`when`(get("/v1/pages/{pageId}", 1))
+                    .then(
+                        status().isOk,
+                        jsonPath("$.visibility").value("PUBLIC")
+                    )
+                verify {
+                    useCase.perform(
+                        match { it.currentUserId == null && it.currentUserRole == null }
+                    )
+                }
+            }
         }
     })

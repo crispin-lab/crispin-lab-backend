@@ -1,10 +1,10 @@
 package com.crispinlab.space.adapter.web.space
 
+import com.crispinlab.space.adapter.web.auth.toViewer
 import com.crispinlab.space.application.port.incoming.space.SpaceGetting
 import com.crispinlab.space.application.port.incoming.space.SpaceGetting.Request
 import com.crispinlab.space.application.port.incoming.space.SpaceGetting.Result
 import com.crispinlab.user.adapter.web.auth.Auth
-import com.crispinlab.user.adapter.web.auth.toContext
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
@@ -20,6 +20,6 @@ class SpaceGettingController(
         @PathVariable spaceId: String,
         auth: Auth?
     ): Result =
-        Request(spaceId = spaceId, auth = auth.toContext())
+        Request(spaceId = spaceId, viewer = auth.toViewer())
             .let { useCase.perform(it) }
 }

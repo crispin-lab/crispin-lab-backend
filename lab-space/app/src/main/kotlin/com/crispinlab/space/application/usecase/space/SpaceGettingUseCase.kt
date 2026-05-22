@@ -6,10 +6,10 @@ import com.crispinlab.space.application.port.incoming.space.SpaceGetting
 import com.crispinlab.space.application.port.incoming.space.SpaceGetting.Request
 import com.crispinlab.space.application.port.incoming.space.SpaceGetting.Result
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.space.Space
 import com.crispinlab.space.domain.space.SpaceErrorCode
 import com.crispinlab.space.domain.space.SpaceVisibility
-import com.crispinlab.user.domain.user.AuthContext
 import org.springframework.stereotype.Service
 
 @Service
@@ -27,13 +27,13 @@ class SpaceGettingUseCase(
     private fun Request.toEntity(): Space =
         spaceRepository
             .findBy(spaceId)
-            ?.takeIf { it.visibility in auth.allowedSpaceVisibilities() }
+            ?.takeIf { it.visibility in viewer.allowedSpaceVisibilities() }
             ?: throw NotFoundException(SpaceErrorCode.SPACE_NOT_FOUND)
 
-    private fun AuthContext.allowedSpaceVisibilities(): Set<SpaceVisibility> =
+    private fun Viewer.allowedSpaceVisibilities(): Set<SpaceVisibility> =
         when (this) {
-            is AuthContext.Anonymous -> setOf(SpaceVisibility.PUBLIC)
-            is AuthContext.Authenticated -> setOf(SpaceVisibility.PUBLIC, SpaceVisibility.INTERNAL)
+            is Viewer.Anonymous -> setOf(SpaceVisibility.PUBLIC)
+            is Viewer.Member -> setOf(SpaceVisibility.PUBLIC, SpaceVisibility.INTERNAL)
         }
 
     private fun Space.toResult(): Result =

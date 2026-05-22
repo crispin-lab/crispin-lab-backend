@@ -3,11 +3,10 @@ package com.crispinlab.space.application.usecase.page
 import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.space.application.port.incoming.page.PageGetting.Request
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicPage
-import com.crispinlab.user.domain.user.AuthContext
-import com.crispinlab.user.domain.user.SystemRole
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -55,7 +54,7 @@ class PageGettingUseCaseTest :
                 val page = basicPage(visibility = Visibility.PUBLIC)
                 every { pageRepository.findBy(page.id) } returns page
 
-                val result = useCase.perform(basicRequest(auth = AuthContext.Anonymous))
+                val result = useCase.perform(basicRequest(viewer = Viewer.Anonymous))
 
                 result.pageId shouldBe page.id
             }
@@ -65,7 +64,7 @@ class PageGettingUseCaseTest :
                 every { pageRepository.findBy(page.id) } returns page
 
                 shouldThrow<NotFoundException> {
-                    useCase.perform(basicRequest(auth = AuthContext.Anonymous))
+                    useCase.perform(basicRequest(viewer = Viewer.Anonymous))
                 }
             }
 
@@ -85,11 +84,7 @@ class PageGettingUseCaseTest :
                 val result =
                     useCase.perform(
                         basicRequest(
-                            auth =
-                                AuthContext.Authenticated(
-                                    userId = UserId(100L),
-                                    role = SystemRole.ADMIN
-                                )
+                            viewer = Viewer.Member(userId = UserId(100L), isAdmin = true)
                         )
                     )
 
@@ -100,12 +95,11 @@ class PageGettingUseCaseTest :
     companion object {
         fun basicRequest(
             pageId: String = "1",
-            auth: AuthContext =
-                AuthContext.Authenticated(userId = UserId(100L), role = SystemRole.USER)
+            viewer: Viewer = Viewer.Member(userId = UserId(100L), isAdmin = false)
         ): Request =
             Request(
                 pageId = pageId,
-                auth = auth
+                viewer = viewer
             )
     }
 }

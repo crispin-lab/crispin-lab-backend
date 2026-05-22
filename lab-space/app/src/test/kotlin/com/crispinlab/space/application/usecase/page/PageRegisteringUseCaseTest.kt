@@ -7,6 +7,7 @@ import com.crispinlab.space.application.port.outgoing.page.PageLinkRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRevisionRepository
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.PageLink
@@ -15,8 +16,6 @@ import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicPage
 import com.crispinlab.space.testsupport.Fixtures.basicSpace
-import com.crispinlab.user.domain.user.AuthContext
-import com.crispinlab.user.domain.user.SystemRole
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -131,7 +130,7 @@ class PageRegisteringUseCaseTest :
             content: String = "본문",
             visibility: String = "DRAFT",
             userId: UserId = UserId(100L),
-            role: SystemRole = SystemRole.USER
+            isAdmin: Boolean = false
         ): Request =
             Request(
                 spaceId = spaceId,
@@ -139,7 +138,7 @@ class PageRegisteringUseCaseTest :
                 title = title,
                 content = content,
                 visibility = visibility,
-                auth = AuthContext.Authenticated(userId = userId, role = role)
+                viewer = Viewer.Member(userId = userId, isAdmin = isAdmin)
             )
     }
 }

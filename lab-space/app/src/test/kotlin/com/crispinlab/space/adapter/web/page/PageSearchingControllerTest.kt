@@ -4,11 +4,11 @@ import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder
 import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.application.port.incoming.page.PageSearching
 import com.crispinlab.space.application.port.incoming.page.PageSearching.Summary
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
-import com.crispinlab.user.domain.user.AuthContext
 import com.crispinlab.user.testsupport.withAuth
 import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
@@ -205,7 +205,7 @@ class PageSearchingControllerTest :
                     )
                 verify {
                     useCase.perform(
-                        match { it.auth == AuthContext.Anonymous }
+                        match { it.viewer == Viewer.Anonymous }
                     )
                 }
             }

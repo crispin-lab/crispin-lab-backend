@@ -33,7 +33,7 @@ class SpaceRegisteringControllerTest :
                             it.name == "팀 위키" &&
                                 it.description == "공유 공간" &&
                                 it.visibility.name == "INTERNAL" &&
-                                it.auth.userId.value == 100L
+                                it.viewer.userId.value == 100L
                         }
                     )
                 } returns Result(spaceId = SpaceId(42L))

@@ -3,11 +3,10 @@ package com.crispinlab.space.application.usecase.space
 import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.space.application.port.incoming.space.SpaceGetting.Request
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicSpace
-import com.crispinlab.user.domain.user.AuthContext
-import com.crispinlab.user.domain.user.SystemRole
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -54,7 +53,7 @@ class SpaceGettingUseCaseTest :
                 val space = basicSpace(visibility = SpaceVisibility.PUBLIC)
                 every { spaceRepository.findBy(space.id) } returns space
 
-                val result = useCase.perform(basicRequest(auth = AuthContext.Anonymous))
+                val result = useCase.perform(basicRequest(viewer = Viewer.Anonymous))
 
                 result.spaceId shouldBe space.id
                 result.visibility shouldBe SpaceVisibility.PUBLIC
@@ -65,7 +64,7 @@ class SpaceGettingUseCaseTest :
                 every { spaceRepository.findBy(space.id) } returns space
 
                 shouldThrow<NotFoundException> {
-                    useCase.perform(basicRequest(auth = AuthContext.Anonymous))
+                    useCase.perform(basicRequest(viewer = Viewer.Anonymous))
                 }
             }
 
@@ -82,8 +81,7 @@ class SpaceGettingUseCaseTest :
     companion object {
         fun basicRequest(
             spaceId: String = "1",
-            auth: AuthContext =
-                AuthContext.Authenticated(userId = UserId(100L), role = SystemRole.USER)
-        ): Request = Request(spaceId = spaceId, auth = auth)
+            viewer: Viewer = Viewer.Member(userId = UserId(100L), isAdmin = false)
+        ): Request = Request(spaceId = spaceId, viewer = viewer)
     }
 }

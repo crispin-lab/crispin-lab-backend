@@ -3,10 +3,9 @@ package com.crispinlab.space.application.usecase.page
 import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.space.application.port.incoming.page.PageDeleting.Request
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicPage
-import com.crispinlab.user.domain.user.AuthContext
-import com.crispinlab.user.domain.user.SystemRole
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -64,7 +63,7 @@ class PageDeletingUseCaseTest :
                     basicRequest(
                         pageId = page.id.value.toString(),
                         userId = UserId(100L),
-                        role = SystemRole.ADMIN
+                        isAdmin = true
                     )
                 )
 
@@ -76,11 +75,11 @@ class PageDeletingUseCaseTest :
         fun basicRequest(
             pageId: String = "1",
             userId: UserId = UserId(100L),
-            role: SystemRole = SystemRole.USER
+            isAdmin: Boolean = false
         ): Request =
             Request(
                 pageId = pageId,
-                auth = AuthContext.Authenticated(userId = userId, role = role)
+                viewer = Viewer.Member(userId = userId, isAdmin = isAdmin)
             )
     }
 }

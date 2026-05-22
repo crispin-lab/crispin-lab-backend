@@ -3,11 +3,11 @@ package com.crispinlab.space.application.port.incoming.space
 import com.crispinlab.common.application.UseCase
 import com.crispinlab.space.application.port.incoming.space.SpaceEditing.Request
 import com.crispinlab.space.application.port.incoming.space.SpaceEditing.Result
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.space.SpaceId.Companion.asSpaceId
 import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.domain.space.SpaceVisibility.Companion.asSpaceVisibility
-import com.crispinlab.user.domain.user.AuthContext
 import java.time.Instant
 
 interface SpaceEditing : UseCase<Request, Result> {
@@ -16,7 +16,7 @@ interface SpaceEditing : UseCase<Request, Result> {
         val name: String? = null,
         val description: String? = null,
         visibility: String? = null,
-        val auth: AuthContext.Authenticated
+        val viewer: Viewer.Member
     ) {
         val spaceId: SpaceId = spaceId.asSpaceId()
         val visibility: SpaceVisibility? = visibility?.asSpaceVisibility()

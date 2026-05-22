@@ -28,7 +28,7 @@ class SpaceRegisteringUseCase(
         }
 
     private fun Request.validate() {
-        if (!auth.isAdmin) {
+        if (!viewer.isAdmin) {
             throw ForbiddenException(SpaceErrorCode.SPACE_ADMIN_ONLY)
         }
     }

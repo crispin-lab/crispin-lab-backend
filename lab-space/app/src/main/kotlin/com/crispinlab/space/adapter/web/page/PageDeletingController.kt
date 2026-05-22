@@ -1,5 +1,6 @@
 package com.crispinlab.space.adapter.web.page
 
+import com.crispinlab.space.adapter.web.auth.toViewer
 import com.crispinlab.space.application.port.incoming.page.PageDeleting
 import com.crispinlab.space.application.port.incoming.page.PageDeleting.Request
 import com.crispinlab.user.adapter.web.auth.Auth
@@ -21,7 +22,7 @@ class PageDeletingController(
         @PathVariable pageId: String,
         auth: Auth
     ) {
-        Request(pageId = pageId, auth = auth.toContext())
+        Request(pageId = pageId, viewer = auth.toViewer())
             .let {
                 useCase.perform(it)
             }

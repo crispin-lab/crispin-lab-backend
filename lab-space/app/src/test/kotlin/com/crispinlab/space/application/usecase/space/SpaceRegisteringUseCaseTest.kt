@@ -4,11 +4,10 @@ import com.crispinlab.common.exception.ForbiddenException
 import com.crispinlab.common.id.IdGenerator
 import com.crispinlab.space.application.port.incoming.space.SpaceRegistering.Request
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.space.Space
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.testsupport.DummyTransactionProvider
-import com.crispinlab.user.domain.user.AuthContext
-import com.crispinlab.user.domain.user.SystemRole
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -59,7 +58,7 @@ class SpaceRegisteringUseCaseTest :
 
             it("USER 가 호출하면 ForbiddenException 으로 차단되고 저장이 일어나지 않는다") {
                 shouldThrow<ForbiddenException> {
-                    useCase.perform(basicRequest(role = SystemRole.USER))
+                    useCase.perform(basicRequest(isAdmin = false))
                 }
                 verify(exactly = 0) { spaceRepository.save(any()) }
             }
@@ -71,13 +70,13 @@ class SpaceRegisteringUseCaseTest :
             description: String = "공유 공간",
             visibility: String = "INTERNAL",
             userId: UserId = UserId(100L),
-            role: SystemRole = SystemRole.ADMIN
+            isAdmin: Boolean = true
         ): Request =
             Request(
                 name = name,
                 description = description,
                 visibility = visibility,
-                auth = AuthContext.Authenticated(userId = userId, role = role)
+                viewer = Viewer.Member(userId = userId, isAdmin = isAdmin)
             )
     }
 }

@@ -6,10 +6,10 @@ import com.crispinlab.space.application.port.incoming.page.PageGetting
 import com.crispinlab.space.application.port.incoming.page.PageGetting.Request
 import com.crispinlab.space.application.port.incoming.page.PageGetting.Result
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageErrorCode
 import com.crispinlab.space.domain.page.Visibility
-import com.crispinlab.user.domain.user.AuthContext
 import org.springframework.stereotype.Service
 
 @Service
@@ -27,18 +27,18 @@ class PageGettingUseCase(
     private fun Request.toEntity(): Page =
         pageRepository
             .findBy(pageId)
-            ?.takeIf { it.isVisibleFor(auth) }
+            ?.takeIf { it.isVisibleFor(viewer) }
             ?: throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
 
-    private fun Page.isVisibleFor(auth: AuthContext): Boolean =
+    private fun Page.isVisibleFor(viewer: Viewer): Boolean =
         when (visibility) {
             Visibility.PUBLIC -> true
-            Visibility.INTERNAL -> auth is AuthContext.Authenticated
-            Visibility.DRAFT -> auth.isAdmin || isOwnedBy(auth)
+            Visibility.INTERNAL -> viewer.isAuthenticated
+            Visibility.DRAFT -> viewer.isAdmin || isOwnedBy(viewer)
         }
 
-    private fun Page.isOwnedBy(auth: AuthContext): Boolean =
-        auth is AuthContext.Authenticated && authorId == auth.userId
+    private fun Page.isOwnedBy(viewer: Viewer): Boolean =
+        viewer is Viewer.Member && authorId == viewer.userId
 
     private fun Page.toResult(): Result =
         Result(

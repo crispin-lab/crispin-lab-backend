@@ -59,7 +59,7 @@ class PageRegisteringUseCase(
             id = PageId(idGenerator.next()),
             spaceId = spaceId,
             parentPageId = parentPageId,
-            authorId = auth.userId,
+            authorId = viewer.userId,
             title = title,
             content = PageContent(content),
             visibility = visibility,

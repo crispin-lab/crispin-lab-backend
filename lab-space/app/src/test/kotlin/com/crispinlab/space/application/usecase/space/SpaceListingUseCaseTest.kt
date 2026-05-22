@@ -5,13 +5,12 @@ import com.crispinlab.common.pagination.PageRequest.Companion.DEFAULT_SIZE
 import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.application.port.incoming.space.SpaceListing.Request
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.space.Space
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicSpace
-import com.crispinlab.user.domain.user.AuthContext
-import com.crispinlab.user.domain.user.SystemRole
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -103,7 +102,7 @@ class SpaceListingUseCaseTest :
                 every { spaceRepository.findPage(any(), any()) } returns
                     PageResult.empty(PageRequest.firstPage())
 
-                useCase.perform(basicRequest(auth = AuthContext.Anonymous))
+                useCase.perform(basicRequest(viewer = Viewer.Anonymous))
 
                 verify {
                     spaceRepository.findPage(
@@ -136,13 +135,12 @@ class SpaceListingUseCaseTest :
         fun basicRequest(
             page: Int = 0,
             size: Int = DEFAULT_SIZE,
-            auth: AuthContext =
-                AuthContext.Authenticated(userId = UserId(100L), role = SystemRole.USER)
+            viewer: Viewer = Viewer.Member(userId = UserId(100L), isAdmin = false)
         ): Request =
             Request(
                 page = page,
                 size = size,
-                auth = auth
+                viewer = viewer
             )
     }
 }

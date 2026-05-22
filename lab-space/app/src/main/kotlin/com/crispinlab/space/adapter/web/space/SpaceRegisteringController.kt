@@ -1,10 +1,11 @@
 package com.crispinlab.space.adapter.web.space
 
+import com.crispinlab.space.adapter.web.auth.toViewer
 import com.crispinlab.space.application.port.incoming.space.SpaceRegistering
 import com.crispinlab.space.application.port.incoming.space.SpaceRegistering.Request
 import com.crispinlab.space.application.port.incoming.space.SpaceRegistering.Result
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.user.adapter.web.auth.Auth
-import com.crispinlab.user.domain.user.AuthContext
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -24,7 +25,7 @@ class SpaceRegisteringController(
         auth: Auth
     ): Result =
         body
-            .toRequestWith(auth.toContext())
+            .toRequestWith(auth.toViewer())
             .let { useCase.perform(it) }
 
     data class Body(
@@ -32,16 +33,12 @@ class SpaceRegisteringController(
         val description: String,
         val visibility: String? = null
     ) {
-        fun toRequestWith(auth: AuthContext.Authenticated): Request =
+        fun toRequestWith(viewer: Viewer.Member): Request =
             Request(
                 name = name,
                 description = description,
-                visibility = visibility ?: DEFAULT_VISIBILITY,
-                auth = auth
+                visibility = visibility ?: "INTERNAL",
+                viewer = viewer
             )
-
-        companion object {
-            private const val DEFAULT_VISIBILITY: String = "INTERNAL"
-        }
     }
 }

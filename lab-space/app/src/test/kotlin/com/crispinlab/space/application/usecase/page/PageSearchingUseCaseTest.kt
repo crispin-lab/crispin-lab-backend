@@ -7,13 +7,12 @@ import com.crispinlab.space.application.port.incoming.page.PageSearching.Request
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.PageSummary
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.tag.TagId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.DummyTransactionProvider
-import com.crispinlab.user.domain.user.AuthContext
-import com.crispinlab.user.domain.user.SystemRole
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -172,7 +171,7 @@ class PageSearchingUseCaseTest :
                     )
                 } returns PageResult.empty(basicRequest().pageRequest)
 
-                useCase.perform(basicRequest(auth = AuthContext.Anonymous))
+                useCase.perform(basicRequest(viewer = Viewer.Anonymous))
 
                 verify {
                     pageSearchPort.search(
@@ -198,11 +197,7 @@ class PageSearchingUseCaseTest :
 
                 useCase.perform(
                     basicRequest(
-                        auth =
-                            AuthContext.Authenticated(
-                                userId = UserId(100L),
-                                role = SystemRole.USER
-                            )
+                        viewer = Viewer.Member(userId = UserId(100L), isAdmin = false)
                     )
                 )
 
@@ -230,11 +225,7 @@ class PageSearchingUseCaseTest :
 
                 useCase.perform(
                     basicRequest(
-                        auth =
-                            AuthContext.Authenticated(
-                                userId = UserId(100L),
-                                role = SystemRole.ADMIN
-                            )
+                        viewer = Viewer.Member(userId = UserId(100L), isAdmin = true)
                     )
                 )
 
@@ -257,8 +248,7 @@ class PageSearchingUseCaseTest :
             tagIds: List<String> = emptyList(),
             page: Int = 0,
             size: Int = DEFAULT_SIZE,
-            auth: AuthContext =
-                AuthContext.Authenticated(userId = UserId(100L), role = SystemRole.USER)
+            viewer: Viewer = Viewer.Member(userId = UserId(100L), isAdmin = false)
         ): Request =
             Request(
                 keyword = keyword,
@@ -266,7 +256,7 @@ class PageSearchingUseCaseTest :
                 tagIds = tagIds,
                 page = page,
                 size = size,
-                auth = auth
+                viewer = viewer
             )
     }
 }

@@ -33,7 +33,7 @@ class PageRegisteringControllerTest :
                                 it.title == "오늘의 회고" &&
                                 it.content == "본문 [[wiki]]" &&
                                 it.visibility == Visibility.DRAFT &&
-                                it.auth.userId.value == 100L
+                                it.viewer.userId.value == 100L
                         }
                     )
                 } returns Result(pageId = PageId(42L))

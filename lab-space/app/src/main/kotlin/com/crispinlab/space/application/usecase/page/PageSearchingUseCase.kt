@@ -8,7 +8,7 @@ import com.crispinlab.space.application.port.incoming.page.PageSearching.Summary
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.PageSummary
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
-import com.crispinlab.user.domain.user.AuthContext
+import com.crispinlab.space.domain.access.Viewer
 import org.springframework.stereotype.Service
 
 @Service
@@ -27,14 +27,14 @@ class PageSearchingUseCase(
                 keyword = keyword,
                 spaceId = spaceId,
                 tagIds = tagIds,
-                scope = auth.toScope(),
+                scope = viewer.toScope(),
                 pageRequest = pageRequest
             ).map { it.toSummary() }
 
-    private fun AuthContext.toScope(): VisibilityScope =
+    private fun Viewer.toScope(): VisibilityScope =
         when {
             isAdmin -> VisibilityScope.Privileged
-            this is AuthContext.Authenticated -> VisibilityScope.Authenticated(userId)
+            this is Viewer.Member -> VisibilityScope.Authenticated(userId)
             else -> VisibilityScope.Anonymous
         }
 

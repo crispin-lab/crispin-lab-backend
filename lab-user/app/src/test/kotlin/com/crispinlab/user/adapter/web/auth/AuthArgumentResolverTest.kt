@@ -10,6 +10,7 @@ import com.crispinlab.user.testsupport.Fixtures.basicSessionToken
 import com.crispinlab.user.testsupport.Fixtures.basicUser
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
+import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
 import io.mockk.every
@@ -132,6 +133,38 @@ class AuthArgumentResolverTest :
                     )
                 }
             }
+
+            it("옵셔널 파라미터에 헤더가 없으면 401 대신 null 을 돌려준다") {
+                resolver
+                    .resolveOptionalArgument(
+                        request = ServletWebRequest(MockHttpServletRequest())
+                    ).shouldBeNull()
+                verify(exactly = 0) { sessionService.find(any()) }
+            }
+
+            it("옵셔널 파라미터에 만료/잘못된 토큰이 와도 null 을 돌려준다") {
+                val token = basicSessionToken()
+                every { sessionService.find(token) } returns null
+
+                resolver
+                    .resolveOptionalArgument(
+                        request = bearer(token.value)
+                    ).shouldBeNull()
+            }
+
+            it("옵셔널 파라미터라도 정상 토큰이면 Auth 를 돌려준다") {
+                val token = basicSessionToken()
+                val user = basicUser(id = UserId(100L), role = SystemRole.USER)
+                every { sessionService.find(token) } returns user.id
+                every { userRepository.findBy(user.id) } returns user
+
+                val auth =
+                    resolver.resolveOptionalArgument(
+                        request = bearer(token.value)
+                    )
+
+                auth shouldBe Auth(userId = UserId(100L), role = SystemRole.USER)
+            }
         }
     }) {
     companion object {
@@ -149,11 +182,26 @@ class AuthArgumentResolverTest :
 
         private fun AuthArgumentResolver.resolveArgument(request: ServletWebRequest): Auth =
             resolveArgument(
-                parameter = mockk(relaxed = true),
+                parameter = parameterMock(optional = false),
+                mavContainer = null,
+                webRequest = request,
+                binderFactory = null
+            )!!
+
+        private fun AuthArgumentResolver.resolveOptionalArgument(
+            request: ServletWebRequest
+        ): Auth? =
+            resolveArgument(
+                parameter = parameterMock(optional = true),
                 mavContainer = null,
                 webRequest = request,
                 binderFactory = null
             )
+
+        private fun parameterMock(optional: Boolean): MethodParameter =
+            mockk(relaxed = true) {
+                every { isOptional } returns optional
+            }
 
         private fun shouldThrowInvalidSession(block: () -> Unit) {
             val ex = shouldThrow<AuthenticationException>(block)

@@ -30,7 +30,14 @@ class AuthArgumentResolver(
         mavContainer: ModelAndViewContainer?,
         webRequest: NativeWebRequest,
         binderFactory: WebDataBinderFactory?
-    ): Auth {
+    ): Auth? =
+        try {
+            resolveAuth(webRequest)
+        } catch (e: AuthenticationException) {
+            if (parameter.isOptional) null else throw e
+        }
+
+    private fun resolveAuth(webRequest: NativeWebRequest): Auth {
         val token = webRequest.extractBearerToken().toSessionToken()
         val userId = sessionService.find(token) ?: throw invalidSession("session_miss")
         val user = userRepository.findBy(userId) ?: throw invalidSession("user_miss")

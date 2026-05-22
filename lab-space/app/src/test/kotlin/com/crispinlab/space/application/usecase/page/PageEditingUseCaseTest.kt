@@ -11,6 +11,7 @@ import com.crispinlab.space.domain.page.PageLink
 import com.crispinlab.space.domain.page.PageRevision
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicPage
+import com.crispinlab.user.domain.user.AuthContext
 import com.crispinlab.user.domain.user.SystemRole
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
@@ -105,7 +106,7 @@ class PageEditingUseCaseTest :
                 every { pageRepository.findBy(page.id) } returns page
 
                 shouldThrow<NotFoundException> {
-                    useCase.perform(basicRequest(currentUserId = UserId(100L)))
+                    useCase.perform(basicRequest(userId = UserId(100L)))
                 }
                 verify(exactly = 0) { pageRepository.save(any()) }
             }
@@ -121,8 +122,8 @@ class PageEditingUseCaseTest :
                             pageId = page.id.value.toString(),
                             title = "새 제목",
                             content = "본문",
-                            currentUserId = UserId(100L),
-                            currentUserRole = SystemRole.ADMIN
+                            userId = UserId(100L),
+                            role = SystemRole.ADMIN
                         )
                     )
 
@@ -136,15 +137,14 @@ class PageEditingUseCaseTest :
             pageId: String = "1",
             title: String = "새 제목",
             content: String = "새 본문",
-            currentUserId: UserId = UserId(100L),
-            currentUserRole: SystemRole = SystemRole.USER
+            userId: UserId = UserId(100L),
+            role: SystemRole = SystemRole.USER
         ): Request =
             Request(
                 pageId = pageId,
                 title = title,
                 content = content,
-                currentUserId = currentUserId,
-                currentUserRole = currentUserRole
+                auth = AuthContext.Authenticated(userId = userId, role = role)
             )
     }
 }

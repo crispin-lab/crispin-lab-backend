@@ -11,6 +11,7 @@ import com.crispinlab.user.testsupport.Fixtures.basicUser
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
 import io.mockk.every
@@ -50,7 +51,8 @@ class AuthArgumentResolverTest :
                         request = bearer(token.value)
                     )
 
-                auth shouldBe Auth(userId = UserId(100L), role = SystemRole.USER)
+                auth.userId shouldBe UserId(100L)
+                auth.role shouldBe SystemRole.USER
                 auth.isAdmin shouldBe false
                 verifyOrder {
                     sessionService.find(token)
@@ -142,14 +144,15 @@ class AuthArgumentResolverTest :
                 verify(exactly = 0) { sessionService.find(any()) }
             }
 
-            it("옵셔널 파라미터에 만료/잘못된 토큰이 와도 null 을 돌려준다") {
+            it("옵셔널 파라미터라도 만료/잘못된 토큰이 오면 401 을 던진다") {
                 val token = basicSessionToken()
                 every { sessionService.find(token) } returns null
 
-                resolver
-                    .resolveOptionalArgument(
+                shouldThrowInvalidSession {
+                    resolver.resolveOptionalArgument(
                         request = bearer(token.value)
-                    ).shouldBeNull()
+                    )
+                }
             }
 
             it("옵셔널 파라미터라도 정상 토큰이면 Auth 를 돌려준다") {
@@ -163,7 +166,9 @@ class AuthArgumentResolverTest :
                         request = bearer(token.value)
                     )
 
-                auth shouldBe Auth(userId = UserId(100L), role = SystemRole.USER)
+                auth.shouldNotBeNull()
+                auth.userId shouldBe UserId(100L)
+                auth.role shouldBe SystemRole.USER
             }
         }
     }) {

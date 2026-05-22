@@ -8,6 +8,7 @@ import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
+import com.crispinlab.user.domain.user.AuthContext
 import com.crispinlab.user.testsupport.withAuth
 import io.mockk.clearMocks
 import io.mockk.every
@@ -106,6 +107,28 @@ class SpaceListingControllerTest :
                         jsonPath("$.items.length()").value(0),
                         jsonPath("$.totalElements").value(0)
                     )
+            }
+
+            it("비로그인 상태에서도 200 으로 응답하고 Anonymous 컨텍스트로 UseCase 가 호출된다") {
+                every { useCase.perform(any()) } returns
+                    PageResult(
+                        items = emptyList(),
+                        page = 0,
+                        size = 20,
+                        totalElements = 0L
+                    )
+
+                controller
+                    .`when`(get("/v1/spaces"))
+                    .then(
+                        status().isOk,
+                        jsonPath("$.items.length()").value(0)
+                    )
+                verify {
+                    useCase.perform(
+                        match { it.auth == AuthContext.Anonymous }
+                    )
+                }
             }
 
             it("page 가 음수면 400 과 한국어 메시지를 반환한다") {

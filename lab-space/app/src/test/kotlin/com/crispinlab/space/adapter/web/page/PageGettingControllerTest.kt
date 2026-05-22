@@ -9,6 +9,7 @@ import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
+import com.crispinlab.user.domain.user.AuthContext
 import com.crispinlab.user.domain.user.UserId
 import com.crispinlab.user.testsupport.withAuth
 import io.mockk.clearMocks
@@ -111,7 +112,7 @@ class PageGettingControllerTest :
                     )
                 verify {
                     useCase.perform(
-                        match { it.currentUserId == null && it.currentUserRole == null }
+                        match { it.auth == AuthContext.Anonymous }
                     )
                 }
             }

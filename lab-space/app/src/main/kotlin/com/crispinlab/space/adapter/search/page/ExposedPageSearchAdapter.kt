@@ -7,11 +7,11 @@ import com.crispinlab.space.adapter.persistence.tag.PageTags
 import com.crispinlab.space.adapter.persistence.toPageResult
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.PageSummary
+import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.tag.TagId
-import com.crispinlab.user.domain.user.UserId
 import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
@@ -32,14 +32,9 @@ class ExposedPageSearchAdapter : PageSearchPort {
         keyword: String?,
         spaceId: SpaceId?,
         tagIds: Collection<TagId>,
-        visibilities: Set<Visibility>,
-        draftAuthorId: UserId?,
+        scope: VisibilityScope,
         pageRequest: PageRequest
     ): PageResult<PageSummary> {
-        val visibilityCondition =
-            buildVisibilityCondition(visibilities, draftAuthorId)
-                ?: return PageResult.empty(pageRequest)
-
         val tagPageIds =
             if (tagIds.isEmpty()) {
                 null
@@ -49,7 +44,7 @@ class ExposedPageSearchAdapter : PageSearchPort {
                 matched
             }
 
-        return baseQuery(keyword, spaceId, tagPageIds, visibilityCondition)
+        return baseQuery(keyword, spaceId, tagPageIds, scope.toCondition())
             .toPageResult(
                 pageRequest,
                 Pages.updatedAt to SortOrder.DESC,
@@ -71,28 +66,30 @@ class ExposedPageSearchAdapter : PageSearchPort {
             }.withDistinct()
             .map { it[PageTags.pageId] }
 
-    private fun buildVisibilityCondition(
-        visibilities: Set<Visibility>,
-        draftAuthorId: UserId?
-    ): Op<Boolean>? {
-        val parts =
-            buildList<Op<Boolean>> {
-                if (visibilities.isNotEmpty()) {
-                    add(Pages.visibility inList visibilities.map { it.name })
-                }
-                draftAuthorId?.let { authorId ->
-                    add(
-                        (Pages.visibility eq Visibility.DRAFT.name) and
-                            (Pages.authorId eq authorId.value)
-                    )
-                }
+    private fun VisibilityScope.toCondition(): Op<Boolean> =
+        when (this) {
+            is VisibilityScope.Anonymous -> {
+                Pages.visibility eq Visibility.PUBLIC.name
             }
-        return when (parts.size) {
-            0 -> null
-            1 -> parts.first()
-            else -> parts.reduce { acc, op -> acc or op }
+
+            is VisibilityScope.Authenticated -> {
+                (
+                    Pages.visibility inList
+                        listOf(
+                            Visibility.PUBLIC.name,
+                            Visibility.INTERNAL.name
+                        )
+                ) or
+                    (
+                        (Pages.visibility eq Visibility.DRAFT.name) and
+                            (Pages.authorId eq viewerId.value)
+                    )
+            }
+
+            is VisibilityScope.Privileged -> {
+                Pages.visibility inList Visibility.entries.map { it.name }
+            }
         }
-    }
 
     private fun baseQuery(
         keyword: String?,

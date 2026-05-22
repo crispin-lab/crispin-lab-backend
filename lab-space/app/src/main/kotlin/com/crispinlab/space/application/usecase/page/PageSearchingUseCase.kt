@@ -7,9 +7,8 @@ import com.crispinlab.space.application.port.incoming.page.PageSearching.Request
 import com.crispinlab.space.application.port.incoming.page.PageSearching.Summary
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.PageSummary
-import com.crispinlab.space.domain.page.Visibility
-import com.crispinlab.user.domain.user.SystemRole
-import com.crispinlab.user.domain.user.UserId
+import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
+import com.crispinlab.user.domain.user.AuthContext
 import org.springframework.stereotype.Service
 
 @Service
@@ -28,32 +27,16 @@ class PageSearchingUseCase(
                 keyword = keyword,
                 spaceId = spaceId,
                 tagIds = tagIds,
-                visibilities = allowedVisibilities(),
-                draftAuthorId = draftAuthorId(),
+                scope = auth.toScope(),
                 pageRequest = pageRequest
             ).map { it.toSummary() }
 
-    private fun Request.allowedVisibilities(): Set<Visibility> =
+    private fun AuthContext.toScope(): VisibilityScope =
         when {
-            currentUserRole == SystemRole.ADMIN -> {
-                setOf(
-                    Visibility.PUBLIC,
-                    Visibility.INTERNAL,
-                    Visibility.DRAFT
-                )
-            }
-
-            currentUserId != null -> {
-                setOf(Visibility.PUBLIC, Visibility.INTERNAL)
-            }
-
-            else -> {
-                setOf(Visibility.PUBLIC)
-            }
+            isAdmin -> VisibilityScope.Privileged
+            this is AuthContext.Authenticated -> VisibilityScope.Authenticated(userId)
+            else -> VisibilityScope.Anonymous
         }
-
-    private fun Request.draftAuthorId(): UserId? =
-        currentUserId?.takeIf { currentUserRole != SystemRole.ADMIN }
 
     private fun PageSummary.toSummary(): Summary =
         Summary(

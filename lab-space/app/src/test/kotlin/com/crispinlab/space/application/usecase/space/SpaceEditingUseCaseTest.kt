@@ -8,6 +8,7 @@ import com.crispinlab.space.domain.space.Space
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicSpace
+import com.crispinlab.user.domain.user.AuthContext
 import com.crispinlab.user.domain.user.SystemRole
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
@@ -69,7 +70,7 @@ class SpaceEditingUseCaseTest :
 
             it("USER 가 호출하면 ForbiddenException 으로 차단되고 저장이 일어나지 않는다") {
                 shouldThrow<ForbiddenException> {
-                    useCase.perform(basicRequest(name = "x", currentUserRole = SystemRole.USER))
+                    useCase.perform(basicRequest(name = "x", role = SystemRole.USER))
                 }
                 verify(exactly = 0) { spaceRepository.save(any()) }
             }
@@ -81,16 +82,15 @@ class SpaceEditingUseCaseTest :
             name: String? = null,
             description: String? = null,
             visibility: String? = null,
-            currentUserId: UserId = UserId(100L),
-            currentUserRole: SystemRole = SystemRole.ADMIN
+            userId: UserId = UserId(100L),
+            role: SystemRole = SystemRole.ADMIN
         ): Request =
             Request(
                 spaceId = spaceId,
                 name = name,
                 description = description,
                 visibility = visibility,
-                currentUserId = currentUserId,
-                currentUserRole = currentUserRole
+                auth = AuthContext.Authenticated(userId = userId, role = role)
             )
     }
 }

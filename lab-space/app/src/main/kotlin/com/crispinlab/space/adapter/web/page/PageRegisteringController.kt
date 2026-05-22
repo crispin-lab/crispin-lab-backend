@@ -4,7 +4,7 @@ import com.crispinlab.space.application.port.incoming.page.PageRegistering
 import com.crispinlab.space.application.port.incoming.page.PageRegistering.Request
 import com.crispinlab.space.application.port.incoming.page.PageRegistering.Result
 import com.crispinlab.user.adapter.web.auth.Auth
-import com.crispinlab.user.domain.user.UserId
+import com.crispinlab.user.domain.user.AuthContext
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -24,7 +24,7 @@ class PageRegisteringController(
         auth: Auth
     ): Result =
         body
-            .toRequestWith(userId = auth.userId)
+            .toRequestWith(auth.toContext())
             .let {
                 useCase.perform(it)
             }
@@ -36,14 +36,14 @@ class PageRegisteringController(
         val content: String,
         val visibility: String
     ) {
-        fun toRequestWith(userId: UserId): Request =
+        fun toRequestWith(auth: AuthContext.Authenticated): Request =
             Request(
                 spaceId = spaceId,
                 parentPageId = parentPageId,
                 title = title,
                 content = content,
                 visibility = visibility,
-                currentUserId = userId
+                auth = auth
             )
     }
 }

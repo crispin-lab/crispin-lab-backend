@@ -6,6 +6,7 @@ import com.crispinlab.space.application.port.incoming.page.PageSearching
 import com.crispinlab.space.application.port.incoming.page.PageSearching.Request
 import com.crispinlab.space.application.port.incoming.page.PageSearching.Summary
 import com.crispinlab.user.adapter.web.auth.Auth
+import com.crispinlab.user.adapter.web.auth.toContext
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
@@ -31,7 +32,6 @@ class PageSearchingController(
             tagIds = tag.orEmpty(),
             page = page,
             size = size,
-            currentUserId = auth?.userId,
-            currentUserRole = auth?.role
+            auth = auth.toContext()
         ).let { useCase.perform(it) }
 }

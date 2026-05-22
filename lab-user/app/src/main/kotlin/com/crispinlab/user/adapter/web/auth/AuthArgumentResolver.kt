@@ -30,33 +30,27 @@ class AuthArgumentResolver(
         mavContainer: ModelAndViewContainer?,
         webRequest: NativeWebRequest,
         binderFactory: WebDataBinderFactory?
-    ): Auth? =
-        try {
-            resolveAuth(webRequest)
-        } catch (e: AuthenticationException) {
-            if (parameter.isOptional) null else throw e
+    ): Auth? {
+        val header = webRequest.getHeader(AUTHORIZATION)
+        if (header == null) {
+            return if (parameter.isOptional) null else throw invalidSession("missing_header")
         }
-
-    private fun resolveAuth(webRequest: NativeWebRequest): Auth {
-        val token = webRequest.extractBearerToken().toSessionToken()
-        val userId = sessionService.find(token) ?: throw invalidSession("session_miss")
-        val user = userRepository.findBy(userId) ?: throw invalidSession("user_miss")
-        return Auth(userId = user.id, role = user.role)
+        return resolveAuth(header)
     }
 
-    private fun NativeWebRequest.extractBearerToken(): String {
-        val header = getHeader(AUTHORIZATION) ?: throw invalidSession("missing_header")
+    private fun resolveAuth(header: String): Auth {
         if (!header.regionMatches(0, BEARER_PREFIX, 0, BEARER_PREFIX.length, ignoreCase = true)) {
             throw invalidSession("missing_bearer_prefix")
         }
         val stripped = header.substring(BEARER_PREFIX.length).trim()
         if (stripped.isEmpty()) throw invalidSession("empty_token")
-        return stripped
+        val token =
+            runCatching { SessionToken(stripped) }
+                .getOrElse { throw invalidSession("bad_token_format", cause = it) }
+        val userId = sessionService.find(token) ?: throw invalidSession("session_miss")
+        val user = userRepository.findBy(userId) ?: throw invalidSession("user_miss")
+        return Auth(userId = user.id, role = user.role)
     }
-
-    private fun String.toSessionToken(): SessionToken =
-        runCatching { SessionToken(this) }
-            .getOrElse { throw invalidSession("bad_token_format", cause = it) }
 
     private fun invalidSession(
         reason: String,

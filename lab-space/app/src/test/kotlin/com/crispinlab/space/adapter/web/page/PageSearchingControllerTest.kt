@@ -8,6 +8,7 @@ import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
+import com.crispinlab.user.domain.user.AuthContext
 import com.crispinlab.user.testsupport.withAuth
 import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
@@ -185,6 +186,28 @@ class PageSearchingControllerTest :
                         )
                 }
                 verify(exactly = 0) { useCase.perform(any()) }
+            }
+
+            it("비로그인 상태에서도 200 으로 응답하고 Anonymous 컨텍스트로 UseCase 가 호출된다") {
+                every { useCase.perform(any()) } returns
+                    PageResult(
+                        items = emptyList(),
+                        page = 0,
+                        size = 20,
+                        totalElements = 0L
+                    )
+
+                controller
+                    .`when`(get("/v1/pages"))
+                    .then(
+                        status().isOk,
+                        jsonPath("$.items.length()").value(0)
+                    )
+                verify {
+                    useCase.perform(
+                        match { it.auth == AuthContext.Anonymous }
+                    )
+                }
             }
         }
     })

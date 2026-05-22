@@ -15,6 +15,8 @@ import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicPage
 import com.crispinlab.space.testsupport.Fixtures.basicSpace
+import com.crispinlab.user.domain.user.AuthContext
+import com.crispinlab.user.domain.user.SystemRole
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -128,7 +130,8 @@ class PageRegisteringUseCaseTest :
             title: String = "테스트",
             content: String = "본문",
             visibility: String = "DRAFT",
-            currentUserId: UserId = UserId(100L)
+            userId: UserId = UserId(100L),
+            role: SystemRole = SystemRole.USER
         ): Request =
             Request(
                 spaceId = spaceId,
@@ -136,7 +139,7 @@ class PageRegisteringUseCaseTest :
                 title = title,
                 content = content,
                 visibility = visibility,
-                currentUserId = currentUserId
+                auth = AuthContext.Authenticated(userId = userId, role = role)
             )
     }
 }

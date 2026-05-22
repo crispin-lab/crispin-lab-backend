@@ -6,6 +6,8 @@ import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicSpace
+import com.crispinlab.user.domain.user.AuthContext
+import com.crispinlab.user.domain.user.SystemRole
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -52,7 +54,7 @@ class SpaceGettingUseCaseTest :
                 val space = basicSpace(visibility = SpaceVisibility.PUBLIC)
                 every { spaceRepository.findBy(space.id) } returns space
 
-                val result = useCase.perform(basicRequest(currentUserId = null))
+                val result = useCase.perform(basicRequest(auth = AuthContext.Anonymous))
 
                 result.spaceId shouldBe space.id
                 result.visibility shouldBe SpaceVisibility.PUBLIC
@@ -63,7 +65,7 @@ class SpaceGettingUseCaseTest :
                 every { spaceRepository.findBy(space.id) } returns space
 
                 shouldThrow<NotFoundException> {
-                    useCase.perform(basicRequest(currentUserId = null))
+                    useCase.perform(basicRequest(auth = AuthContext.Anonymous))
                 }
             }
 
@@ -80,7 +82,8 @@ class SpaceGettingUseCaseTest :
     companion object {
         fun basicRequest(
             spaceId: String = "1",
-            currentUserId: UserId? = UserId(100L)
-        ): Request = Request(spaceId = spaceId, currentUserId = currentUserId)
+            auth: AuthContext =
+                AuthContext.Authenticated(userId = UserId(100L), role = SystemRole.USER)
+        ): Request = Request(spaceId = spaceId, auth = auth)
     }
 }

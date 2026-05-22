@@ -6,15 +6,14 @@ import com.crispinlab.space.application.port.incoming.page.PageGetting.Result
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.PageId.Companion.asPageId
 import com.crispinlab.space.domain.space.SpaceId
-import com.crispinlab.user.domain.user.SystemRole
+import com.crispinlab.user.domain.user.AuthContext
 import com.crispinlab.user.domain.user.UserId
 import java.time.Instant
 
 interface PageGetting : UseCase<Request, Result> {
     class Request(
         pageId: String,
-        val currentUserId: UserId?,
-        val currentUserRole: SystemRole?
+        val auth: AuthContext
     ) {
         val pageId: PageId = pageId.asPageId()
     }

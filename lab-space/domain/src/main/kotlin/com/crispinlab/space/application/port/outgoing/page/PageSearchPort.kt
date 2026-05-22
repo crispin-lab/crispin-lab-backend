@@ -3,7 +3,6 @@ package com.crispinlab.space.application.port.outgoing.page
 import com.crispinlab.common.pagination.PageRequest
 import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.domain.page.PageId
-import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.tag.TagId
 import com.crispinlab.user.domain.user.UserId
@@ -14,10 +13,19 @@ interface PageSearchPort {
         keyword: String?,
         spaceId: SpaceId?,
         tagIds: Collection<TagId>,
-        visibilities: Set<Visibility>,
-        draftAuthorId: UserId?,
+        scope: VisibilityScope,
         pageRequest: PageRequest
     ): PageResult<PageSummary>
+
+    sealed interface VisibilityScope {
+        data object Anonymous : VisibilityScope
+
+        data class Authenticated(
+            val viewerId: UserId
+        ) : VisibilityScope
+
+        data object Privileged : VisibilityScope
+    }
 
     data class PageSummary(
         val id: PageId,

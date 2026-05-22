@@ -8,6 +8,7 @@ import com.crispinlab.space.application.port.incoming.space.SpaceListing.Summary
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.domain.space.Space
 import com.crispinlab.space.domain.space.SpaceVisibility
+import com.crispinlab.user.domain.user.AuthContext
 import org.springframework.stereotype.Service
 
 @Service
@@ -22,14 +23,13 @@ class SpaceListingUseCase(
 
     private fun Request.toResult(): PageResult<Summary> =
         spaceRepository
-            .findPage(pageRequest, allowedVisibilities())
+            .findPage(pageRequest, auth.allowedSpaceVisibilities())
             .map { it.toSummary() }
 
-    private fun Request.allowedVisibilities(): Set<SpaceVisibility> =
-        if (currentUserId == null) {
-            setOf(SpaceVisibility.PUBLIC)
-        } else {
-            setOf(SpaceVisibility.PUBLIC, SpaceVisibility.INTERNAL)
+    private fun AuthContext.allowedSpaceVisibilities(): Set<SpaceVisibility> =
+        when (this) {
+            is AuthContext.Anonymous -> setOf(SpaceVisibility.PUBLIC)
+            is AuthContext.Authenticated -> setOf(SpaceVisibility.PUBLIC, SpaceVisibility.INTERNAL)
         }
 
     private fun Space.toSummary(): Summary =

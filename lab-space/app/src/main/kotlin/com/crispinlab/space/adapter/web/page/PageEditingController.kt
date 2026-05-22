@@ -4,8 +4,7 @@ import com.crispinlab.space.application.port.incoming.page.PageEditing
 import com.crispinlab.space.application.port.incoming.page.PageEditing.Request
 import com.crispinlab.space.application.port.incoming.page.PageEditing.Result
 import com.crispinlab.user.adapter.web.auth.Auth
-import com.crispinlab.user.domain.user.SystemRole
-import com.crispinlab.user.domain.user.UserId
+import com.crispinlab.user.domain.user.AuthContext
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -24,11 +23,8 @@ class PageEditingController(
         auth: Auth
     ): Result =
         body
-            .toRequestWith(
-                pageId = pageId,
-                userId = auth.userId,
-                role = auth.role
-            ).let {
+            .toRequestWith(pageId = pageId, auth = auth.toContext())
+            .let {
                 useCase.perform(it)
             }
 
@@ -38,15 +34,13 @@ class PageEditingController(
     ) {
         fun toRequestWith(
             pageId: String,
-            userId: UserId,
-            role: SystemRole
+            auth: AuthContext.Authenticated
         ): Request =
             Request(
                 pageId = pageId,
                 title = title,
                 content = content,
-                currentUserId = userId,
-                currentUserRole = role
+                auth = auth
             )
     }
 }

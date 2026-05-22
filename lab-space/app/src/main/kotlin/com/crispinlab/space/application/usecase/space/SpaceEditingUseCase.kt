@@ -9,7 +9,6 @@ import com.crispinlab.space.application.port.incoming.space.SpaceEditing.Result
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.domain.space.Space
 import com.crispinlab.space.domain.space.SpaceErrorCode
-import com.crispinlab.user.domain.user.SystemRole
 import org.springframework.stereotype.Service
 
 @Service
@@ -28,7 +27,7 @@ class SpaceEditingUseCase(
         }
 
     private fun Request.validate() {
-        if (currentUserRole != SystemRole.ADMIN) {
+        if (!auth.isAdmin) {
             throw ForbiddenException(SpaceErrorCode.SPACE_ADMIN_ONLY)
         }
     }

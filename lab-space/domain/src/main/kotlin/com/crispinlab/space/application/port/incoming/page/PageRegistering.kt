@@ -9,7 +9,7 @@ import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.page.Visibility.Companion.asVisibility
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.space.SpaceId.Companion.asSpaceId
-import com.crispinlab.user.domain.user.UserId
+import com.crispinlab.user.domain.user.AuthContext
 
 interface PageRegistering : UseCase<Request, Result> {
     class Request(
@@ -18,7 +18,7 @@ interface PageRegistering : UseCase<Request, Result> {
         val title: String,
         val content: String,
         visibility: String,
-        val currentUserId: UserId
+        val auth: AuthContext.Authenticated
     ) {
         val spaceId: SpaceId = spaceId.asSpaceId()
         val parentPageId: PageId? = parentPageId?.asPageId()

@@ -1,15 +1,18 @@
 package com.crispinlab.space.application.usecase.page
 
+import com.crispinlab.common.pagination.PageRequest
 import com.crispinlab.common.pagination.PageRequest.Companion.DEFAULT_SIZE
 import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.application.port.incoming.page.PageSearching.Request
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.PageSummary
+import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.tag.TagId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.DummyTransactionProvider
+import com.crispinlab.user.domain.user.AuthContext
 import com.crispinlab.user.domain.user.SystemRole
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
@@ -51,8 +54,7 @@ class PageSearchingUseCaseTest :
                         keyword = "회고",
                         spaceId = SpaceId(10L),
                         tagIds = listOf(TagId(100L), TagId(200L)),
-                        visibilities = any(),
-                        draftAuthorId = any(),
+                        scope = any(),
                         pageRequest = any()
                     )
                 } returns
@@ -81,10 +83,9 @@ class PageSearchingUseCaseTest :
                         keyword = "회고",
                         spaceId = SpaceId(10L),
                         tagIds = listOf(TagId(100L), TagId(200L)),
-                        visibilities = any(),
-                        draftAuthorId = any(),
+                        scope = any(),
                         pageRequest =
-                            withArg<com.crispinlab.common.pagination.PageRequest> {
+                            withArg<PageRequest> {
                                 it.page shouldBe 0
                                 it.size shouldBe 20
                             }
@@ -98,8 +99,7 @@ class PageSearchingUseCaseTest :
                         keyword = null,
                         spaceId = null,
                         tagIds = emptyList(),
-                        visibilities = any(),
-                        draftAuthorId = any(),
+                        scope = any(),
                         pageRequest = any()
                     )
                 } returns PageResult.empty(basicRequest().pageRequest)
@@ -111,8 +111,7 @@ class PageSearchingUseCaseTest :
                         keyword = null,
                         spaceId = null,
                         tagIds = emptyList(),
-                        visibilities = any(),
-                        draftAuthorId = any(),
+                        scope = any(),
                         pageRequest = any()
                     )
                 }
@@ -124,8 +123,7 @@ class PageSearchingUseCaseTest :
                         keyword = null,
                         spaceId = null,
                         tagIds = emptyList(),
-                        visibilities = any(),
-                        draftAuthorId = any(),
+                        scope = any(),
                         pageRequest = any()
                     )
                 } returns PageResult.empty(basicRequest().pageRequest)
@@ -163,50 +161,49 @@ class PageSearchingUseCaseTest :
                 }
             }
 
-            it("비로그인 상태에서는 PUBLIC 만 visibility 로 전달된다") {
+            it("비로그인 상태에서는 Anonymous scope 로 전달된다") {
                 every {
                     pageSearchPort.search(
                         keyword = any(),
                         spaceId = any(),
                         tagIds = any(),
-                        visibilities = any(),
-                        draftAuthorId = any(),
+                        scope = any(),
                         pageRequest = any()
                     )
                 } returns PageResult.empty(basicRequest().pageRequest)
 
-                useCase.perform(basicRequest(currentUserId = null, currentUserRole = null))
+                useCase.perform(basicRequest(auth = AuthContext.Anonymous))
 
                 verify {
                     pageSearchPort.search(
                         keyword = any(),
                         spaceId = any(),
                         tagIds = any(),
-                        visibilities =
-                            withArg<Set<com.crispinlab.space.domain.page.Visibility>> {
-                                it shouldBe
-                                    setOf(com.crispinlab.space.domain.page.Visibility.PUBLIC)
-                            },
-                        draftAuthorId = isNull(),
+                        scope = VisibilityScope.Anonymous,
                         pageRequest = any()
                     )
                 }
             }
 
-            it("USER 는 PUBLIC + INTERNAL + 본인 DRAFT 로 검색한다") {
+            it("USER 는 Authenticated(viewerId) scope 로 검색한다") {
                 every {
                     pageSearchPort.search(
                         keyword = any(),
                         spaceId = any(),
                         tagIds = any(),
-                        visibilities = any(),
-                        draftAuthorId = any(),
+                        scope = any(),
                         pageRequest = any()
                     )
                 } returns PageResult.empty(basicRequest().pageRequest)
 
                 useCase.perform(
-                    basicRequest(currentUserId = UserId(100L), currentUserRole = SystemRole.USER)
+                    basicRequest(
+                        auth =
+                            AuthContext.Authenticated(
+                                userId = UserId(100L),
+                                role = SystemRole.USER
+                            )
+                    )
                 )
 
                 verify {
@@ -214,34 +211,31 @@ class PageSearchingUseCaseTest :
                         keyword = any(),
                         spaceId = any(),
                         tagIds = any(),
-                        visibilities =
-                            withArg<Set<com.crispinlab.space.domain.page.Visibility>> {
-                                it shouldBe
-                                    setOf(
-                                        com.crispinlab.space.domain.page.Visibility.PUBLIC,
-                                        com.crispinlab.space.domain.page.Visibility.INTERNAL
-                                    )
-                            },
-                        draftAuthorId = UserId(100L),
+                        scope = VisibilityScope.Authenticated(viewerId = UserId(100L)),
                         pageRequest = any()
                     )
                 }
             }
 
-            it("ADMIN 은 모든 visibility 로 검색하고 draftAuthorId 는 null 이다") {
+            it("ADMIN 은 Privileged scope 로 검색한다") {
                 every {
                     pageSearchPort.search(
                         keyword = any(),
                         spaceId = any(),
                         tagIds = any(),
-                        visibilities = any(),
-                        draftAuthorId = any(),
+                        scope = any(),
                         pageRequest = any()
                     )
                 } returns PageResult.empty(basicRequest().pageRequest)
 
                 useCase.perform(
-                    basicRequest(currentUserId = UserId(100L), currentUserRole = SystemRole.ADMIN)
+                    basicRequest(
+                        auth =
+                            AuthContext.Authenticated(
+                                userId = UserId(100L),
+                                role = SystemRole.ADMIN
+                            )
+                    )
                 )
 
                 verify {
@@ -249,16 +243,7 @@ class PageSearchingUseCaseTest :
                         keyword = any(),
                         spaceId = any(),
                         tagIds = any(),
-                        visibilities =
-                            withArg<Set<com.crispinlab.space.domain.page.Visibility>> {
-                                it shouldBe
-                                    setOf(
-                                        com.crispinlab.space.domain.page.Visibility.PUBLIC,
-                                        com.crispinlab.space.domain.page.Visibility.INTERNAL,
-                                        com.crispinlab.space.domain.page.Visibility.DRAFT
-                                    )
-                            },
-                        draftAuthorId = isNull(),
+                        scope = VisibilityScope.Privileged,
                         pageRequest = any()
                     )
                 }
@@ -272,8 +257,8 @@ class PageSearchingUseCaseTest :
             tagIds: List<String> = emptyList(),
             page: Int = 0,
             size: Int = DEFAULT_SIZE,
-            currentUserId: UserId? = UserId(100L),
-            currentUserRole: SystemRole? = SystemRole.USER
+            auth: AuthContext =
+                AuthContext.Authenticated(userId = UserId(100L), role = SystemRole.USER)
         ): Request =
             Request(
                 keyword = keyword,
@@ -281,8 +266,7 @@ class PageSearchingUseCaseTest :
                 tagIds = tagIds,
                 page = page,
                 size = size,
-                currentUserId = currentUserId,
-                currentUserRole = currentUserRole
+                auth = auth
             )
     }
 }

@@ -9,6 +9,7 @@ import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.domain.space.Space
 import com.crispinlab.space.domain.space.SpaceErrorCode
 import com.crispinlab.space.domain.space.SpaceVisibility
+import com.crispinlab.user.domain.user.AuthContext
 import org.springframework.stereotype.Service
 
 @Service
@@ -26,14 +27,13 @@ class SpaceGettingUseCase(
     private fun Request.toEntity(): Space =
         spaceRepository
             .findBy(spaceId)
-            ?.takeIf { it.visibility in allowedVisibilities() }
+            ?.takeIf { it.visibility in auth.allowedSpaceVisibilities() }
             ?: throw NotFoundException(SpaceErrorCode.SPACE_NOT_FOUND)
 
-    private fun Request.allowedVisibilities(): Set<SpaceVisibility> =
-        if (currentUserId == null) {
-            setOf(SpaceVisibility.PUBLIC)
-        } else {
-            setOf(SpaceVisibility.PUBLIC, SpaceVisibility.INTERNAL)
+    private fun AuthContext.allowedSpaceVisibilities(): Set<SpaceVisibility> =
+        when (this) {
+            is AuthContext.Anonymous -> setOf(SpaceVisibility.PUBLIC)
+            is AuthContext.Authenticated -> setOf(SpaceVisibility.PUBLIC, SpaceVisibility.INTERNAL)
         }
 
     private fun Space.toResult(): Result =

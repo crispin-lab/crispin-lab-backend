@@ -7,6 +7,7 @@ import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicSpace
+import com.crispinlab.user.domain.user.AuthContext
 import com.crispinlab.user.domain.user.SystemRole
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
@@ -48,7 +49,7 @@ class SpaceDeletingUseCaseTest :
 
             it("USER 가 호출하면 ForbiddenException 으로 차단되고 delete 가 일어나지 않는다") {
                 shouldThrow<ForbiddenException> {
-                    useCase.perform(basicRequest(currentUserRole = SystemRole.USER))
+                    useCase.perform(basicRequest(role = SystemRole.USER))
                 }
                 verify(exactly = 0) { spaceRepository.delete(any()) }
             }
@@ -57,13 +58,12 @@ class SpaceDeletingUseCaseTest :
     companion object {
         fun basicRequest(
             spaceId: String = "1",
-            currentUserId: UserId = UserId(100L),
-            currentUserRole: SystemRole = SystemRole.ADMIN
+            userId: UserId = UserId(100L),
+            role: SystemRole = SystemRole.ADMIN
         ): Request =
             Request(
                 spaceId = spaceId,
-                currentUserId = currentUserId,
-                currentUserRole = currentUserRole
+                auth = AuthContext.Authenticated(userId = userId, role = role)
             )
     }
 }

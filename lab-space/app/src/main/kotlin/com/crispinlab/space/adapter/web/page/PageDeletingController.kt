@@ -21,12 +21,9 @@ class PageDeletingController(
         @PathVariable pageId: String,
         auth: Auth
     ) {
-        Request(
-            pageId = pageId,
-            currentUserId = auth.userId,
-            currentUserRole = auth.role
-        ).let {
-            useCase.perform(it)
-        }
+        Request(pageId = pageId, auth = auth.toContext())
+            .let {
+                useCase.perform(it)
+            }
     }
 }

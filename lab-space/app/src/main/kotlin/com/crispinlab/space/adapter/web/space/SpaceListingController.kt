@@ -6,6 +6,7 @@ import com.crispinlab.space.application.port.incoming.space.SpaceListing
 import com.crispinlab.space.application.port.incoming.space.SpaceListing.Request
 import com.crispinlab.space.application.port.incoming.space.SpaceListing.Summary
 import com.crispinlab.user.adapter.web.auth.Auth
+import com.crispinlab.user.adapter.web.auth.toContext
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
@@ -25,6 +26,6 @@ class SpaceListingController(
         Request(
             page = page,
             size = size,
-            currentUserId = auth?.userId
+            auth = auth.toContext()
         ).let { useCase.perform(it) }
 }

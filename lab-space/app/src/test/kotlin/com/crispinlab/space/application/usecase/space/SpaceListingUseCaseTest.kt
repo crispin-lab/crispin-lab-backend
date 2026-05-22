@@ -1,5 +1,6 @@
 package com.crispinlab.space.application.usecase.space
 
+import com.crispinlab.common.pagination.PageRequest
 import com.crispinlab.common.pagination.PageRequest.Companion.DEFAULT_SIZE
 import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.application.port.incoming.space.SpaceListing.Request
@@ -9,6 +10,8 @@ import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicSpace
+import com.crispinlab.user.domain.user.AuthContext
+import com.crispinlab.user.domain.user.SystemRole
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -98,12 +101,9 @@ class SpaceListingUseCaseTest :
 
             it("비로그인 상태에서는 PUBLIC 만 필터한 visibility 로 조회한다") {
                 every { spaceRepository.findPage(any(), any()) } returns
-                    PageResult.empty(
-                        com.crispinlab.common.pagination.PageRequest
-                            .firstPage()
-                    )
+                    PageResult.empty(PageRequest.firstPage())
 
-                useCase.perform(basicRequest(currentUserId = null))
+                useCase.perform(basicRequest(auth = AuthContext.Anonymous))
 
                 verify {
                     spaceRepository.findPage(
@@ -117,12 +117,9 @@ class SpaceListingUseCaseTest :
 
             it("로그인 상태에서는 PUBLIC + INTERNAL visibility 로 조회한다") {
                 every { spaceRepository.findPage(any(), any()) } returns
-                    PageResult.empty(
-                        com.crispinlab.common.pagination.PageRequest
-                            .firstPage()
-                    )
+                    PageResult.empty(PageRequest.firstPage())
 
-                useCase.perform(basicRequest(currentUserId = UserId(100L)))
+                useCase.perform(basicRequest())
 
                 verify {
                     spaceRepository.findPage(
@@ -139,12 +136,13 @@ class SpaceListingUseCaseTest :
         fun basicRequest(
             page: Int = 0,
             size: Int = DEFAULT_SIZE,
-            currentUserId: UserId? = UserId(100L)
+            auth: AuthContext =
+                AuthContext.Authenticated(userId = UserId(100L), role = SystemRole.USER)
         ): Request =
             Request(
                 page = page,
                 size = size,
-                currentUserId = currentUserId
+                auth = auth
             )
     }
 }

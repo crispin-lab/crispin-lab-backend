@@ -21,10 +21,7 @@ class SpaceDeletingController(
         @PathVariable spaceId: String,
         auth: Auth
     ) {
-        Request(
-            spaceId = spaceId,
-            currentUserId = auth.userId,
-            currentUserRole = auth.role
-        ).let { useCase.perform(it) }
+        Request(spaceId = spaceId, auth = auth.toContext())
+            .let { useCase.perform(it) }
     }
 }

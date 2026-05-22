@@ -9,6 +9,7 @@ import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
+import com.crispinlab.user.domain.user.AuthContext
 import com.crispinlab.user.testsupport.withAuth
 import io.mockk.clearMocks
 import io.mockk.every
@@ -90,7 +91,7 @@ class SpaceGettingControllerTest :
                     )
                 verify {
                     useCase.perform(
-                        match { it.currentUserId == null }
+                        match { it.auth == AuthContext.Anonymous }
                     )
                 }
             }

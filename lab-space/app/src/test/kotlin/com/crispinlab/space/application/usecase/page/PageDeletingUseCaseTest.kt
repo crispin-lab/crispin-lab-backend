@@ -5,6 +5,7 @@ import com.crispinlab.space.application.port.incoming.page.PageDeleting.Request
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicPage
+import com.crispinlab.user.domain.user.AuthContext
 import com.crispinlab.user.domain.user.SystemRole
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
@@ -49,7 +50,7 @@ class PageDeletingUseCaseTest :
                 every { pageRepository.findBy(page.id) } returns page
 
                 shouldThrow<NotFoundException> {
-                    useCase.perform(basicRequest(currentUserId = UserId(100L)))
+                    useCase.perform(basicRequest(userId = UserId(100L)))
                 }
                 verify(exactly = 0) { pageRepository.delete(any()) }
             }
@@ -62,8 +63,8 @@ class PageDeletingUseCaseTest :
                 useCase.perform(
                     basicRequest(
                         pageId = page.id.value.toString(),
-                        currentUserId = UserId(100L),
-                        currentUserRole = SystemRole.ADMIN
+                        userId = UserId(100L),
+                        role = SystemRole.ADMIN
                     )
                 )
 
@@ -74,13 +75,12 @@ class PageDeletingUseCaseTest :
     companion object {
         fun basicRequest(
             pageId: String = "1",
-            currentUserId: UserId = UserId(100L),
-            currentUserRole: SystemRole = SystemRole.USER
+            userId: UserId = UserId(100L),
+            role: SystemRole = SystemRole.USER
         ): Request =
             Request(
                 pageId = pageId,
-                currentUserId = currentUserId,
-                currentUserRole = currentUserRole
+                auth = AuthContext.Authenticated(userId = userId, role = role)
             )
     }
 }

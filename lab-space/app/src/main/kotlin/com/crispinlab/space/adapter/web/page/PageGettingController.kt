@@ -4,6 +4,7 @@ import com.crispinlab.space.application.port.incoming.page.PageGetting
 import com.crispinlab.space.application.port.incoming.page.PageGetting.Request
 import com.crispinlab.space.application.port.incoming.page.PageGetting.Result
 import com.crispinlab.user.adapter.web.auth.Auth
+import com.crispinlab.user.adapter.web.auth.toContext
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
@@ -21,8 +22,7 @@ class PageGettingController(
     ): Result =
         Request(
             pageId = pageId,
-            currentUserId = auth?.userId,
-            currentUserRole = auth?.role
+            auth = auth.toContext()
         ).let {
             useCase.perform(it)
         }

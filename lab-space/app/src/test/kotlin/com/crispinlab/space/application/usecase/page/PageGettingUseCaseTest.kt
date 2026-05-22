@@ -6,6 +6,7 @@ import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicPage
+import com.crispinlab.user.domain.user.AuthContext
 import com.crispinlab.user.domain.user.SystemRole
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
@@ -54,8 +55,7 @@ class PageGettingUseCaseTest :
                 val page = basicPage(visibility = Visibility.PUBLIC)
                 every { pageRepository.findBy(page.id) } returns page
 
-                val result =
-                    useCase.perform(basicRequest(currentUserId = null, currentUserRole = null))
+                val result = useCase.perform(basicRequest(auth = AuthContext.Anonymous))
 
                 result.pageId shouldBe page.id
             }
@@ -65,7 +65,7 @@ class PageGettingUseCaseTest :
                 every { pageRepository.findBy(page.id) } returns page
 
                 shouldThrow<NotFoundException> {
-                    useCase.perform(basicRequest(currentUserId = null, currentUserRole = null))
+                    useCase.perform(basicRequest(auth = AuthContext.Anonymous))
                 }
             }
 
@@ -74,7 +74,7 @@ class PageGettingUseCaseTest :
                 every { pageRepository.findBy(page.id) } returns page
 
                 shouldThrow<NotFoundException> {
-                    useCase.perform(basicRequest(currentUserId = UserId(100L)))
+                    useCase.perform(basicRequest())
                 }
             }
 
@@ -85,8 +85,11 @@ class PageGettingUseCaseTest :
                 val result =
                     useCase.perform(
                         basicRequest(
-                            currentUserId = UserId(100L),
-                            currentUserRole = SystemRole.ADMIN
+                            auth =
+                                AuthContext.Authenticated(
+                                    userId = UserId(100L),
+                                    role = SystemRole.ADMIN
+                                )
                         )
                     )
 
@@ -97,13 +100,12 @@ class PageGettingUseCaseTest :
     companion object {
         fun basicRequest(
             pageId: String = "1",
-            currentUserId: UserId? = UserId(100L),
-            currentUserRole: SystemRole? = SystemRole.USER
+            auth: AuthContext =
+                AuthContext.Authenticated(userId = UserId(100L), role = SystemRole.USER)
         ): Request =
             Request(
                 pageId = pageId,
-                currentUserId = currentUserId,
-                currentUserRole = currentUserRole
+                auth = auth
             )
     }
 }

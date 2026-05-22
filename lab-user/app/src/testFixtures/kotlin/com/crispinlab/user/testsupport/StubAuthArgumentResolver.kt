@@ -22,15 +22,15 @@ class StubAuthArgumentResolver : HandlerMethodArgumentResolver {
         mavContainer: ModelAndViewContainer?,
         webRequest: NativeWebRequest,
         binderFactory: WebDataBinderFactory?
-    ): Auth? =
-        try {
-            resolveAuth(webRequest)
-        } catch (e: AuthenticationException) {
-            if (parameter.isOptional) null else throw e
+    ): Auth? {
+        val raw = webRequest.getHeader(AUTHORIZATION)
+        if (raw == null) {
+            return if (parameter.isOptional) null else throw invalidSession()
         }
+        return resolveAuth(raw)
+    }
 
-    private fun resolveAuth(webRequest: NativeWebRequest): Auth {
-        val raw = webRequest.getHeader(AUTHORIZATION) ?: throw invalidSession()
+    private fun resolveAuth(raw: String): Auth {
         if (!raw.regionMatches(0, BEARER_PREFIX, 0, BEARER_PREFIX.length, ignoreCase = true)) {
             throw invalidSession()
         }

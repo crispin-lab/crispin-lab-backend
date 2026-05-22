@@ -5,8 +5,7 @@ import com.crispinlab.space.application.port.incoming.page.PageEditing.Request
 import com.crispinlab.space.application.port.incoming.page.PageEditing.Result
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.PageId.Companion.asPageId
-import com.crispinlab.user.domain.user.SystemRole
-import com.crispinlab.user.domain.user.UserId
+import com.crispinlab.user.domain.user.AuthContext
 import java.time.Instant
 
 interface PageEditing : UseCase<Request, Result> {
@@ -14,8 +13,7 @@ interface PageEditing : UseCase<Request, Result> {
         pageId: String,
         val title: String,
         val content: String,
-        val currentUserId: UserId,
-        val currentUserRole: SystemRole
+        val auth: AuthContext.Authenticated
     ) {
         val pageId: PageId = pageId.asPageId()
     }

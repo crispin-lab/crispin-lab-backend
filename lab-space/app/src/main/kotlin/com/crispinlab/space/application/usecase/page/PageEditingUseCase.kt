@@ -15,7 +15,6 @@ import com.crispinlab.space.domain.page.PageLink
 import com.crispinlab.space.domain.page.PageLinkId
 import com.crispinlab.space.domain.page.PageRevision
 import com.crispinlab.space.domain.page.PageRevisionId
-import com.crispinlab.user.domain.user.SystemRole
 import org.springframework.stereotype.Service
 
 @Service
@@ -38,7 +37,7 @@ class PageEditingUseCase(
         pageRepository
             .findBy(pageId)
             ?.takeIf {
-                currentUserRole == SystemRole.ADMIN || it.authorId == currentUserId
+                auth.isAdmin || it.authorId == auth.userId
             } ?: throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
 
     private fun Page.applyEditWith(request: Request): Page =

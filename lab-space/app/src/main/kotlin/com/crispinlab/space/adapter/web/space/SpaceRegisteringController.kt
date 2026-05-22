@@ -29,9 +29,15 @@ class SpaceRegisteringController(
 
     data class Body(
         val name: String,
-        val description: String
+        val description: String,
+        val visibility: String
     ) {
         fun toRequestWith(userId: UserId): Request =
-            Request(name = name, description = description, currentUserId = userId)
+            Request(
+                name = name,
+                description = description,
+                visibility = visibility,
+                currentUserId = userId
+            )
     }
 }

@@ -7,6 +7,7 @@ import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.application.port.incoming.space.SpaceListing.Request
 import com.crispinlab.space.application.port.incoming.space.SpaceListing.Summary
 import com.crispinlab.space.domain.space.SpaceId
+import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.user.domain.user.UserId
 import java.time.Instant
 
@@ -27,6 +28,7 @@ interface SpaceListing : UseCase<Request, PageResult<Summary>> {
         val spaceId: SpaceId,
         val name: String,
         val description: String,
+        val visibility: SpaceVisibility,
         val createdAt: Instant,
         val updatedAt: Instant
     )

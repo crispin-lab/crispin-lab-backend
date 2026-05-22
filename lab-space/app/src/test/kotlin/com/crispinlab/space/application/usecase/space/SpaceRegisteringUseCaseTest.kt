@@ -59,7 +59,14 @@ class SpaceRegisteringUseCaseTest :
         fun basicRequest(
             name: String = "팀 위키",
             description: String = "공유 공간",
+            visibility: String = "INTERNAL",
             currentUserId: UserId = UserId(100L)
-        ): Request = Request(name = name, description = description, currentUserId = currentUserId)
+        ): Request =
+            Request(
+                name = name,
+                description = description,
+                visibility = visibility,
+                currentUserId = currentUserId
+            )
     }
 }

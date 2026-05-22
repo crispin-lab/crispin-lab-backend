@@ -5,6 +5,7 @@ import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.application.port.incoming.space.SpaceListing
 import com.crispinlab.space.application.port.incoming.space.SpaceListing.Summary
 import com.crispinlab.space.domain.space.SpaceId
+import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
 import com.crispinlab.user.testsupport.withAuth
@@ -33,6 +34,7 @@ class SpaceListingControllerTest :
                                     spaceId = SpaceId(2L),
                                     name = "최근",
                                     description = "최근 설명",
+                                    visibility = SpaceVisibility.INTERNAL,
                                     createdAt = DUMMY_INSTANT,
                                     updatedAt = DUMMY_INSTANT
                                 ),
@@ -40,6 +42,7 @@ class SpaceListingControllerTest :
                                     spaceId = SpaceId(1L),
                                     name = "이전",
                                     description = "이전 설명",
+                                    visibility = SpaceVisibility.PUBLIC,
                                     createdAt = DUMMY_INSTANT,
                                     updatedAt = DUMMY_INSTANT
                                 )
@@ -73,6 +76,7 @@ class SpaceListingControllerTest :
                                 "spaceId".string("스페이스 식별자")
                                 "name".string("이름")
                                 "description".string("설명")
+                                "visibility".string("공개 범위")
                                 "createdAt".datetime("생성 시각")
                                 "updatedAt".datetime("최근 갱신 시각")
                             }

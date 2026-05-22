@@ -40,7 +40,11 @@ class SpaceEditingUseCase(
 
     private fun Space.editWith(request: Request): Space =
         apply {
-            edit(name = request.name, description = request.description)
+            edit(
+                name = request.name,
+                description = request.description,
+                visibility = request.visibility
+            )
         }
 
     private fun Space.toResult(): Result =
@@ -48,6 +52,7 @@ class SpaceEditingUseCase(
             spaceId = id,
             name = name,
             description = description,
+            visibility = visibility,
             updatedAt = updatedAt
         )
 }

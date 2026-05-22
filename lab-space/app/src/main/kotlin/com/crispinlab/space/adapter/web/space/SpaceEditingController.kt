@@ -28,7 +28,8 @@ class SpaceEditingController(
 
     data class Body(
         val name: String? = null,
-        val description: String? = null
+        val description: String? = null,
+        val visibility: String? = null
     ) {
         fun toRequestWith(
             spaceId: String,
@@ -38,6 +39,7 @@ class SpaceEditingController(
                 spaceId = spaceId,
                 name = name,
                 description = description,
+                visibility = visibility,
                 currentUserId = userId
             )
     }

@@ -6,6 +6,7 @@ import com.crispinlab.space.application.port.incoming.space.SpaceGetting
 import com.crispinlab.space.application.port.incoming.space.SpaceGetting.Result
 import com.crispinlab.space.domain.space.SpaceErrorCode
 import com.crispinlab.space.domain.space.SpaceId
+import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
 import com.crispinlab.user.testsupport.withAuth
@@ -31,6 +32,7 @@ class SpaceGettingControllerTest :
                         spaceId = SpaceId(1L),
                         name = "팀 위키",
                         description = "공유 공간",
+                        visibility = SpaceVisibility.INTERNAL,
                         createdAt = DUMMY_INSTANT,
                         updatedAt = DUMMY_INSTANT
                     )
@@ -48,6 +50,7 @@ class SpaceGettingControllerTest :
                             "spaceId".string("스페이스 식별자")
                             "name".string("이름")
                             "description".string("설명")
+                            "visibility".string("공개 범위")
                             "createdAt".datetime("생성 시각")
                             "updatedAt".datetime("최근 갱신 시각")
                         }

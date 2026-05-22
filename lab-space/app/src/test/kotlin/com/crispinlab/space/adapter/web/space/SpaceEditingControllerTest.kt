@@ -5,6 +5,7 @@ import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder
 import com.crispinlab.space.application.port.incoming.space.SpaceEditing
 import com.crispinlab.space.application.port.incoming.space.SpaceEditing.Result
 import com.crispinlab.space.domain.space.SpaceId
+import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
 import com.crispinlab.user.testsupport.withAuth
@@ -30,6 +31,7 @@ class SpaceEditingControllerTest :
                         spaceId = SpaceId(1L),
                         name = "새 이름",
                         description = "새 설명",
+                        visibility = SpaceVisibility.INTERNAL,
                         updatedAt = DUMMY_INSTANT
                     )
 
@@ -49,11 +51,13 @@ class SpaceEditingControllerTest :
                         requestFields {
                             "name".string("변경할 이름", optional = true)
                             "description".string("변경할 설명", optional = true)
+                            "visibility".string("변경할 공개 범위", optional = true)
                         },
                         responseFields {
                             "spaceId".string("스페이스 식별자")
                             "name".string("갱신된 이름")
                             "description".string("갱신된 설명")
+                            "visibility".string("갱신된 공개 범위")
                             "updatedAt".datetime("갱신 시각")
                         }
                     )

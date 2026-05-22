@@ -41,6 +41,7 @@ class SpaceGettingUseCase(
             spaceId = id,
             name = name,
             description = description,
+            visibility = visibility,
             createdAt = createdAt,
             updatedAt = updatedAt
         )

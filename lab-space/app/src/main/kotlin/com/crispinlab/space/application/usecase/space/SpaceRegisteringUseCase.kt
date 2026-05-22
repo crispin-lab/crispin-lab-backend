@@ -38,7 +38,8 @@ class SpaceRegisteringUseCase(
         Space(
             id = SpaceId(idGenerator.next()),
             name = name,
-            description = description
+            description = description,
+            visibility = visibility
         )
 
     private fun Space.toResult(): Result = Result(spaceId = id)

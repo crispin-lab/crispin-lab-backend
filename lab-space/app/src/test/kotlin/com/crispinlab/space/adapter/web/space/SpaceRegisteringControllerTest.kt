@@ -29,6 +29,7 @@ class SpaceRegisteringControllerTest :
                         match {
                             it.name == "팀 위키" &&
                                 it.description == "공유 공간" &&
+                                it.visibility.name == "INTERNAL" &&
                                 it.currentUserId.value == 100L
                         }
                     )
@@ -38,7 +39,13 @@ class SpaceRegisteringControllerTest :
                     .`when`(
                         post("/v1/spaces")
                             .withAuth()
-                            .body(mapOf("name" to "팀 위키", "description" to "공유 공간"))
+                            .body(
+                                mapOf(
+                                    "name" to "팀 위키",
+                                    "description" to "공유 공간",
+                                    "visibility" to "INTERNAL"
+                                )
+                            )
                     ).then(
                         status().isCreated,
                         jsonPath("$.spaceId").value("42")
@@ -47,6 +54,7 @@ class SpaceRegisteringControllerTest :
                         requestFields {
                             "name".string("스페이스 이름")
                             "description".string("스페이스 설명")
+                            "visibility".string("공개 범위 (PUBLIC|INTERNAL)")
                         },
                         responseFields {
                             "spaceId".string("생성된 스페이스 식별자")
@@ -58,7 +66,13 @@ class SpaceRegisteringControllerTest :
                 controller
                     .`when`(
                         post("/v1/spaces")
-                            .body(mapOf("name" to "팀 위키", "description" to "공유 공간"))
+                            .body(
+                                mapOf(
+                                    "name" to "팀 위키",
+                                    "description" to "공유 공간",
+                                    "visibility" to "INTERNAL"
+                                )
+                            )
                     ).then(
                         status().isUnauthorized,
                         jsonPath("$.code").value("INVALID_SESSION")

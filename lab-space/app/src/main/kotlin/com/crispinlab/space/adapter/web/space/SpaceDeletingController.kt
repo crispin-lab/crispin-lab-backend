@@ -1,5 +1,6 @@
 package com.crispinlab.space.adapter.web.space
 
+import com.crispinlab.space.adapter.web.auth.toMember
 import com.crispinlab.space.application.port.incoming.space.SpaceDeleting
 import com.crispinlab.space.application.port.incoming.space.SpaceDeleting.Request
 import com.crispinlab.user.adapter.web.auth.Auth
@@ -21,7 +22,7 @@ class SpaceDeletingController(
         @PathVariable spaceId: String,
         auth: Auth
     ) {
-        Request(spaceId = spaceId, currentUserId = auth.userId)
+        Request(spaceId = spaceId, viewer = auth.toMember())
             .let { useCase.perform(it) }
     }
 }

@@ -1,10 +1,13 @@
 package com.crispinlab.space.application.usecase.page
 
+import com.crispinlab.common.pagination.PageRequest
 import com.crispinlab.common.pagination.PageRequest.Companion.DEFAULT_SIZE
 import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.application.port.incoming.page.PageSearching.Request
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.PageSummary
+import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.tag.TagId
@@ -50,6 +53,7 @@ class PageSearchingUseCaseTest :
                         keyword = "회고",
                         spaceId = SpaceId(10L),
                         tagIds = listOf(TagId(100L), TagId(200L)),
+                        scope = any(),
                         pageRequest = any()
                     )
                 } returns
@@ -78,8 +82,9 @@ class PageSearchingUseCaseTest :
                         keyword = "회고",
                         spaceId = SpaceId(10L),
                         tagIds = listOf(TagId(100L), TagId(200L)),
+                        scope = any(),
                         pageRequest =
-                            withArg {
+                            withArg<PageRequest> {
                                 it.page shouldBe 0
                                 it.size shouldBe 20
                             }
@@ -93,6 +98,7 @@ class PageSearchingUseCaseTest :
                         keyword = null,
                         spaceId = null,
                         tagIds = emptyList(),
+                        scope = any(),
                         pageRequest = any()
                     )
                 } returns PageResult.empty(basicRequest().pageRequest)
@@ -104,6 +110,7 @@ class PageSearchingUseCaseTest :
                         keyword = null,
                         spaceId = null,
                         tagIds = emptyList(),
+                        scope = any(),
                         pageRequest = any()
                     )
                 }
@@ -115,6 +122,7 @@ class PageSearchingUseCaseTest :
                         keyword = null,
                         spaceId = null,
                         tagIds = emptyList(),
+                        scope = any(),
                         pageRequest = any()
                     )
                 } returns PageResult.empty(basicRequest().pageRequest)
@@ -151,6 +159,86 @@ class PageSearchingUseCaseTest :
                     basicRequest(size = 201)
                 }
             }
+
+            it("비로그인 상태에서는 Anonymous scope 로 전달된다") {
+                every {
+                    pageSearchPort.search(
+                        keyword = any(),
+                        spaceId = any(),
+                        tagIds = any(),
+                        scope = any(),
+                        pageRequest = any()
+                    )
+                } returns PageResult.empty(basicRequest().pageRequest)
+
+                useCase.perform(basicRequest(viewer = Viewer.Anonymous))
+
+                verify {
+                    pageSearchPort.search(
+                        keyword = any(),
+                        spaceId = any(),
+                        tagIds = any(),
+                        scope = VisibilityScope.Anonymous,
+                        pageRequest = any()
+                    )
+                }
+            }
+
+            it("USER 는 Authenticated(viewerId) scope 로 검색한다") {
+                every {
+                    pageSearchPort.search(
+                        keyword = any(),
+                        spaceId = any(),
+                        tagIds = any(),
+                        scope = any(),
+                        pageRequest = any()
+                    )
+                } returns PageResult.empty(basicRequest().pageRequest)
+
+                useCase.perform(
+                    basicRequest(
+                        viewer = Viewer.Member(userId = UserId(100L), isAdmin = false)
+                    )
+                )
+
+                verify {
+                    pageSearchPort.search(
+                        keyword = any(),
+                        spaceId = any(),
+                        tagIds = any(),
+                        scope = VisibilityScope.Authenticated(viewerId = UserId(100L)),
+                        pageRequest = any()
+                    )
+                }
+            }
+
+            it("ADMIN 은 Privileged scope 로 검색한다") {
+                every {
+                    pageSearchPort.search(
+                        keyword = any(),
+                        spaceId = any(),
+                        tagIds = any(),
+                        scope = any(),
+                        pageRequest = any()
+                    )
+                } returns PageResult.empty(basicRequest().pageRequest)
+
+                useCase.perform(
+                    basicRequest(
+                        viewer = Viewer.Member(userId = UserId(100L), isAdmin = true)
+                    )
+                )
+
+                verify {
+                    pageSearchPort.search(
+                        keyword = any(),
+                        spaceId = any(),
+                        tagIds = any(),
+                        scope = VisibilityScope.Privileged,
+                        pageRequest = any()
+                    )
+                }
+            }
         }
     }) {
     companion object {
@@ -160,7 +248,7 @@ class PageSearchingUseCaseTest :
             tagIds: List<String> = emptyList(),
             page: Int = 0,
             size: Int = DEFAULT_SIZE,
-            currentUserId: UserId = UserId(100L)
+            viewer: Viewer = Viewer.Member(userId = UserId(100L), isAdmin = false)
         ): Request =
             Request(
                 keyword = keyword,
@@ -168,7 +256,7 @@ class PageSearchingUseCaseTest :
                 tagIds = tagIds,
                 page = page,
                 size = size,
-                currentUserId = currentUserId
+                viewer = viewer
             )
     }
 }

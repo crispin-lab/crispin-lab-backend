@@ -9,6 +9,7 @@ class Space(
     override val id: SpaceId,
     name: String,
     description: String,
+    visibility: SpaceVisibility,
     val createdAt: Instant = now(),
     updatedAt: Instant = createdAt,
     deletedAt: Instant? = null
@@ -17,6 +18,8 @@ class Space(
     var name: String = name
         private set
     var description: String = description
+        private set
+    var visibility: SpaceVisibility = visibility
         private set
     var updatedAt: Instant = updatedAt
         private set
@@ -30,7 +33,8 @@ class Space(
 
     fun edit(
         name: String? = null,
-        description: String? = null
+        description: String? = null,
+        visibility: SpaceVisibility? = null
     ) {
         check(!isDeleted) {
             "삭제된 스페이스는 수정할 수 없습니다."
@@ -42,6 +46,9 @@ class Space(
         description?.also {
             validateDescription(it)
             this.description = it
+        }
+        visibility?.also {
+            this.visibility = it
         }
         updatedAt = now()
     }

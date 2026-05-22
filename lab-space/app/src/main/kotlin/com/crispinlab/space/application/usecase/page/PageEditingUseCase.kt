@@ -37,7 +37,7 @@ class PageEditingUseCase(
         pageRepository
             .findBy(pageId)
             ?.takeIf {
-                it.authorId == currentUserId
+                viewer.isAdmin || it.authorId == viewer.userId
             } ?: throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
 
     private fun Page.applyEditWith(request: Request): Page =

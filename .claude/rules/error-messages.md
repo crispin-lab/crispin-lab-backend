@@ -19,7 +19,8 @@
 | 상황 | 예외 | 메시지 패턴 | 예시 |
 |------|------|------------|------|
 | 엔티티 없음 | `NotFoundException` | "{대상}을(를) 찾을 수 없습니다." | "페이지를 찾을 수 없습니다." |
-| 권한 없음 | `NotFoundException` (의도적, 아래 IDOR 참조) | 위와 동일 | "페이지를 찾을 수 없습니다." |
+| IDOR 보호 (작성자/소유자 외) | `NotFoundException` (의도적, 아래 IDOR 참조) | 위와 동일 | "페이지를 찾을 수 없습니다." |
+| 권한 거부 (ADMIN 전용 등) | `ForbiddenException` | "{역할}만 수행할 수 있습니다." | "관리자만 수행할 수 있습니다." |
 | 상태 충돌 | `ConflictException` | "이미 {상태}입니다." | "이미 발행된 페이지입니다." |
 | 중복 | `ConflictException` | "이미 {대상}이(가) 존재합니다." | "이미 등록된 슬러그입니다." |
 | 잘못된 입력 | `IllegalArgumentException` (`require` 결과) | "{필드}이(가) {문제}합니다." | "제목을 입력해 주세요." |
@@ -64,6 +65,8 @@ ErrorCode 는 식별자만 운반한다. status 는 **예외 타입** 이 결정
 
 | 예외 | status |
 |------|--------|
+| `AuthenticationException` | 401 |
+| `ForbiddenException` | 403 |
 | `NotFoundException` | 404 |
 | `ConflictException` | 409 |
 | `DomainException` (fallback) | 422 |
@@ -128,6 +131,13 @@ val page = pageRepository.findBy(pageId)
     ?.takeIf { it.authorId == currentUserId }
     ?: throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
 ```
+
+### ForbiddenException 을 쓰는 경우 vs NotFoundException 으로 통합하는 경우
+
+- **`ForbiddenException` (403)**: 자원의 *존재 자체* 가 이미 클라이언트에게 노출되어도 무방한 경우. 예: ADMIN 전용 기능 (`SpaceRegistering` / `SpaceEditing` / `SpaceDeleting`) — 일반 USER 도 Space 의 존재는 list / get 으로 안다. "수행" 만 거부.
+- **`NotFoundException` (404)**: 자원의 존재 자체가 권한에 따라 다르게 노출되어야 하는 경우 (IDOR 보호). 예: `PageEditing` / `PageDeleting` — 다른 사용자의 DRAFT 페이지를 식별자만 알면 안 된다. "존재" 와 "권한" 응답을 통합.
+
+판단 기준: *식별자만 알면 자원의 존재 여부가 새는가?* 새면 NotFoundException 통합, 안 새면 ForbiddenException.
 
 ### 인증 실패는 사용자/비밀번호를 구분하지 않는다
 

@@ -8,6 +8,7 @@ object Spaces : Table("spaces") {
     val id = long("id")
     val name = varchar("name", length = Space.MAX_NAME_LENGTH)
     val description = varchar("description", length = Space.MAX_DESCRIPTION_LENGTH)
+    val visibility = varchar("visibility", length = 20)
     val createdAt = timestamp("created_at")
     val updatedAt = timestamp("updated_at")
     val deletedAt = timestamp("deleted_at").nullable()

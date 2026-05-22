@@ -3,7 +3,7 @@ package com.crispinlab.user.adapter.web.auth
 import com.crispinlab.user.domain.user.SystemRole
 import com.crispinlab.user.domain.user.UserId
 
-data class Auth(
+class Auth(
     val userId: UserId,
     val role: SystemRole
 ) {

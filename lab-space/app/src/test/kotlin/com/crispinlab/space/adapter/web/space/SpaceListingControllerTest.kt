@@ -4,7 +4,9 @@ import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder
 import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.application.port.incoming.space.SpaceListing
 import com.crispinlab.space.application.port.incoming.space.SpaceListing.Summary
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.space.SpaceId
+import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
 import com.crispinlab.user.testsupport.withAuth
@@ -12,6 +14,7 @@ import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import org.springframework.http.HttpHeaders
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
@@ -33,6 +36,7 @@ class SpaceListingControllerTest :
                                     spaceId = SpaceId(2L),
                                     name = "최근",
                                     description = "최근 설명",
+                                    visibility = SpaceVisibility.INTERNAL,
                                     createdAt = DUMMY_INSTANT,
                                     updatedAt = DUMMY_INSTANT
                                 ),
@@ -40,6 +44,7 @@ class SpaceListingControllerTest :
                                     spaceId = SpaceId(1L),
                                     name = "이전",
                                     description = "이전 설명",
+                                    visibility = SpaceVisibility.PUBLIC,
                                     createdAt = DUMMY_INSTANT,
                                     updatedAt = DUMMY_INSTANT
                                 )
@@ -73,6 +78,7 @@ class SpaceListingControllerTest :
                                 "spaceId".string("스페이스 식별자")
                                 "name".string("이름")
                                 "description".string("설명")
+                                "visibility".string("공개 범위")
                                 "createdAt".datetime("생성 시각")
                                 "updatedAt".datetime("최근 갱신 시각")
                             }
@@ -104,10 +110,34 @@ class SpaceListingControllerTest :
                     )
             }
 
-            it("Authorization 토큰이 없으면 401 을 반환한다") {
+            it("비로그인 상태에서도 200 으로 응답하고 Anonymous 컨텍스트로 UseCase 가 호출된다") {
+                every { useCase.perform(any()) } returns
+                    PageResult(
+                        items = emptyList(),
+                        page = 0,
+                        size = 20,
+                        totalElements = 0L
+                    )
+
                 controller
                     .`when`(get("/v1/spaces"))
                     .then(
+                        status().isOk,
+                        jsonPath("$.items.length()").value(0)
+                    )
+                verify {
+                    useCase.perform(
+                        match { it.viewer == Viewer.Anonymous }
+                    )
+                }
+            }
+
+            it("옵셔널 endpoint 라도 Authorization 헤더가 잘못되면 401 로 fail-fast 한다") {
+                controller
+                    .`when`(
+                        get("/v1/spaces")
+                            .header(HttpHeaders.AUTHORIZATION, "Bearer not-a-valid-token")
+                    ).then(
                         status().isUnauthorized,
                         jsonPath("$.code").value("INVALID_SESSION")
                     )

@@ -3,9 +3,9 @@ package com.crispinlab.space.application.port.incoming.page
 import com.crispinlab.common.application.UseCase
 import com.crispinlab.space.application.port.incoming.page.PageEditing.Request
 import com.crispinlab.space.application.port.incoming.page.PageEditing.Result
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.PageId.Companion.asPageId
-import com.crispinlab.user.domain.user.UserId
 import java.time.Instant
 
 interface PageEditing : UseCase<Request, Result> {
@@ -13,7 +13,7 @@ interface PageEditing : UseCase<Request, Result> {
         pageId: String,
         val title: String,
         val content: String,
-        val currentUserId: UserId
+        val viewer: Viewer.Member
     ) {
         val pageId: PageId = pageId.asPageId()
     }

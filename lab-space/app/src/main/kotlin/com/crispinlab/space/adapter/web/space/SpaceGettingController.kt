@@ -1,5 +1,6 @@
 package com.crispinlab.space.adapter.web.space
 
+import com.crispinlab.space.adapter.web.auth.toViewer
 import com.crispinlab.space.application.port.incoming.space.SpaceGetting
 import com.crispinlab.space.application.port.incoming.space.SpaceGetting.Request
 import com.crispinlab.space.application.port.incoming.space.SpaceGetting.Result
@@ -17,8 +18,8 @@ class SpaceGettingController(
     @GetMapping
     fun get(
         @PathVariable spaceId: String,
-        auth: Auth
+        auth: Auth?
     ): Result =
-        Request(spaceId = spaceId, currentUserId = auth.userId)
+        Request(spaceId = spaceId, viewer = auth.toViewer())
             .let { useCase.perform(it) }
 }

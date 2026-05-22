@@ -36,6 +36,10 @@ aggregate 본체 (`User`, `Page` 등) 의 cross-domain import 는 여전히 금�
 
 `lab-common-infra` 에 두지 않는 이유: 본 모듈은 도메인 무관 인프라 (Jackson, Tx, Trace, ErrorHandler) 의 위치. user 도메인 타입 (`UserId`, `SystemRole`, `SessionService`) 을 의존하면 분리 의도가 깨진다.
 
+**옵셔널 인증 (`Auth?`)** — 비로그인 사용자도 PUBLIC 리소스를 볼 수 있어야 하는 endpoint 는 controller signature 를 `auth: Auth?` 로 받는다. resolver 는 `MethodParameter.isOptional` 로 두 경우를 구분: 헤더 자체가 없으면 null 반환 (anonymous), 헤더가 있는데 invalid (만료/위변조/세션 miss) 이면 항상 `AuthenticationException` (401). silently null 로 떨어뜨리면 클라이언트가 세션 만료를 인지 못 해 자동 재로그인이 안 걸린다. 시그널은 Kotlin nullable 타입 그대로 — 별도 어노테이션 신설하지 않는다.
+
+**도메인 자체 access control 컨셉** — 다른 도메인 (`lab-space` 등) 이 권한 검증을 도입할 때 lab-user 의 `Auth` / `SystemRole` / `AuthContext` 류를 도메인 모듈 (`lab-space/domain`) 이 직접 import 하지 않는다. 도메인이 자기 access control 모델 (예: `Viewer` sealed type: `Anonymous` / `Member(userId, isAdmin)`) 을 `domain/access/` 같은 sub-package 에 신설하고, controller adapter 가 `Auth → Viewer` 매핑을 책임 (`lab-{domain}/app/adapter/web/auth/AuthViewerMapping.kt` 같은 위치). cross-domain api 의존이 `UserId` (EntityId) 한 종류로 환원되고, role 분류 (`SystemRole`) 같은 user-domain 의 분류 체계는 어댑터 경계에 머문다.
+
 ## component scan 범위
 
 `@SpringBootApplication(scanBasePackageClasses = [Application::class, SpaceModule::class, ...])` 로 type-safe 하게 명시한다. 도메인 모듈마다 `com.crispinlab.<domain>` 루트에 marker 인터페이스(`SpaceModule`, 향후 `UserModule` 등) 한 개를 두고, 진입 클래스의 `scanBasePackageClasses` 에 추가한다.

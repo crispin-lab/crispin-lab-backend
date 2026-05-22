@@ -1,5 +1,6 @@
 package com.crispinlab.space.application.usecase.space
 
+import com.crispinlab.common.exception.ForbiddenException
 import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.common.transaction.TransactionProvider
 import com.crispinlab.space.application.port.incoming.space.SpaceEditing
@@ -26,12 +27,9 @@ class SpaceEditingUseCase(
         }
 
     private fun Request.validate() {
-        /*
-        todo    :: 외부 의존성이 필요한 검증을 둘 자리. 권한 등이 도입될 때 채운다.
-         author :: heechoel shin
-         date   :: 2026-05-11T14:04:49KST
-         ticket :: LAB-21
-         */
+        if (!viewer.isAdmin) {
+            throw ForbiddenException(SpaceErrorCode.SPACE_ADMIN_ONLY)
+        }
     }
 
     private fun Request.toEntity(): Space =
@@ -40,7 +38,11 @@ class SpaceEditingUseCase(
 
     private fun Space.editWith(request: Request): Space =
         apply {
-            edit(name = request.name, description = request.description)
+            edit(
+                name = request.name,
+                description = request.description,
+                visibility = request.visibility
+            )
         }
 
     private fun Space.toResult(): Result =
@@ -48,6 +50,7 @@ class SpaceEditingUseCase(
             spaceId = id,
             name = name,
             description = description,
+            visibility = visibility,
             updatedAt = updatedAt
         )
 }

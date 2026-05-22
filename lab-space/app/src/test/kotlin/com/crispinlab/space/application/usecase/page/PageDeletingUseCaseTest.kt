@@ -3,6 +3,7 @@ package com.crispinlab.space.application.usecase.page
 import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.space.application.port.incoming.page.PageDeleting.Request
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicPage
 import com.crispinlab.user.domain.user.UserId
@@ -48,16 +49,37 @@ class PageDeletingUseCaseTest :
                 every { pageRepository.findBy(page.id) } returns page
 
                 shouldThrow<NotFoundException> {
-                    useCase.perform(basicRequest(currentUserId = UserId(100L)))
+                    useCase.perform(basicRequest(userId = UserId(100L)))
                 }
                 verify(exactly = 0) { pageRepository.delete(any()) }
+            }
+
+            it("ADMIN 은 작성자가 아니어도 삭제 가능하다") {
+                val page = basicPage(authorId = UserId(200L))
+                every { pageRepository.findBy(page.id) } returns page
+                justRun { pageRepository.delete(page.id) }
+
+                useCase.perform(
+                    basicRequest(
+                        pageId = page.id.value.toString(),
+                        userId = UserId(100L),
+                        isAdmin = true
+                    )
+                )
+
+                verify(exactly = 1) { pageRepository.delete(page.id) }
             }
         }
     }) {
     companion object {
         fun basicRequest(
             pageId: String = "1",
-            currentUserId: UserId = UserId(100L)
-        ): Request = Request(pageId = pageId, currentUserId = currentUserId)
+            userId: UserId = UserId(100L),
+            isAdmin: Boolean = false
+        ): Request =
+            Request(
+                pageId = pageId,
+                viewer = Viewer.Member(userId = userId, isAdmin = isAdmin)
+            )
     }
 }

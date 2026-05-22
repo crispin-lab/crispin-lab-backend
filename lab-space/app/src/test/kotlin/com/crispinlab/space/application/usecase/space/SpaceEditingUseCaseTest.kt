@@ -1,8 +1,10 @@
 package com.crispinlab.space.application.usecase.space
 
+import com.crispinlab.common.exception.ForbiddenException
 import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.space.application.port.incoming.space.SpaceEditing.Request
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.space.Space
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.DummyTransactionProvider
@@ -16,6 +18,7 @@ import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import io.mockk.verify
 
 class SpaceEditingUseCaseTest :
     DescribeSpec({
@@ -63,6 +66,13 @@ class SpaceEditingUseCaseTest :
                     useCase.perform(basicRequest(name = "x"))
                 }
             }
+
+            it("USER 가 호출하면 ForbiddenException 으로 차단되고 저장이 일어나지 않는다") {
+                shouldThrow<ForbiddenException> {
+                    useCase.perform(basicRequest(name = "x", isAdmin = false))
+                }
+                verify(exactly = 0) { spaceRepository.save(any()) }
+            }
         }
     }) {
     companion object {
@@ -70,13 +80,16 @@ class SpaceEditingUseCaseTest :
             spaceId: String = "1",
             name: String? = null,
             description: String? = null,
-            currentUserId: UserId = UserId(100L)
+            visibility: String? = null,
+            userId: UserId = UserId(100L),
+            isAdmin: Boolean = true
         ): Request =
             Request(
                 spaceId = spaceId,
                 name = name,
                 description = description,
-                currentUserId = currentUserId
+                visibility = visibility,
+                viewer = Viewer.Member(userId = userId, isAdmin = isAdmin)
             )
     }
 }

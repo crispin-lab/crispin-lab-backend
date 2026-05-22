@@ -1,10 +1,11 @@
 package com.crispinlab.space.adapter.web.space
 
+import com.crispinlab.space.adapter.web.auth.toMember
 import com.crispinlab.space.application.port.incoming.space.SpaceEditing
 import com.crispinlab.space.application.port.incoming.space.SpaceEditing.Request
 import com.crispinlab.space.application.port.incoming.space.SpaceEditing.Result
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.user.adapter.web.auth.Auth
-import com.crispinlab.user.domain.user.UserId
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -23,22 +24,24 @@ class SpaceEditingController(
         auth: Auth
     ): Result =
         body
-            .toRequestWith(spaceId = spaceId, userId = auth.userId)
+            .toRequestWith(spaceId = spaceId, viewer = auth.toMember())
             .let { useCase.perform(it) }
 
     data class Body(
         val name: String? = null,
-        val description: String? = null
+        val description: String? = null,
+        val visibility: String? = null
     ) {
         fun toRequestWith(
             spaceId: String,
-            userId: UserId
+            viewer: Viewer.Member
         ): Request =
             Request(
                 spaceId = spaceId,
                 name = name,
                 description = description,
-                currentUserId = userId
+                visibility = visibility,
+                viewer = viewer
             )
     }
 }

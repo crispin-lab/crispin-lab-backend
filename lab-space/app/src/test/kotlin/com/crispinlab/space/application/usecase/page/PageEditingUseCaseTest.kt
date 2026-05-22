@@ -6,6 +6,7 @@ import com.crispinlab.space.application.port.incoming.page.PageEditing.Request
 import com.crispinlab.space.application.port.outgoing.page.PageLinkRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRevisionRepository
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageLink
 import com.crispinlab.space.domain.page.PageRevision
@@ -104,9 +105,29 @@ class PageEditingUseCaseTest :
                 every { pageRepository.findBy(page.id) } returns page
 
                 shouldThrow<NotFoundException> {
-                    useCase.perform(basicRequest(currentUserId = UserId(100L)))
+                    useCase.perform(basicRequest(userId = UserId(100L)))
                 }
                 verify(exactly = 0) { pageRepository.save(any()) }
+            }
+
+            it("ADMIN 은 작성자가 아니어도 수정 가능하다") {
+                val page = basicPage(authorId = UserId(200L), title = "이전")
+                every { pageRepository.findBy(page.id) } returns page
+                every { idGenerator.next() } returnsMany listOf(101L)
+
+                val result =
+                    useCase.perform(
+                        basicRequest(
+                            pageId = page.id.value.toString(),
+                            title = "새 제목",
+                            content = "본문",
+                            userId = UserId(100L),
+                            isAdmin = true
+                        )
+                    )
+
+                result.title shouldBe "새 제목"
+                verify(exactly = 1) { pageRepository.save(any()) }
             }
         }
     }) {
@@ -115,13 +136,14 @@ class PageEditingUseCaseTest :
             pageId: String = "1",
             title: String = "새 제목",
             content: String = "새 본문",
-            currentUserId: UserId = UserId(100L)
+            userId: UserId = UserId(100L),
+            isAdmin: Boolean = false
         ): Request =
             Request(
                 pageId = pageId,
                 title = title,
                 content = content,
-                currentUserId = currentUserId
+                viewer = Viewer.Member(userId = userId, isAdmin = isAdmin)
             )
     }
 }

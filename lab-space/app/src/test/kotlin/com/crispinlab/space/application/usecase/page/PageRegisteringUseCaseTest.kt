@@ -7,6 +7,7 @@ import com.crispinlab.space.application.port.outgoing.page.PageLinkRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRevisionRepository
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.PageLink
@@ -128,7 +129,8 @@ class PageRegisteringUseCaseTest :
             title: String = "테스트",
             content: String = "본문",
             visibility: String = "DRAFT",
-            currentUserId: UserId = UserId(100L)
+            userId: UserId = UserId(100L),
+            isAdmin: Boolean = false
         ): Request =
             Request(
                 spaceId = spaceId,
@@ -136,7 +138,7 @@ class PageRegisteringUseCaseTest :
                 title = title,
                 content = content,
                 visibility = visibility,
-                currentUserId = currentUserId
+                viewer = Viewer.Member(userId = userId, isAdmin = isAdmin)
             )
     }
 }

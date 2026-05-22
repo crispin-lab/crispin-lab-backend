@@ -2,6 +2,7 @@ package com.crispinlab.space.adapter.web.page
 
 import com.crispinlab.common.pagination.PageRequest.Companion.DEFAULT_SIZE
 import com.crispinlab.common.pagination.PageResult
+import com.crispinlab.space.adapter.web.auth.toViewer
 import com.crispinlab.space.application.port.incoming.page.PageSearching
 import com.crispinlab.space.application.port.incoming.page.PageSearching.Request
 import com.crispinlab.space.application.port.incoming.page.PageSearching.Summary
@@ -23,7 +24,7 @@ class PageSearchingController(
         @RequestParam(required = false) tag: List<String>?,
         @RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "$DEFAULT_SIZE") size: Int,
-        auth: Auth
+        auth: Auth?
     ): PageResult<Summary> =
         Request(
             keyword = query,
@@ -31,6 +32,6 @@ class PageSearchingController(
             tagIds = tag.orEmpty(),
             page = page,
             size = size,
-            currentUserId = auth.userId
+            viewer = auth.toViewer()
         ).let { useCase.perform(it) }
 }

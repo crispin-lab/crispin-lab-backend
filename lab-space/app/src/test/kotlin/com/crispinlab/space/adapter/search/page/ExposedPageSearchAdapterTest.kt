@@ -5,6 +5,7 @@ import com.crispinlab.common.persistence.PostgresTestContext
 import com.crispinlab.space.adapter.persistence.page.ExposedPageRepository
 import com.crispinlab.space.adapter.persistence.tag.PageTags
 import com.crispinlab.space.adapter.persistence.tag.Tags
+import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageContent
 import com.crispinlab.space.domain.page.PageId
@@ -13,6 +14,7 @@ import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.tag.TagId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.Fixtures.basicPage
+import com.crispinlab.user.domain.user.UserId
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
@@ -58,6 +60,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = emptyList(),
+                            scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
                         )
                     }
@@ -89,6 +92,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = "회고",
                             spaceId = null,
                             tagIds = emptyList(),
+                            scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
                         )
                     }
@@ -110,6 +114,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = "90%",
                             spaceId = null,
                             tagIds = emptyList(),
+                            scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
                         )
                     }
@@ -121,6 +126,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = "snake_case",
                             spaceId = null,
                             tagIds = emptyList(),
+                            scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
                         )
                     }
@@ -147,6 +153,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = "회고",
                             spaceId = null,
                             tagIds = emptyList(),
+                            scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
                         )
                     }
@@ -167,6 +174,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = SpaceId(20L),
                             tagIds = emptyList(),
+                            scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
                         )
                     }
@@ -191,6 +199,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = listOf(TagId(100L), TagId(200L)),
+                            scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
                         )
                     }
@@ -213,6 +222,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = listOf(TagId(100L), TagId(200L), TagId(300L)),
+                            scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
                         )
                     }
@@ -233,6 +243,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = listOf(TagId(999L)),
+                            scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
                         )
                     }
@@ -263,6 +274,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = "회고",
                             spaceId = SpaceId(10L),
                             tagIds = listOf(TagId(100L)),
+                            scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
                         )
                     }
@@ -288,6 +300,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = emptyList(),
+                            scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest(page = 1, size = 2)
                         )
                     }
@@ -313,6 +326,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = emptyList(),
+                            scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
                         )
                     }
@@ -339,12 +353,88 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = listOf(TagId(100L)),
+                            scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
                         )
                     }
 
                 result.items.map { it.id } shouldBe listOf(PageId(1L))
                 result.totalElements shouldBe 1L
+            }
+
+            it("Authenticated scope 는 PUBLIC + INTERNAL + 본인 DRAFT 를 노출한다") {
+                transaction(database) {
+                    pageRepository.save(publicPage(id = PageId(1L), title = "공개"))
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(2L),
+                            title = "내부",
+                            visibility = Visibility.INTERNAL
+                        )
+                    )
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(3L),
+                            authorId = UserId(100L),
+                            title = "본인 초안",
+                            visibility = Visibility.DRAFT
+                        )
+                    )
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(4L),
+                            authorId = UserId(200L),
+                            title = "타인 초안",
+                            visibility = Visibility.DRAFT
+                        )
+                    )
+                }
+
+                val result =
+                    transaction(database) {
+                        adapter.search(
+                            keyword = null,
+                            spaceId = null,
+                            tagIds = emptyList(),
+                            scope = VisibilityScope.Authenticated(viewerId = UserId(100L)),
+                            pageRequest = PageRequest.firstPage()
+                        )
+                    }
+
+                result.items.map { it.id }.toSet() shouldBe
+                    setOf(PageId(1L), PageId(2L), PageId(3L))
+                result.totalElements shouldBe 3L
+            }
+
+            it("Privileged scope 는 모든 visibility 의 페이지를 노출한다") {
+                transaction(database) {
+                    pageRepository.save(publicPage(id = PageId(1L)))
+                    pageRepository.save(
+                        basicPage(id = PageId(2L), visibility = Visibility.INTERNAL)
+                    )
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(3L),
+                            authorId = UserId(200L),
+                            visibility = Visibility.DRAFT
+                        )
+                    )
+                }
+
+                val result =
+                    transaction(database) {
+                        adapter.search(
+                            keyword = null,
+                            spaceId = null,
+                            tagIds = emptyList(),
+                            scope = VisibilityScope.Privileged,
+                            pageRequest = PageRequest.firstPage()
+                        )
+                    }
+
+                result.items.map { it.id }.toSet() shouldBe
+                    setOf(PageId(1L), PageId(2L), PageId(3L))
+                result.totalElements shouldBe 3L
             }
         }
     }) {

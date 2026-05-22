@@ -1,11 +1,14 @@
 package com.crispinlab.space.application.usecase.space
 
+import com.crispinlab.common.pagination.PageRequest
 import com.crispinlab.common.pagination.PageRequest.Companion.DEFAULT_SIZE
 import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.application.port.incoming.space.SpaceListing.Request
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.space.Space
 import com.crispinlab.space.domain.space.SpaceId
+import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicSpace
 import com.crispinlab.user.domain.user.UserId
@@ -33,7 +36,7 @@ class SpaceListingUseCaseTest :
                         basicSpace(id = SpaceId(2L), name = "최근"),
                         basicSpace(id = SpaceId(1L), name = "이전")
                     )
-                every { spaceRepository.findPage(any()) } returns
+                every { spaceRepository.findPage(any(), any()) } returns
                     PageResult(
                         items = spaces,
                         page = 2,
@@ -59,13 +62,14 @@ class SpaceListingUseCaseTest :
                         withArg {
                             it.page shouldBe 2
                             it.size shouldBe 5
-                        }
+                        },
+                        any()
                     )
                 }
             }
 
             it("결과가 비어 있어도 빈 페이지를 반환한다") {
-                every { spaceRepository.findPage(any()) } returns
+                every { spaceRepository.findPage(any(), any()) } returns
                     PageResult(
                         items = emptyList(),
                         page = 0,
@@ -93,18 +97,70 @@ class SpaceListingUseCaseTest :
                     basicRequest(size = 201)
                 }
             }
+
+            it("비로그인 상태에서는 PUBLIC 만 필터한 visibility 로 조회한다") {
+                every { spaceRepository.findPage(any(), any()) } returns
+                    PageResult.empty(PageRequest.firstPage())
+
+                useCase.perform(basicRequest(viewer = Viewer.Anonymous))
+
+                verify {
+                    spaceRepository.findPage(
+                        any(),
+                        withArg<Set<SpaceVisibility>> {
+                            it shouldBe setOf(SpaceVisibility.PUBLIC)
+                        }
+                    )
+                }
+            }
+
+            it("로그인 상태에서는 PUBLIC + INTERNAL visibility 로 조회한다") {
+                every { spaceRepository.findPage(any(), any()) } returns
+                    PageResult.empty(PageRequest.firstPage())
+
+                useCase.perform(basicRequest())
+
+                verify {
+                    spaceRepository.findPage(
+                        any(),
+                        withArg<Set<SpaceVisibility>> {
+                            it shouldBe setOf(SpaceVisibility.PUBLIC, SpaceVisibility.INTERNAL)
+                        }
+                    )
+                }
+            }
+
+            it("ADMIN 도 PUBLIC + INTERNAL visibility 로 조회한다 (Space 는 ADMIN-only visibility 없음)") {
+                every { spaceRepository.findPage(any(), any()) } returns
+                    PageResult.empty(PageRequest.firstPage())
+
+                useCase.perform(
+                    basicRequest(
+                        viewer = Viewer.Member(userId = UserId(100L), isAdmin = true)
+                    )
+                )
+
+                verify {
+                    spaceRepository.findPage(
+                        any(),
+                        withArg<Set<SpaceVisibility>> {
+                            it shouldBe setOf(SpaceVisibility.PUBLIC, SpaceVisibility.INTERNAL)
+                        }
+                    )
+                }
+            }
         }
     }) {
     companion object {
         fun basicRequest(
             page: Int = 0,
             size: Int = DEFAULT_SIZE,
-            currentUserId: UserId = UserId(100L)
+            viewer: Viewer = Viewer.Member(userId = UserId(100L), isAdmin = false)
         ): Request =
             Request(
                 page = page,
                 size = size,
-                currentUserId = currentUserId
+                viewer = viewer
             )
     }
 }

@@ -3,9 +3,11 @@ package com.crispinlab.space.application.port.incoming.space
 import com.crispinlab.common.application.UseCase
 import com.crispinlab.space.application.port.incoming.space.SpaceEditing.Request
 import com.crispinlab.space.application.port.incoming.space.SpaceEditing.Result
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.space.SpaceId.Companion.asSpaceId
-import com.crispinlab.user.domain.user.UserId
+import com.crispinlab.space.domain.space.SpaceVisibility
+import com.crispinlab.space.domain.space.SpaceVisibility.Companion.asSpaceVisibility
 import java.time.Instant
 
 interface SpaceEditing : UseCase<Request, Result> {
@@ -13,12 +15,14 @@ interface SpaceEditing : UseCase<Request, Result> {
         spaceId: String,
         val name: String? = null,
         val description: String? = null,
-        val currentUserId: UserId
+        visibility: String? = null,
+        val viewer: Viewer.Member
     ) {
         val spaceId: SpaceId = spaceId.asSpaceId()
+        val visibility: SpaceVisibility? = visibility?.asSpaceVisibility()
 
         init {
-            require(name != null || description != null) {
+            require(name != null || description != null || this.visibility != null) {
                 "수정할 필드를 최소 1개 이상 입력해 주세요."
             }
         }
@@ -28,6 +32,7 @@ interface SpaceEditing : UseCase<Request, Result> {
         val spaceId: SpaceId,
         val name: String,
         val description: String,
+        val visibility: SpaceVisibility,
         val updatedAt: Instant
     )
 }

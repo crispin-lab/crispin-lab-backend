@@ -4,6 +4,7 @@ import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder
 import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.application.port.incoming.page.PageSearching
 import com.crispinlab.space.application.port.incoming.page.PageSearching.Summary
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
@@ -15,6 +16,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
+import org.springframework.http.HttpHeaders
 import org.springframework.restdocs.request.RequestDocumentation.queryParameters
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
@@ -131,16 +133,6 @@ class PageSearchingControllerTest :
                 requestSlot.captured.tagIds.map { it.value } shouldBe listOf(100L, 200L, 300L)
             }
 
-            it("Authorization 토큰이 없으면 401 을 반환한다") {
-                controller
-                    .`when`(get("/v1/pages"))
-                    .then(
-                        status().isUnauthorized,
-                        jsonPath("$.code").value("INVALID_SESSION")
-                    )
-                verify(exactly = 0) { useCase.perform(any()) }
-            }
-
             it("space 형식이 숫자가 아니면 400 을 반환한다") {
                 controller
                     .`when`(
@@ -194,6 +186,40 @@ class PageSearchingControllerTest :
                             jsonPath("$.message").value("페이지 크기는 1 이상 200 이하여야 합니다.")
                         )
                 }
+                verify(exactly = 0) { useCase.perform(any()) }
+            }
+
+            it("비로그인 상태에서도 200 으로 응답하고 Anonymous 컨텍스트로 UseCase 가 호출된다") {
+                every { useCase.perform(any()) } returns
+                    PageResult(
+                        items = emptyList(),
+                        page = 0,
+                        size = 20,
+                        totalElements = 0L
+                    )
+
+                controller
+                    .`when`(get("/v1/pages"))
+                    .then(
+                        status().isOk,
+                        jsonPath("$.items.length()").value(0)
+                    )
+                verify {
+                    useCase.perform(
+                        match { it.viewer == Viewer.Anonymous }
+                    )
+                }
+            }
+
+            it("옵셔널 endpoint 라도 Authorization 헤더가 잘못되면 401 로 fail-fast 한다") {
+                controller
+                    .`when`(
+                        get("/v1/pages")
+                            .header(HttpHeaders.AUTHORIZATION, "Bearer not-a-valid-token")
+                    ).then(
+                        status().isUnauthorized,
+                        jsonPath("$.code").value("INVALID_SESSION")
+                    )
                 verify(exactly = 0) { useCase.perform(any()) }
             }
         }

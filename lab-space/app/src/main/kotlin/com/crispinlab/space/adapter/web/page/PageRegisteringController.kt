@@ -1,10 +1,11 @@
 package com.crispinlab.space.adapter.web.page
 
+import com.crispinlab.space.adapter.web.auth.toMember
 import com.crispinlab.space.application.port.incoming.page.PageRegistering
 import com.crispinlab.space.application.port.incoming.page.PageRegistering.Request
 import com.crispinlab.space.application.port.incoming.page.PageRegistering.Result
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.user.adapter.web.auth.Auth
-import com.crispinlab.user.domain.user.UserId
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -24,7 +25,7 @@ class PageRegisteringController(
         auth: Auth
     ): Result =
         body
-            .toRequestWith(userId = auth.userId)
+            .toRequestWith(auth.toMember())
             .let {
                 useCase.perform(it)
             }
@@ -36,14 +37,14 @@ class PageRegisteringController(
         val content: String,
         val visibility: String
     ) {
-        fun toRequestWith(userId: UserId): Request =
+        fun toRequestWith(viewer: Viewer.Member): Request =
             Request(
                 spaceId = spaceId,
                 parentPageId = parentPageId,
                 title = title,
                 content = content,
                 visibility = visibility,
-                currentUserId = userId
+                viewer = viewer
             )
     }
 }

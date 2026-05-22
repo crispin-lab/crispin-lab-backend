@@ -12,6 +12,7 @@ import com.crispinlab.space.domain.page.PageRevisionId
 import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.space.Space
 import com.crispinlab.space.domain.space.SpaceId
+import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.domain.tag.PageTag
 import com.crispinlab.space.domain.tag.Tag
 import com.crispinlab.space.domain.tag.TagId
@@ -24,6 +25,7 @@ object Fixtures {
         id: SpaceId = SpaceId(1L),
         name: String = "자유게시판",
         description: String = "기본 설명",
+        visibility: SpaceVisibility = SpaceVisibility.INTERNAL,
         createdAt: Instant = DUMMY_INSTANT,
         deletedAt: Instant? = null
     ): Space =
@@ -31,6 +33,7 @@ object Fixtures {
             id = id,
             name = name,
             description = description,
+            visibility = visibility,
             createdAt = createdAt,
             deletedAt = deletedAt
         )

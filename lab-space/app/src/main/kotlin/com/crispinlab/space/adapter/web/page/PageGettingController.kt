@@ -1,5 +1,6 @@
 package com.crispinlab.space.adapter.web.page
 
+import com.crispinlab.space.adapter.web.auth.toViewer
 import com.crispinlab.space.application.port.incoming.page.PageGetting
 import com.crispinlab.space.application.port.incoming.page.PageGetting.Request
 import com.crispinlab.space.application.port.incoming.page.PageGetting.Result
@@ -17,11 +18,11 @@ class PageGettingController(
     @GetMapping
     fun get(
         @PathVariable pageId: String,
-        auth: Auth
+        auth: Auth?
     ): Result =
         Request(
             pageId = pageId,
-            currentUserId = auth.userId
+            viewer = auth.toViewer()
         ).let {
             useCase.perform(it)
         }

@@ -1,8 +1,10 @@
 package com.crispinlab.space.application.usecase.space
 
+import com.crispinlab.common.exception.ForbiddenException
 import com.crispinlab.common.id.IdGenerator
 import com.crispinlab.space.application.port.incoming.space.SpaceRegistering.Request
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.space.Space
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.testsupport.DummyTransactionProvider
@@ -53,13 +55,28 @@ class SpaceRegisteringUseCaseTest :
                 }
                 verify(exactly = 0) { spaceRepository.save(any()) }
             }
+
+            it("USER 가 호출하면 ForbiddenException 으로 차단되고 저장이 일어나지 않는다") {
+                shouldThrow<ForbiddenException> {
+                    useCase.perform(basicRequest(isAdmin = false))
+                }
+                verify(exactly = 0) { spaceRepository.save(any()) }
+            }
         }
     }) {
     companion object {
         fun basicRequest(
             name: String = "팀 위키",
             description: String = "공유 공간",
-            currentUserId: UserId = UserId(100L)
-        ): Request = Request(name = name, description = description, currentUserId = currentUserId)
+            visibility: String = "INTERNAL",
+            userId: UserId = UserId(100L),
+            isAdmin: Boolean = true
+        ): Request =
+            Request(
+                name = name,
+                description = description,
+                visibility = visibility,
+                viewer = Viewer.Member(userId = userId, isAdmin = isAdmin)
+            )
     }
 }

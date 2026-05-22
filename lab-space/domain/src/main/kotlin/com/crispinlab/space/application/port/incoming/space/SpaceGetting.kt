@@ -3,15 +3,16 @@ package com.crispinlab.space.application.port.incoming.space
 import com.crispinlab.common.application.UseCase
 import com.crispinlab.space.application.port.incoming.space.SpaceGetting.Request
 import com.crispinlab.space.application.port.incoming.space.SpaceGetting.Result
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.space.SpaceId.Companion.asSpaceId
-import com.crispinlab.user.domain.user.UserId
+import com.crispinlab.space.domain.space.SpaceVisibility
 import java.time.Instant
 
 interface SpaceGetting : UseCase<Request, Result> {
     class Request(
         spaceId: String,
-        val currentUserId: UserId
+        val viewer: Viewer
     ) {
         val spaceId: SpaceId = spaceId.asSpaceId()
     }
@@ -20,6 +21,7 @@ interface SpaceGetting : UseCase<Request, Result> {
         val spaceId: SpaceId,
         val name: String,
         val description: String,
+        val visibility: SpaceVisibility,
         val createdAt: Instant,
         val updatedAt: Instant
     )

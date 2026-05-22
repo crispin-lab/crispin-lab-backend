@@ -6,6 +6,7 @@ import com.crispinlab.space.application.port.incoming.page.PageGetting
 import com.crispinlab.space.application.port.incoming.page.PageGetting.Request
 import com.crispinlab.space.application.port.incoming.page.PageGetting.Result
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
+import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageErrorCode
 import org.springframework.stereotype.Service
@@ -18,24 +19,17 @@ class PageGettingUseCase(
     override fun perform(request: Request): Result =
         transactionProvider.transactional(readOnly = true) {
             request
-                .also {
-                    it.validate()
-                }.toEntity()
+                .toEntity()
                 .toResult()
         }
 
-    private fun Request.validate() {
-        /*
-        todo    :: visibility·권한 모델 도입 시 외부 의존 검증을 둘 자리. 현재는 누구나 조회 가능.
-         author :: heechoel shin
-         date   :: 2026-05-13T00:00:00KST
-         ticket :: LAB-22
-         */
-    }
-
-    private fun Request.toEntity(): Page =
-        pageRepository.findBy(pageId)
+    private fun Request.toEntity(): Page {
+        val scope = VisibilityScope.of(viewer)
+        return pageRepository
+            .findBy(pageId)
+            ?.takeIf { scope.allows(it.visibility, it.authorId) }
             ?: throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
+    }
 
     private fun Page.toResult(): Result =
         Result(

@@ -7,6 +7,7 @@ import com.crispinlab.space.adapter.persistence.tag.PageTags
 import com.crispinlab.space.adapter.persistence.toPageResult
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.PageSummary
+import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.space.SpaceId
@@ -31,6 +32,7 @@ class ExposedPageSearchAdapter : PageSearchPort {
         keyword: String?,
         spaceId: SpaceId?,
         tagIds: Collection<TagId>,
+        scope: VisibilityScope,
         pageRequest: PageRequest
     ): PageResult<PageSummary> {
         val tagPageIds =
@@ -42,7 +44,7 @@ class ExposedPageSearchAdapter : PageSearchPort {
                 matched
             }
 
-        return baseQuery(keyword, spaceId, tagPageIds)
+        return baseQuery(keyword, spaceId, tagPageIds, scope.toCondition())
             .toPageResult(
                 pageRequest,
                 Pages.updatedAt to SortOrder.DESC,
@@ -64,15 +66,41 @@ class ExposedPageSearchAdapter : PageSearchPort {
             }.withDistinct()
             .map { it[PageTags.pageId] }
 
+    private fun VisibilityScope.toCondition(): Op<Boolean> =
+        when (this) {
+            is VisibilityScope.Anonymous -> {
+                Pages.visibility eq Visibility.PUBLIC.name
+            }
+
+            is VisibilityScope.Authenticated -> {
+                (
+                    Pages.visibility inList
+                        listOf(
+                            Visibility.PUBLIC.name,
+                            Visibility.INTERNAL.name
+                        )
+                ) or
+                    (
+                        (Pages.visibility eq Visibility.DRAFT.name) and
+                            (Pages.authorId eq viewerId.value)
+                    )
+            }
+
+            is VisibilityScope.Privileged -> {
+                Op.TRUE
+            }
+        }
+
     private fun baseQuery(
         keyword: String?,
         spaceId: SpaceId?,
-        tagPageIds: List<Long>?
+        tagPageIds: List<Long>?,
+        visibilityCondition: Op<Boolean>
     ): Query {
         val conditions =
             buildList<Op<Boolean>> {
                 add(Pages.notDeleted())
-                add(Pages.visibility eq Visibility.PUBLIC.name)
+                add(visibilityCondition)
                 keyword?.let {
                     val pattern = "%${it.escapeLike()}%"
                     add((Pages.title like pattern) or (Pages.content like pattern))

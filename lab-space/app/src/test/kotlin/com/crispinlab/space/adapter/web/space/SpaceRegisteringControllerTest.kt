@@ -6,6 +6,7 @@ import com.crispinlab.space.application.port.incoming.space.SpaceRegistering
 import com.crispinlab.space.application.port.incoming.space.SpaceRegistering.Result
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
+import com.crispinlab.user.testsupport.withAuth
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -36,13 +37,13 @@ class SpaceRegisteringControllerTest :
                 controller
                     .`when`(
                         post("/v1/spaces")
-                            .withUserHeader()
+                            .withAuth()
                             .body(mapOf("name" to "팀 위키", "description" to "공유 공간"))
                     ).then(
                         status().isCreated,
                         jsonPath("$.spaceId").value("42")
                     ).document(
-                        userHeaderRequired(),
+                        authHeaderRequired(),
                         requestFields {
                             "name".string("스페이스 이름")
                             "description".string("스페이스 설명")
@@ -53,22 +54,15 @@ class SpaceRegisteringControllerTest :
                     )
             }
 
-            it("X-User-Id 헤더가 없으면 400 을 반환한다") {
+            it("Authorization 토큰이 없으면 401 을 반환한다") {
                 controller
                     .`when`(
                         post("/v1/spaces")
                             .body(mapOf("name" to "팀 위키", "description" to "공유 공간"))
-                    ).then(status().isBadRequest)
-                verify(exactly = 0) { useCase.perform(any()) }
-            }
-
-            it("X-User-Id 가 숫자가 아니면 400 을 반환한다") {
-                controller
-                    .`when`(
-                        post("/v1/spaces")
-                            .withUserHeader(userId = "not-a-number")
-                            .body(mapOf("name" to "팀 위키", "description" to "공유 공간"))
-                    ).then(status().isBadRequest)
+                    ).then(
+                        status().isUnauthorized,
+                        jsonPath("$.code").value("INVALID_SESSION")
+                    )
                 verify(exactly = 0) { useCase.perform(any()) }
             }
         }

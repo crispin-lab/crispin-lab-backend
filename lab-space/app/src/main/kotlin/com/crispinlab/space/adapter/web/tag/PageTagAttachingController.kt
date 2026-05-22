@@ -1,9 +1,9 @@
 package com.crispinlab.space.adapter.web.tag
 
-import com.crispinlab.space.adapter.web.auth.Auth
 import com.crispinlab.space.application.port.incoming.tag.PageTagAttaching
 import com.crispinlab.space.application.port.incoming.tag.PageTagAttaching.Request
-import com.crispinlab.space.domain.user.UserId
+import com.crispinlab.user.adapter.web.auth.Auth
+import com.crispinlab.user.domain.user.UserId
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping

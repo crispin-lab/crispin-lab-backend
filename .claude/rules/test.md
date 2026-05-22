@@ -39,7 +39,7 @@ package com.crispinlab.space.testsupport
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.Visibility
-import com.crispinlab.space.domain.user.UserId
+import com.crispinlab.user.domain.user.UserId
 import java.time.Instant
 
 object Dummies {
@@ -169,7 +169,7 @@ class PageGettingControllerTest(
             )
 
             mockMvc.get("/v1/pages/1") {
-                header("X-User-Id", "100")
+                header(HttpHeaders.AUTHORIZATION, "Bearer 100:USER")
             }.andExpect {
                 status { isOk() }
                 jsonPath("$.title") { value("테스트") }

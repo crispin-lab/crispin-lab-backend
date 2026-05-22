@@ -2,10 +2,10 @@ package com.crispinlab.space.adapter.web.page
 
 import com.crispinlab.common.pagination.PageRequest.Companion.DEFAULT_SIZE
 import com.crispinlab.common.pagination.PageResult
-import com.crispinlab.space.adapter.web.auth.Auth
 import com.crispinlab.space.application.port.incoming.page.PageSearching
 import com.crispinlab.space.application.port.incoming.page.PageSearching.Request
 import com.crispinlab.space.application.port.incoming.page.PageSearching.Summary
+import com.crispinlab.user.adapter.web.auth.Auth
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam

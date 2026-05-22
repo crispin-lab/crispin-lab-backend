@@ -7,6 +7,7 @@ import com.crispinlab.space.application.port.incoming.space.SpaceListing.Summary
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
+import com.crispinlab.user.testsupport.withAuth
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -51,7 +52,7 @@ class SpaceListingControllerTest :
                 controller
                     .`when`(
                         get("/v1/spaces")
-                            .withUserHeader()
+                            .withAuth()
                             .param("page", "0")
                             .param("size", "20")
                     ).then(
@@ -65,7 +66,7 @@ class SpaceListingControllerTest :
                         jsonPath("$.totalPages").value(1),
                         jsonPath("$.hasNext").value(false)
                     ).document(
-                        userHeaderRequired(),
+                        authHeaderRequired(),
                         pagingParameters(),
                         responseFields {
                             "items".array("스페이스 목록") {
@@ -95,7 +96,7 @@ class SpaceListingControllerTest :
                     )
 
                 controller
-                    .`when`(get("/v1/spaces").withUserHeader())
+                    .`when`(get("/v1/spaces").withAuth())
                     .then(
                         status().isOk,
                         jsonPath("$.items.length()").value(0),
@@ -103,17 +104,13 @@ class SpaceListingControllerTest :
                     )
             }
 
-            it("X-User-Id 헤더가 없으면 400 을 반환한다") {
+            it("Authorization 토큰이 없으면 401 을 반환한다") {
                 controller
                     .`when`(get("/v1/spaces"))
-                    .then(status().isBadRequest)
-                verify(exactly = 0) { useCase.perform(any()) }
-            }
-
-            it("X-User-Id 가 숫자가 아니면 400 을 반환한다") {
-                controller
-                    .`when`(get("/v1/spaces").withUserHeader(userId = "not-a-number"))
-                    .then(status().isBadRequest)
+                    .then(
+                        status().isUnauthorized,
+                        jsonPath("$.code").value("INVALID_SESSION")
+                    )
                 verify(exactly = 0) { useCase.perform(any()) }
             }
 
@@ -121,7 +118,7 @@ class SpaceListingControllerTest :
                 controller
                     .`when`(
                         get("/v1/spaces")
-                            .withUserHeader()
+                            .withAuth()
                             .param("page", "-1")
                     ).then(
                         status().isBadRequest,
@@ -135,7 +132,7 @@ class SpaceListingControllerTest :
                 controller
                     .`when`(
                         get("/v1/spaces")
-                            .withUserHeader()
+                            .withAuth()
                             .param("page", "abc")
                     ).then(
                         status().isBadRequest,
@@ -149,7 +146,7 @@ class SpaceListingControllerTest :
                     controller
                         .`when`(
                             get("/v1/spaces")
-                                .withUserHeader()
+                                .withAuth()
                                 .param("size", invalidSize)
                         ).then(
                             status().isBadRequest,
@@ -164,7 +161,7 @@ class SpaceListingControllerTest :
                 controller
                     .`when`(
                         get("/v1/spaces")
-                            .withUserHeader()
+                            .withAuth()
                             .param("size", "abc")
                     ).then(
                         status().isBadRequest,

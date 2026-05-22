@@ -7,9 +7,10 @@ import com.crispinlab.space.application.port.incoming.page.PageGetting.Result
 import com.crispinlab.space.domain.page.PageErrorCode
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.space.SpaceId
-import com.crispinlab.space.domain.user.UserId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
+import com.crispinlab.user.domain.user.UserId
+import com.crispinlab.user.testsupport.withAuth
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -43,14 +44,14 @@ class PageGettingControllerTest :
 
                 controller
                     .`when`(
-                        get("/v1/pages/{pageId}", 1).withUserHeader()
+                        get("/v1/pages/{pageId}", 1).withAuth()
                     ).then(
                         status().isOk,
                         jsonPath("$.pageId").value("1"),
                         jsonPath("$.title").value("오늘의 회고"),
                         jsonPath("$.visibility").value("DRAFT")
                     ).document(
-                        userHeaderRequired(),
+                        authHeaderRequired(),
                         responseFields {
                             "pageId".string("페이지 식별자")
                             "spaceId".string("소속 스페이스 식별자")
@@ -72,7 +73,7 @@ class PageGettingControllerTest :
 
                 controller
                     .`when`(
-                        get("/v1/pages/{pageId}", 999).withUserHeader()
+                        get("/v1/pages/{pageId}", 999).withAuth()
                     ).then(
                         status().isNotFound,
                         jsonPath("$.code").value("PAGE_NOT_FOUND"),
@@ -80,16 +81,19 @@ class PageGettingControllerTest :
                     )
             }
 
-            it("X-User-Id 헤더가 없으면 400 을 반환한다") {
+            it("Authorization 토큰이 없으면 401 을 반환한다") {
                 controller
                     .`when`(get("/v1/pages/{pageId}", 1))
-                    .then(status().isBadRequest)
+                    .then(
+                        status().isUnauthorized,
+                        jsonPath("$.code").value("INVALID_SESSION")
+                    )
                 verify(exactly = 0) { useCase.perform(any()) }
             }
 
             it("pageId 형식이 숫자가 아니면 400 을 반환한다") {
                 controller
-                    .`when`(get("/v1/pages/{pageId}", "not-a-number").withUserHeader())
+                    .`when`(get("/v1/pages/{pageId}", "not-a-number").withAuth())
                     .then(status().isBadRequest)
                 verify(exactly = 0) { useCase.perform(any()) }
             }

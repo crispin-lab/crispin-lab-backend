@@ -15,8 +15,8 @@ import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.tag.PageTag
 import com.crispinlab.space.domain.tag.Tag
 import com.crispinlab.space.domain.tag.TagId
-import com.crispinlab.space.domain.user.UserId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
+import com.crispinlab.user.domain.user.UserId
 import java.time.Instant
 
 object Fixtures {

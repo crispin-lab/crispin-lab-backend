@@ -9,7 +9,7 @@ import com.crispinlab.space.application.port.incoming.tag.TagListing.Summary
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.space.SpaceId.Companion.asSpaceId
 import com.crispinlab.space.domain.tag.TagId
-import com.crispinlab.space.domain.user.UserId
+import com.crispinlab.user.domain.user.UserId
 import java.time.Instant
 
 interface TagListing : UseCase<Request, PageResult<Summary>> {

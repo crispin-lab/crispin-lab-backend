@@ -6,6 +6,7 @@ import com.crispinlab.space.application.port.incoming.comment.CommentRegistering
 import com.crispinlab.space.application.port.incoming.comment.CommentRegistering.Result
 import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
+import com.crispinlab.user.testsupport.withAuth
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -36,13 +37,13 @@ class CommentRegisteringControllerTest :
                 controller
                     .`when`(
                         post("/v1/pages/{pageId}/comments", 10)
-                            .withUserHeader()
+                            .withAuth()
                             .body(mapOf("body" to "첫 댓글"))
                     ).then(
                         status().isCreated,
                         jsonPath("$.commentId").value("42")
                     ).document(
-                        userHeaderRequired(),
+                        authHeaderRequired(),
                         requestFields {
                             "body".string("댓글 본문")
                         },
@@ -52,12 +53,15 @@ class CommentRegisteringControllerTest :
                     )
             }
 
-            it("X-User-Id 헤더가 없으면 400 을 반환한다") {
+            it("Authorization 토큰이 없으면 401 을 반환한다") {
                 controller
                     .`when`(
                         post("/v1/pages/{pageId}/comments", 10)
                             .body(mapOf("body" to "첫 댓글"))
-                    ).then(status().isBadRequest)
+                    ).then(
+                        status().isUnauthorized,
+                        jsonPath("$.code").value("INVALID_SESSION")
+                    )
                 verify(exactly = 0) { useCase.perform(any()) }
             }
 
@@ -65,7 +69,7 @@ class CommentRegisteringControllerTest :
                 controller
                     .`when`(
                         post("/v1/pages/{pageId}/comments", "not-a-number")
-                            .withUserHeader()
+                            .withAuth()
                             .body(mapOf("body" to "첫 댓글"))
                     ).then(status().isBadRequest)
                 verify(exactly = 0) { useCase.perform(any()) }

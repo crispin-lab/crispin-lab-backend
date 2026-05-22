@@ -4,9 +4,9 @@ import com.crispinlab.common.pagination.PageRequest
 import com.crispinlab.common.persistence.PostgresTestContext
 import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.domain.page.PageId
-import com.crispinlab.space.domain.user.UserId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.Fixtures.basicComment
+import com.crispinlab.user.domain.user.UserId
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldBeNull

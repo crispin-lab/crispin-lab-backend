@@ -28,8 +28,8 @@ import com.crispinlab.space.domain.page.PageLink.Type
 import com.crispinlab.space.domain.page.PageLink.Type.Companion.asType
 import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.page.Visibility.Companion.asVisibility
-import com.crispinlab.space.domain.user.UserId
-import com.crispinlab.space.domain.user.UserId.Companion.asUserId
+import com.crispinlab.user.domain.user.UserId
+import com.crispinlab.user.domain.user.UserId.Companion.asUserId
 import java.net.URI
 import java.time.Instant
 

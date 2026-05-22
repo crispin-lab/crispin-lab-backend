@@ -9,7 +9,7 @@ import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.page.Visibility.Companion.asVisibility
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.space.SpaceId.Companion.asSpaceId
-import com.crispinlab.space.domain.user.UserId
+import com.crispinlab.user.domain.user.UserId
 
 interface PageRegistering : UseCase<Request, Result> {
     class Request(

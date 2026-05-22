@@ -1,10 +1,10 @@
 package com.crispinlab.space.adapter.web.tag
 
-import com.crispinlab.space.adapter.web.auth.Auth
 import com.crispinlab.space.application.port.incoming.tag.TagRegistering
 import com.crispinlab.space.application.port.incoming.tag.TagRegistering.Request
 import com.crispinlab.space.application.port.incoming.tag.TagRegistering.Result
-import com.crispinlab.space.domain.user.UserId
+import com.crispinlab.user.adapter.web.auth.Auth
+import com.crispinlab.user.domain.user.UserId
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody

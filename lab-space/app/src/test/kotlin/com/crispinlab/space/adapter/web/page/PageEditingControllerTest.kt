@@ -7,6 +7,7 @@ import com.crispinlab.space.application.port.incoming.page.PageEditing.Result
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
+import com.crispinlab.user.testsupport.withAuth
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -35,7 +36,7 @@ class PageEditingControllerTest :
                 controller
                     .`when`(
                         put("/v1/pages/{pageId}", 1)
-                            .withUserHeader()
+                            .withAuth()
                             .body(mapOf("title" to "새 제목", "content" to "새 본문 [[wiki]]"))
                     ).then(
                         status().isOk,
@@ -43,7 +44,7 @@ class PageEditingControllerTest :
                         jsonPath("$.title").value("새 제목"),
                         jsonPath("$.version").value(2)
                     ).document(
-                        userHeaderRequired(),
+                        authHeaderRequired(),
                         requestFields {
                             "title".string("새 제목")
                             "content".string("새 본문")
@@ -57,12 +58,15 @@ class PageEditingControllerTest :
                     )
             }
 
-            it("X-User-Id 헤더가 없으면 400 을 반환한다") {
+            it("Authorization 토큰이 없으면 401 을 반환한다") {
                 controller
                     .`when`(
                         put("/v1/pages/{pageId}", 1)
                             .body(mapOf("title" to "새 제목", "content" to "본문"))
-                    ).then(status().isBadRequest)
+                    ).then(
+                        status().isUnauthorized,
+                        jsonPath("$.code").value("INVALID_SESSION")
+                    )
                 verify(exactly = 0) { useCase.perform(any()) }
             }
 
@@ -70,7 +74,7 @@ class PageEditingControllerTest :
                 controller
                     .`when`(
                         put("/v1/pages/{pageId}", "not-a-number")
-                            .withUserHeader()
+                            .withAuth()
                             .body(mapOf("title" to "새 제목", "content" to "본문"))
                     ).then(status().isBadRequest)
                 verify(exactly = 0) { useCase.perform(any()) }

@@ -24,6 +24,18 @@
 
 `EntityIdSerializer` 의 시그니처에 `EntityId` 가 등장하지만 `lab-common-infra` 는 이 의존을 `api` 가 아닌 `implementation` 으로만 노출한다. consumer 가 `EntityIdSerializer` 를 직접 import 할 일은 거의 없고 (Spring Boot 의 Jackson auto-config 가 `SimpleModule` 빈을 자동 wiring), 직접 참조하는 곳 (예: `lab-api-support` 의 `ControllerDescribeSpec`) 은 이미 별도로 `api(labCommonDomain)` 을 명시한다. `lab-common-infra` 가 `api(labCommonDomain)` 으로 올리면 transitive 노출이 늘어나면서 분리 의도가 약해진다 — `EntityId` 가 필요한 consumer 는 자기 build.gradle.kts 에서 명시 의존을 갖는 것이 정합.
 
+### identity reference 의 cross-domain `api` 의존 허용
+
+`package-structure.md` 는 "한 도메인의 entity 를 다른 도메인이 직접 import 하지 않는다" 를 명시한다. 다만 **EntityId (값 객체 식별자)** 는 예외 — aggregate 간 참조의 매개체라 import 가 일반적이다. 예: `lab-space/domain` 의 `Page.authorId` 가 `com.crispinlab.user.domain.user.UserId` 를 참조. 따라서 `lab-space/domain/build.gradle.kts` 는 `api(projects.labUser.domain)` 으로 의존을 노출한다 (구현 entity 가 아니라 identity 만 import 한다는 정신).
+
+aggregate 본체 (`User`, `Page` 등) 의 cross-domain import 는 여전히 금지. port 를 통해서만 다른 도메인의 데이터를 가져온다.
+
+### `lab-user/app` — cross-cutting auth provider
+
+`AuthArgumentResolver`, `Auth` 는 `lab-user/app/.../adapter/web/auth/` 에 위치한다. user 도메인이 user identity + SessionService + SystemRole 의 owner 이므로 web auth 어댑터를 자기가 책임지는 게 자연 응집. 다른 도메인 app 모듈 (예: `lab-space/app`) 은 `implementation(projects.labUser.app)` 로 의존 + `Auth` 를 controller signature 에 받는다. `UserModule` component scan 이 `AuthArgumentResolver` 와 `WebMvcConfigurer` 를 자동 wiring 하므로 다른 도메인은 추가 설정 없음.
+
+`lab-common-infra` 에 두지 않는 이유: 본 모듈은 도메인 무관 인프라 (Jackson, Tx, Trace, ErrorHandler) 의 위치. user 도메인 타입 (`UserId`, `SystemRole`, `SessionService`) 을 의존하면 분리 의도가 깨진다.
+
 ## component scan 범위
 
 `@SpringBootApplication(scanBasePackageClasses = [Application::class, SpaceModule::class, ...])` 로 type-safe 하게 명시한다. 도메인 모듈마다 `com.crispinlab.<domain>` 루트에 marker 인터페이스(`SpaceModule`, 향후 `UserModule` 등) 한 개를 두고, 진입 클래스의 `scanBasePackageClasses` 에 추가한다.

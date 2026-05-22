@@ -10,12 +10,14 @@ dependencies {
     implementation(projects.labCommonInfra)
     implementation(projects.labSpace.app)
     implementation(projects.labUser.app)
+    implementation(projects.labUser.domain)
 
     runtimeOnly(libs.postgresql)
     runtimeOnly(libs.flyway.core)
     runtimeOnly(libs.flyway.database.postgresql)
 
     testImplementation(projects.labCommonDomain)
+    testImplementation(testFixtures(projects.labUser.domain))
     testImplementation(libs.spring.boot.testcontainers)
     testImplementation(libs.testcontainers.postgresql)
 }

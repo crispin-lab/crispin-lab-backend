@@ -13,5 +13,6 @@ object LogContext {
         const val CODE: String = "code"
         const val MESSAGE: String = "message"
         const val CAUSE: String = "cause"
+        const val REASON: String = "reason"
     }
 }

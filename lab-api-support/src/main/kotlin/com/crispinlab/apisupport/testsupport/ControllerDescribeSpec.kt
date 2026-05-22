@@ -15,6 +15,7 @@ import io.kotest.core.spec.style.DescribeSpec
 import io.mockk.every
 import io.mockk.mockk
 import kotlin.text.Charsets.UTF_8
+import org.springframework.http.HttpHeaders.AUTHORIZATION
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter
@@ -127,10 +128,6 @@ abstract class ControllerDescribeSpec(
             resultActions.andExpect(resultMatcher)
         }
 
-    fun MockHttpServletRequestBuilder.withUserHeader(
-        userId: String = "100"
-    ): MockHttpServletRequestBuilder = header(USER_ID_HEADER, userId)
-
     fun MockHttpServletRequestBuilder.body(body: Any): MockHttpServletRequestBuilder =
         content(objectMapper.writeValueAsString(body))
             .contentType(APPLICATION_JSON)
@@ -192,10 +189,10 @@ abstract class ControllerDescribeSpec(
     fun ResultActions.document(vararg snippets: Snippet): ResultActions =
         andDo(basicDocument(snippets = snippets))
 
-    fun userHeaderRequired(optional: Boolean = false): Snippet =
+    fun authHeaderRequired(optional: Boolean = false): Snippet =
         requestHeaders(
-            headerWithName(USER_ID_HEADER)
-                .description("사용자 인증 헤더 (현재 임시)")
+            headerWithName(AUTHORIZATION)
+                .description("세션 토큰 (`Bearer {token}`)")
                 .let { if (optional) it.optional() else it }
         )
 
@@ -441,8 +438,6 @@ abstract class ControllerDescribeSpec(
     }
 
     companion object {
-        const val USER_ID_HEADER: String = "X-User-Id"
-
         /*
         todo    :: PageResult 응답 표준 필드. 첫 페이징 컨트롤러에서 채택, 그때까지 미사용이면 제거.
          author :: heechoel shin

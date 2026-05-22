@@ -1,9 +1,9 @@
 package com.crispinlab.space.adapter.web.space
 
-import com.crispinlab.space.adapter.web.auth.Auth
 import com.crispinlab.space.application.port.incoming.space.SpaceGetting
 import com.crispinlab.space.application.port.incoming.space.SpaceGetting.Request
 import com.crispinlab.space.application.port.incoming.space.SpaceGetting.Result
+import com.crispinlab.user.adapter.web.auth.Auth
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping

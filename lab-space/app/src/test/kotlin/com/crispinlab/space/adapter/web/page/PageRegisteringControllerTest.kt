@@ -7,6 +7,7 @@ import com.crispinlab.space.application.port.incoming.page.PageRegistering.Resul
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
+import com.crispinlab.user.testsupport.withAuth
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -40,7 +41,7 @@ class PageRegisteringControllerTest :
                 controller
                     .`when`(
                         post("/v1/pages")
-                            .withUserHeader()
+                            .withAuth()
                             .body(
                                 mapOf(
                                     "spaceId" to "10",
@@ -53,7 +54,7 @@ class PageRegisteringControllerTest :
                         status().isCreated,
                         jsonPath("$.pageId").value("42")
                     ).document(
-                        userHeaderRequired(),
+                        authHeaderRequired(),
                         requestFields {
                             "spaceId".string("소속 스페이스 식별자")
                             "parentPageId".string("부모 페이지 식별자", optional = true)
@@ -67,7 +68,7 @@ class PageRegisteringControllerTest :
                     )
             }
 
-            it("X-User-Id 헤더가 없으면 400 을 반환한다") {
+            it("Authorization 토큰이 없으면 401 을 반환한다") {
                 controller
                     .`when`(
                         post("/v1/pages")
@@ -79,7 +80,10 @@ class PageRegisteringControllerTest :
                                     "visibility" to "DRAFT"
                                 )
                             )
-                    ).then(status().isBadRequest)
+                    ).then(
+                        status().isUnauthorized,
+                        jsonPath("$.code").value("INVALID_SESSION")
+                    )
                 verify(exactly = 0) { useCase.perform(any()) }
             }
         }

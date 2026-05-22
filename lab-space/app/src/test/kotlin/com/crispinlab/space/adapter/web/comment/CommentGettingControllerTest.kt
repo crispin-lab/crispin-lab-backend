@@ -7,9 +7,10 @@ import com.crispinlab.space.application.port.incoming.comment.CommentGetting.Res
 import com.crispinlab.space.domain.comment.CommentErrorCode
 import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.domain.page.PageId
-import com.crispinlab.space.domain.user.UserId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
+import com.crispinlab.user.domain.user.UserId
+import com.crispinlab.user.testsupport.withAuth
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -47,13 +48,13 @@ class CommentGettingControllerTest :
 
                 controller
                     .`when`(
-                        get("/v1/pages/{pageId}/comments/{commentId}", 10, 7).withUserHeader()
+                        get("/v1/pages/{pageId}/comments/{commentId}", 10, 7).withAuth()
                     ).then(
                         status().isOk,
                         jsonPath("$.commentId").value("7"),
                         jsonPath("$.body").value("안녕하세요")
                     ).document(
-                        userHeaderRequired(),
+                        authHeaderRequired(),
                         responseFields {
                             "commentId".string("댓글 식별자")
                             "pageId".string("소속 페이지 식별자")
@@ -81,7 +82,7 @@ class CommentGettingControllerTest :
 
                 controller
                     .`when`(
-                        get("/v1/pages/{pageId}/comments/{commentId}", 10, 999).withUserHeader()
+                        get("/v1/pages/{pageId}/comments/{commentId}", 10, 999).withAuth()
                     ).then(
                         status().isNotFound,
                         jsonPath("$.code").value("COMMENT_NOT_FOUND"),
@@ -89,10 +90,13 @@ class CommentGettingControllerTest :
                     )
             }
 
-            it("X-User-Id 헤더가 없으면 400 을 반환한다") {
+            it("Authorization 토큰이 없으면 401 을 반환한다") {
                 controller
                     .`when`(get("/v1/pages/{pageId}/comments/{commentId}", 10, 1))
-                    .then(status().isBadRequest)
+                    .then(
+                        status().isUnauthorized,
+                        jsonPath("$.code").value("INVALID_SESSION")
+                    )
                 verify(exactly = 0) { useCase.perform(any()) }
             }
 
@@ -100,7 +104,7 @@ class CommentGettingControllerTest :
                 controller
                     .`when`(
                         get("/v1/pages/{pageId}/comments/{commentId}", 10, "not-a-number")
-                            .withUserHeader()
+                            .withAuth()
                     ).then(status().isBadRequest)
                 verify(exactly = 0) { useCase.perform(any()) }
             }

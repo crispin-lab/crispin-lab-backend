@@ -1,9 +1,9 @@
 package com.crispinlab.space.adapter.web.comment
 
-import com.crispinlab.space.adapter.web.auth.Auth
 import com.crispinlab.space.application.port.incoming.comment.CommentGetting
 import com.crispinlab.space.application.port.incoming.comment.CommentGetting.Request
 import com.crispinlab.space.application.port.incoming.comment.CommentGetting.Result
+import com.crispinlab.user.adapter.web.auth.Auth
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping

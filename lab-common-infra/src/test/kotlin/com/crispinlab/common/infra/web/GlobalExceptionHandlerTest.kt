@@ -3,6 +3,7 @@ package com.crispinlab.common.infra.web
 import com.crispinlab.common.exception.AuthenticationException
 import com.crispinlab.common.exception.DomainException
 import com.crispinlab.common.exception.ErrorCode
+import com.crispinlab.common.exception.ForbiddenException
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
@@ -29,6 +30,16 @@ class GlobalExceptionHandlerTest :
                 val body = response.body.shouldNotBeNull()
                 body.code shouldBe "INVALID_CREDENTIALS"
                 body.message shouldBe "인증 정보가 올바르지 않습니다."
+            }
+
+            it("ForbiddenException 은 403 + errorCode.code 로 매핑한다") {
+                val response =
+                    handler.handleForbidden(ForbiddenException(DummyErrorCode.ADMIN_ONLY))
+
+                response.statusCode shouldBe HttpStatus.FORBIDDEN
+                val body = response.body.shouldNotBeNull()
+                body.code shouldBe "ADMIN_ONLY"
+                body.message shouldBe "관리자만 수행할 수 있습니다."
             }
 
             it("DomainException 은 422 + errorCode.code 로 매핑한다") {
@@ -109,7 +120,8 @@ class GlobalExceptionHandlerTest :
         override val defaultMessage: String
     ) : ErrorCode {
         DUMMY_FAILURE("도메인 규칙을 위반했습니다."),
-        INVALID_CREDENTIALS("인증 정보가 올바르지 않습니다.")
+        INVALID_CREDENTIALS("인증 정보가 올바르지 않습니다."),
+        ADMIN_ONLY("관리자만 수행할 수 있습니다.")
         ;
 
         override val code: String get() = name

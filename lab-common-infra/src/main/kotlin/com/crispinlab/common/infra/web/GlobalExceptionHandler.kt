@@ -3,6 +3,7 @@ package com.crispinlab.common.infra.web
 import com.crispinlab.common.exception.AuthenticationException
 import com.crispinlab.common.exception.ConflictException
 import com.crispinlab.common.exception.DomainException
+import com.crispinlab.common.exception.ForbiddenException
 import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.common.logging.LogContext.Field
 import org.slf4j.LoggerFactory
@@ -26,6 +27,14 @@ class GlobalExceptionHandler {
     fun handleAuthentication(exception: AuthenticationException): ResponseEntity<ErrorPayload> =
         respondClientError(
             status = HttpStatus.UNAUTHORIZED,
+            code = exception.errorCode.code,
+            message = exception.message
+        )
+
+    @ExceptionHandler(ForbiddenException::class)
+    fun handleForbidden(exception: ForbiddenException): ResponseEntity<ErrorPayload> =
+        respondClientError(
+            status = HttpStatus.FORBIDDEN,
             code = exception.errorCode.code,
             message = exception.message
         )

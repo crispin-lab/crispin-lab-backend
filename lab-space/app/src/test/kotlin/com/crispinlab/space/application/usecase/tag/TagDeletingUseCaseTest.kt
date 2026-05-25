@@ -4,11 +4,13 @@ import com.crispinlab.common.exception.ForbiddenException
 import com.crispinlab.space.application.port.incoming.tag.TagDeleting.Request
 import com.crispinlab.space.application.port.outgoing.tag.TagRepository
 import com.crispinlab.space.domain.access.Viewer
+import com.crispinlab.space.domain.tag.TagErrorCode
 import com.crispinlab.space.domain.tag.TagId
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
+import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.just
@@ -37,10 +39,13 @@ class TagDeletingUseCaseTest :
                 verify(exactly = 1) { tagRepository.delete(TagId(42L)) }
             }
 
-            it("일반 USER 가 호출하면 ForbiddenException 으로 실패한다") {
-                shouldThrow<ForbiddenException> {
-                    useCase.perform(basicRequest(tagId = "42", isAdmin = false))
-                }
+            it("일반 USER 가 호출하면 TAG_ADMIN_ONLY 로 실패한다") {
+                val exception =
+                    shouldThrow<ForbiddenException> {
+                        useCase.perform(basicRequest(tagId = "42", isAdmin = false))
+                    }
+
+                exception.errorCode shouldBe TagErrorCode.TAG_ADMIN_ONLY
                 verify(exactly = 0) { tagRepository.delete(any()) }
             }
 

@@ -18,6 +18,7 @@ import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 
 class CommentGettingUseCaseTest :
     DescribeSpec({
@@ -64,6 +65,7 @@ class CommentGettingUseCaseTest :
                 shouldThrow<NotFoundException> {
                     useCase.perform(basicRequest())
                 }
+                verify(exactly = 0) { commentRepository.findBy(any()) }
             }
 
             it("다른 사용자의 DRAFT 페이지는 PAGE_NOT_FOUND") {
@@ -78,6 +80,7 @@ class CommentGettingUseCaseTest :
                 shouldThrow<NotFoundException> {
                     useCase.perform(basicRequest(userId = UserId(100L)))
                 }
+                verify(exactly = 0) { commentRepository.findBy(any()) }
             }
 
             it("본인의 DRAFT 페이지는 조회할 수 있다") {

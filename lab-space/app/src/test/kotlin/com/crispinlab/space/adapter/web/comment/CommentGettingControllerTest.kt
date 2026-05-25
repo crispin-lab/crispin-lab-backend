@@ -33,7 +33,7 @@ class CommentGettingControllerTest :
                         match {
                             it.pageId.value == 10L &&
                                 it.commentId.value == 7L &&
-                                it.currentUserId.value == 100L
+                                it.viewer.userId.value == 100L
                         }
                     )
                 } returns
@@ -70,7 +70,7 @@ class CommentGettingControllerTest :
                         match {
                             it.pageId.value == 10L &&
                                 it.commentId.value == 7L &&
-                                it.currentUserId.value == 100L
+                                it.viewer.userId.value == 100L
                         }
                     )
                 }

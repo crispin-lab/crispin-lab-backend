@@ -2,6 +2,7 @@ package com.crispinlab.space.adapter.web.tag
 
 import com.crispinlab.common.pagination.PageRequest.Companion.DEFAULT_SIZE
 import com.crispinlab.common.pagination.PageResult
+import com.crispinlab.space.adapter.web.auth.toMember
 import com.crispinlab.space.application.port.incoming.tag.PageTagListing
 import com.crispinlab.space.application.port.incoming.tag.PageTagListing.Request
 import com.crispinlab.space.application.port.incoming.tag.PageTagListing.Summary
@@ -28,7 +29,7 @@ class PageTagListingController(
             pageId = pageId,
             page = page,
             size = size,
-            currentUserId = auth.userId
+            viewer = auth.toMember()
         ).let {
             useCase.perform(it)
         }

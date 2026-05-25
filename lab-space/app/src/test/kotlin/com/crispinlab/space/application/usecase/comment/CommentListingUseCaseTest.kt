@@ -7,9 +7,11 @@ import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.application.port.incoming.comment.CommentListing.Request
 import com.crispinlab.space.application.port.outgoing.comment.CommentRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.comment.Comment
 import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.domain.page.PageId
+import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicComment
 import com.crispinlab.space.testsupport.Fixtures.basicPage
@@ -104,6 +106,32 @@ class CommentListingUseCaseTest :
                 verify(exactly = 0) { commentRepository.findByPageId(any(), any()) }
             }
 
+            it("다른 사용자의 DRAFT 페이지는 NotFoundException") {
+                every { pageRepository.findBy(any()) } returns
+                    basicPage(authorId = UserId(999L), visibility = Visibility.DRAFT)
+
+                shouldThrow<NotFoundException> {
+                    useCase.perform(basicRequest(userId = UserId(100L)))
+                }
+                verify(exactly = 0) { commentRepository.findByPageId(any(), any()) }
+            }
+
+            it("ADMIN 은 다른 사용자의 DRAFT 페이지의 댓글 목록도 조회할 수 있다") {
+                every { pageRepository.findBy(any()) } returns
+                    basicPage(authorId = UserId(999L), visibility = Visibility.DRAFT)
+                every { commentRepository.findByPageId(any(), any()) } returns
+                    PageResult(
+                        items = emptyList(),
+                        page = 0,
+                        size = 20,
+                        totalElements = 0L
+                    )
+
+                useCase.perform(basicRequest(isAdmin = true))
+
+                verify(exactly = 1) { commentRepository.findByPageId(any(), any()) }
+            }
+
             it("page 가 음수면 Request 생성에서 실패한다") {
                 shouldThrow<IllegalArgumentException> {
                     basicRequest(page = -1)
@@ -116,13 +144,14 @@ class CommentListingUseCaseTest :
             pageId: String = "10",
             page: Int = 0,
             size: Int = DEFAULT_SIZE,
-            currentUserId: UserId = UserId(100L)
+            userId: UserId = UserId(100L),
+            isAdmin: Boolean = false
         ): Request =
             Request(
                 pageId = pageId,
                 page = page,
                 size = size,
-                currentUserId = currentUserId
+                viewer = Viewer.Member(userId = userId, isAdmin = isAdmin)
             )
     }
 }

@@ -3,10 +3,14 @@ package com.crispinlab.space.application.usecase.comment
 import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.space.application.port.incoming.comment.CommentGetting.Request
 import com.crispinlab.space.application.port.outgoing.comment.CommentRepository
+import com.crispinlab.space.application.port.outgoing.page.PageRepository
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.domain.page.PageId
+import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicComment
+import com.crispinlab.space.testsupport.Fixtures.basicPage
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -18,20 +22,28 @@ import io.mockk.mockk
 class CommentGettingUseCaseTest :
     DescribeSpec({
         val commentRepository = mockk<CommentRepository>()
-        val useCase = CommentGettingUseCase(commentRepository, DummyTransactionProvider())
+        val pageRepository = mockk<PageRepository>()
+        val useCase =
+            CommentGettingUseCase(
+                commentRepository,
+                pageRepository,
+                DummyTransactionProvider()
+            )
 
         beforeEach {
-            clearMocks(commentRepository)
+            clearMocks(commentRepository, pageRepository)
         }
 
         describe("댓글 단건 조회") {
-            it("정상적으로 조회한다") {
+            it("PUBLIC 페이지의 댓글을 정상 조회한다") {
+                val page = basicPage(id = PageId(10L), visibility = Visibility.PUBLIC)
                 val comment =
                     basicComment(
                         id = CommentId(7L),
-                        pageId = PageId(10L),
+                        pageId = page.id,
                         body = "안녕하세요"
                     )
+                every { pageRepository.findBy(page.id) } returns page
                 every { commentRepository.findBy(comment.id) } returns comment
 
                 val result =
@@ -46,15 +58,63 @@ class CommentGettingUseCaseTest :
                 result.body shouldBe "안녕하세요"
             }
 
-            it("삭제된 댓글은 repository.findBy 가 자동 필터로 null 을 돌려주므로 NotFoundException") {
-                every { commentRepository.findBy(any()) } returns null
+            it("페이지가 없으면 NotFoundException") {
+                every { pageRepository.findBy(any()) } returns null
 
                 shouldThrow<NotFoundException> {
                     useCase.perform(basicRequest())
                 }
             }
 
+            it("다른 사용자의 DRAFT 페이지는 PAGE_NOT_FOUND") {
+                val page =
+                    basicPage(
+                        id = PageId(10L),
+                        authorId = UserId(999L),
+                        visibility = Visibility.DRAFT
+                    )
+                every { pageRepository.findBy(page.id) } returns page
+
+                shouldThrow<NotFoundException> {
+                    useCase.perform(basicRequest(userId = UserId(100L)))
+                }
+            }
+
+            it("본인의 DRAFT 페이지는 조회할 수 있다") {
+                val page =
+                    basicPage(
+                        id = PageId(10L),
+                        authorId = UserId(100L),
+                        visibility = Visibility.DRAFT
+                    )
+                val comment = basicComment(pageId = page.id)
+                every { pageRepository.findBy(page.id) } returns page
+                every { commentRepository.findBy(comment.id) } returns comment
+
+                val result = useCase.perform(basicRequest(userId = UserId(100L)))
+
+                result.commentId shouldBe comment.id
+            }
+
+            it("ADMIN 은 다른 사용자의 DRAFT 페이지의 댓글도 조회할 수 있다") {
+                val page =
+                    basicPage(
+                        id = PageId(10L),
+                        authorId = UserId(999L),
+                        visibility = Visibility.DRAFT
+                    )
+                val comment = basicComment(pageId = page.id)
+                every { pageRepository.findBy(page.id) } returns page
+                every { commentRepository.findBy(comment.id) } returns comment
+
+                val result = useCase.perform(basicRequest(isAdmin = true))
+
+                result.commentId shouldBe comment.id
+            }
+
             it("댓글이 없으면 NotFoundException") {
+                every { pageRepository.findBy(any()) } returns
+                    basicPage(visibility = Visibility.PUBLIC)
                 every { commentRepository.findBy(any()) } returns null
 
                 shouldThrow<NotFoundException> {
@@ -63,7 +123,9 @@ class CommentGettingUseCaseTest :
             }
 
             it("URL 의 pageId 와 댓글의 pageId 가 다르면 NotFoundException") {
+                val page = basicPage(id = PageId(10L), visibility = Visibility.PUBLIC)
                 val comment = basicComment(pageId = PageId(999L))
+                every { pageRepository.findBy(page.id) } returns page
                 every { commentRepository.findBy(comment.id) } returns comment
 
                 shouldThrow<NotFoundException> {
@@ -90,12 +152,13 @@ class CommentGettingUseCaseTest :
         fun basicRequest(
             pageId: String = "10",
             commentId: String = "1",
-            currentUserId: UserId = UserId(100L)
+            userId: UserId = UserId(100L),
+            isAdmin: Boolean = false
         ): Request =
             Request(
                 pageId = pageId,
                 commentId = commentId,
-                currentUserId = currentUserId
+                viewer = Viewer.Member(userId = userId, isAdmin = isAdmin)
             )
     }
 }

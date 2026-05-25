@@ -1,5 +1,6 @@
 package com.crispinlab.space.adapter.web.comment
 
+import com.crispinlab.space.adapter.web.auth.toMember
 import com.crispinlab.space.application.port.incoming.comment.CommentGetting
 import com.crispinlab.space.application.port.incoming.comment.CommentGetting.Request
 import com.crispinlab.space.application.port.incoming.comment.CommentGetting.Result
@@ -23,7 +24,7 @@ class CommentGettingController(
         Request(
             pageId = pageId,
             commentId = commentId,
-            currentUserId = auth.userId
+            viewer = auth.toMember()
         ).let {
             useCase.perform(it)
         }

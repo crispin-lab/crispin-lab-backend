@@ -6,13 +6,17 @@ import com.crispinlab.space.application.port.incoming.comment.CommentGetting
 import com.crispinlab.space.application.port.incoming.comment.CommentGetting.Request
 import com.crispinlab.space.application.port.incoming.comment.CommentGetting.Result
 import com.crispinlab.space.application.port.outgoing.comment.CommentRepository
+import com.crispinlab.space.application.port.outgoing.page.PageRepository
+import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
 import com.crispinlab.space.domain.comment.Comment
 import com.crispinlab.space.domain.comment.CommentErrorCode
+import com.crispinlab.space.domain.page.PageErrorCode
 import org.springframework.stereotype.Service
 
 @Service
 class CommentGettingUseCase(
     private val commentRepository: CommentRepository,
+    private val pageRepository: PageRepository,
     private val transactionProvider: TransactionProvider
 ) : CommentGetting {
     override fun perform(request: Request): Result =
@@ -25,20 +29,18 @@ class CommentGettingUseCase(
         }
 
     private fun Request.validate() {
-        /*
-        todo    :: 비공개 페이지·권한 모델 도입 시 외부 의존 검증을 둘 자리. 현재는 누구나 조회 가능.
-         author :: heechoel shin
-         date   :: 2026-05-14T00:00:00KST
-         ticket :: LAB-23
-         */
+        val scope = VisibilityScope.of(viewer)
+        pageRepository
+            .findBy(pageId)
+            ?.takeIf { scope.allows(it.visibility, it.authorId) }
+            ?: throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
     }
 
     private fun Request.toEntity(): Comment =
         commentRepository
             .findBy(commentId)
-            ?.takeIf {
-                it.pageId == pageId
-            } ?: throw NotFoundException(CommentErrorCode.COMMENT_NOT_FOUND)
+            ?.takeIf { it.pageId == pageId }
+            ?: throw NotFoundException(CommentErrorCode.COMMENT_NOT_FOUND)
 
     private fun Comment.toResult(): Result =
         Result(

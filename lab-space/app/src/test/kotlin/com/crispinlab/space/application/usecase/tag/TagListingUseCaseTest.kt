@@ -7,6 +7,7 @@ import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.application.port.incoming.tag.TagListing.Request
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.tag.TagRepository
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.tag.Tag
 import com.crispinlab.space.domain.tag.TagId
@@ -126,13 +127,14 @@ class TagListingUseCaseTest :
             spaceId: String = "10",
             page: Int = 0,
             size: Int = DEFAULT_SIZE,
-            currentUserId: UserId = UserId(100L)
+            userId: UserId = UserId(100L),
+            isAdmin: Boolean = false
         ): Request =
             Request(
                 spaceId = spaceId,
                 page = page,
                 size = size,
-                currentUserId = currentUserId
+                viewer = Viewer.Member(userId = userId, isAdmin = isAdmin)
             )
     }
 }

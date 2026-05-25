@@ -3,7 +3,7 @@ package com.crispinlab.space.application.usecase.comment
 import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.space.application.port.incoming.comment.CommentDeleting.Request
 import com.crispinlab.space.application.port.outgoing.comment.CommentRepository
-import com.crispinlab.space.domain.comment.CommentId
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicComment
@@ -71,16 +71,40 @@ class CommentDeletingUseCaseTest :
                 every { commentRepository.findBy(comment.id) } returns comment
 
                 shouldThrow<NotFoundException> {
-                    useCase.perform(basicRequest(currentUserId = UserId(100L)))
+                    useCase.perform(basicRequest(userId = UserId(100L)))
                 }
                 verify(exactly = 0) { commentRepository.delete(any()) }
             }
 
-            it("이미 삭제된 댓글은 자동 필터로 findBy 가 null 을 반환하므로 NotFoundException") {
-                every { commentRepository.findBy(CommentId(1L)) } returns null
+            it("ADMIN 은 작성자가 아니어도 삭제 가능하다") {
+                val comment = basicComment(pageId = PageId(10L), authorId = UserId(200L))
+                every { commentRepository.findBy(comment.id) } returns comment
+                justRun { commentRepository.delete(comment.id) }
+
+                useCase.perform(
+                    basicRequest(
+                        pageId = "10",
+                        commentId = comment.id.value.toString(),
+                        userId = UserId(100L),
+                        isAdmin = true
+                    )
+                )
+
+                verify(exactly = 1) { commentRepository.delete(comment.id) }
+            }
+
+            it("ADMIN 이라도 URL 의 pageId 와 댓글의 pageId 가 다르면 NotFoundException") {
+                val comment = basicComment(pageId = PageId(999L))
+                every { commentRepository.findBy(comment.id) } returns comment
 
                 shouldThrow<NotFoundException> {
-                    useCase.perform(basicRequest())
+                    useCase.perform(
+                        basicRequest(
+                            pageId = "10",
+                            commentId = comment.id.value.toString(),
+                            isAdmin = true
+                        )
+                    )
                 }
                 verify(exactly = 0) { commentRepository.delete(any()) }
             }
@@ -90,12 +114,13 @@ class CommentDeletingUseCaseTest :
         fun basicRequest(
             pageId: String = "10",
             commentId: String = "1",
-            currentUserId: UserId = UserId(100L)
+            userId: UserId = UserId(100L),
+            isAdmin: Boolean = false
         ): Request =
             Request(
                 pageId = pageId,
                 commentId = commentId,
-                currentUserId = currentUserId
+                viewer = Viewer.Member(userId = userId, isAdmin = isAdmin)
             )
     }
 }

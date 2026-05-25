@@ -7,6 +7,7 @@ import com.crispinlab.space.application.port.incoming.tag.PageTagListing
 import com.crispinlab.space.application.port.incoming.tag.PageTagListing.Request
 import com.crispinlab.space.application.port.incoming.tag.PageTagListing.Summary
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
+import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
 import com.crispinlab.space.application.port.outgoing.tag.TagRepository
 import com.crispinlab.space.domain.page.PageErrorCode
 import com.crispinlab.space.domain.tag.Tag
@@ -27,7 +28,10 @@ class PageTagListingUseCase(
         }
 
     private fun Request.validate() {
-        pageRepository.findBy(pageId)
+        val scope = VisibilityScope.of(viewer)
+        pageRepository
+            .findBy(pageId)
+            ?.takeIf { scope.allows(it.visibility, it.authorId) }
             ?: throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
     }
 

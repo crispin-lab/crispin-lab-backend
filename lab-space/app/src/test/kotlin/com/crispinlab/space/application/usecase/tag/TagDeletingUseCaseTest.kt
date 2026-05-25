@@ -1,7 +1,9 @@
 package com.crispinlab.space.application.usecase.tag
 
+import com.crispinlab.common.exception.ForbiddenException
 import com.crispinlab.space.application.port.incoming.tag.TagDeleting.Request
 import com.crispinlab.space.application.port.outgoing.tag.TagRepository
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.tag.TagId
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.user.domain.user.UserId
@@ -29,14 +31,21 @@ class TagDeletingUseCaseTest :
         }
 
         describe("태그 삭제") {
-            it("delete 를 호출한다") {
-                useCase.perform(basicRequest(tagId = "42"))
+            it("ADMIN 이면 delete 를 호출한다") {
+                useCase.perform(basicRequest(tagId = "42", isAdmin = true))
 
                 verify(exactly = 1) { tagRepository.delete(TagId(42L)) }
             }
 
-            it("Tag 가 없어도 멱등 성공 — delete 를 그대로 호출한다") {
-                useCase.perform(basicRequest(tagId = "9999"))
+            it("일반 USER 가 호출하면 ForbiddenException 으로 실패한다") {
+                shouldThrow<ForbiddenException> {
+                    useCase.perform(basicRequest(tagId = "42", isAdmin = false))
+                }
+                verify(exactly = 0) { tagRepository.delete(any()) }
+            }
+
+            it("ADMIN 이고 Tag 가 없어도 멱등 성공 — delete 를 그대로 호출한다") {
+                useCase.perform(basicRequest(tagId = "9999", isAdmin = true))
 
                 verify(exactly = 1) { tagRepository.delete(TagId(9999L)) }
             }
@@ -51,11 +60,12 @@ class TagDeletingUseCaseTest :
     companion object {
         fun basicRequest(
             tagId: String = "1",
-            currentUserId: UserId = UserId(100L)
+            userId: UserId = UserId(100L),
+            isAdmin: Boolean = false
         ): Request =
             Request(
                 tagId = tagId,
-                currentUserId = currentUserId
+                viewer = Viewer.Member(userId = userId, isAdmin = isAdmin)
             )
     }
 }

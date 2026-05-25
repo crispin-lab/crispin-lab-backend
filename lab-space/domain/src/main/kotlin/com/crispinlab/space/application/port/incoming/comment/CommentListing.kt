@@ -6,6 +6,7 @@ import com.crispinlab.common.pagination.PageRequest.Companion.DEFAULT_SIZE
 import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.application.port.incoming.comment.CommentListing.Request
 import com.crispinlab.space.application.port.incoming.comment.CommentListing.Summary
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.PageId.Companion.asPageId
@@ -17,7 +18,7 @@ interface CommentListing : UseCase<Request, PageResult<Summary>> {
         pageId: String,
         page: Int = 0,
         size: Int = DEFAULT_SIZE,
-        val currentUserId: UserId
+        val viewer: Viewer.Member
     ) {
         val pageId: PageId = pageId.asPageId()
         val pageRequest: PageRequest =

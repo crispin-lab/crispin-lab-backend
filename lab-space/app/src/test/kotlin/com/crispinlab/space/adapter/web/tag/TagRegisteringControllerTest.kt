@@ -29,7 +29,7 @@ class TagRegisteringControllerTest :
                         match {
                             it.spaceId.value == 10L &&
                                 it.name == "kotlin" &&
-                                it.currentUserId.value == 100L
+                                it.viewer.userId.value == 100L
                         }
                     )
                 } returns Result(tagId = TagId(42L))
@@ -58,7 +58,7 @@ class TagRegisteringControllerTest :
                         match {
                             it.spaceId.value == 10L &&
                                 it.name == "kotlin" &&
-                                it.currentUserId.value == 100L
+                                it.viewer.userId.value == 100L
                         }
                     )
                 }

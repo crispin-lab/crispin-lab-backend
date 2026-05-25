@@ -29,7 +29,7 @@ class CommentRegisteringControllerTest :
                         match {
                             it.pageId.value == 10L &&
                                 it.body == "첫 댓글" &&
-                                it.currentUserId.value == 100L
+                                it.viewer.userId.value == 100L
                         }
                     )
                 } returns Result(commentId = CommentId(42L))

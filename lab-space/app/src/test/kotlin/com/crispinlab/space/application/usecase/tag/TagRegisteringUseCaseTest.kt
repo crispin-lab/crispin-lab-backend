@@ -6,6 +6,7 @@ import com.crispinlab.common.id.IdGenerator
 import com.crispinlab.space.application.port.incoming.tag.TagRegistering.Request
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.tag.TagRepository
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.tag.Tag
 import com.crispinlab.space.domain.tag.TagId
@@ -98,12 +99,13 @@ class TagRegisteringUseCaseTest :
         fun basicRequest(
             spaceId: String = "10",
             name: String = "kotlin",
-            currentUserId: UserId = UserId(100L)
+            userId: UserId = UserId(100L),
+            isAdmin: Boolean = false
         ): Request =
             Request(
                 spaceId = spaceId,
                 name = name,
-                currentUserId = currentUserId
+                viewer = Viewer.Member(userId = userId, isAdmin = isAdmin)
             )
     }
 }

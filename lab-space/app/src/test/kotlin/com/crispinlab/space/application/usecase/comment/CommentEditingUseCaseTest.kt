@@ -3,6 +3,7 @@ package com.crispinlab.space.application.usecase.comment
 import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.space.application.port.incoming.comment.CommentEditing.Request
 import com.crispinlab.space.application.port.outgoing.comment.CommentRepository
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.comment.Comment
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.testsupport.DummyTransactionProvider
@@ -76,16 +77,45 @@ class CommentEditingUseCaseTest :
                 every { commentRepository.findBy(comment.id) } returns comment
 
                 shouldThrow<NotFoundException> {
-                    useCase.perform(basicRequest(currentUserId = UserId(100L)))
+                    useCase.perform(basicRequest(userId = UserId(100L)))
                 }
                 verify(exactly = 0) { commentRepository.save(any()) }
             }
 
-            it("이미 삭제된 댓글은 자동 필터로 findBy 가 null 을 반환하므로 NotFoundException") {
-                every { commentRepository.findBy(any()) } returns null
+            it("ADMIN 은 작성자가 아니어도 수정 가능하다") {
+                val comment =
+                    basicComment(pageId = PageId(10L), authorId = UserId(200L), body = "이전")
+                every { commentRepository.findBy(comment.id) } returns comment
+                val saved = slot<Comment>()
+                every { commentRepository.save(capture(saved)) } answers { saved.captured }
+
+                val result =
+                    useCase.perform(
+                        basicRequest(
+                            pageId = "10",
+                            commentId = comment.id.value.toString(),
+                            body = "수정됨",
+                            userId = UserId(100L),
+                            isAdmin = true
+                        )
+                    )
+
+                result.body shouldBe "수정됨"
+                saved.captured.body shouldBe "수정됨"
+            }
+
+            it("ADMIN 이라도 URL 의 pageId 와 댓글의 pageId 가 다르면 NotFoundException") {
+                val comment = basicComment(pageId = PageId(999L))
+                every { commentRepository.findBy(comment.id) } returns comment
 
                 shouldThrow<NotFoundException> {
-                    useCase.perform(basicRequest())
+                    useCase.perform(
+                        basicRequest(
+                            pageId = "10",
+                            commentId = comment.id.value.toString(),
+                            isAdmin = true
+                        )
+                    )
                 }
                 verify(exactly = 0) { commentRepository.save(any()) }
             }
@@ -96,13 +126,14 @@ class CommentEditingUseCaseTest :
             pageId: String = "10",
             commentId: String = "1",
             body: String = "수정된 댓글",
-            currentUserId: UserId = UserId(100L)
+            userId: UserId = UserId(100L),
+            isAdmin: Boolean = false
         ): Request =
             Request(
                 pageId = pageId,
                 commentId = commentId,
                 body = body,
-                currentUserId = currentUserId
+                viewer = Viewer.Member(userId = userId, isAdmin = isAdmin)
             )
     }
 }

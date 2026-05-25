@@ -6,6 +6,7 @@ import com.crispinlab.space.application.port.incoming.tag.PageTagAttaching
 import com.crispinlab.space.application.port.incoming.tag.PageTagAttaching.Request
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.tag.TagRepository
+import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageErrorCode
 import com.crispinlab.space.domain.tag.PageTag
 import com.crispinlab.space.domain.tag.TagErrorCode
@@ -31,20 +32,19 @@ class PageTagAttachingUseCase(
     }
 
     private fun Request.validate() {
-        /*
-        todo    :: 권한 모델 도입 시 currentUserId 기반 페이지 편집 권한 검증 추가.
-         author :: heechoel shin
-         date   :: 2026-05-15T09:00:00KST
-         ticket :: LAB-24
-         */
-        val page =
-            pageRepository.findBy(pageId)
-                ?: throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
+        val page: Page = editablePage()
         tagRepository
             .findBy(tagId)
             ?.takeIf { it.spaceId == page.spaceId }
             ?: throw NotFoundException(TagErrorCode.TAG_NOT_FOUND)
     }
+
+    private fun Request.editablePage(): Page =
+        pageRepository
+            .findBy(pageId)
+            ?.takeIf {
+                viewer.isAdmin || it.authorId == viewer.userId
+            } ?: throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
 
     private fun Request.toPageTag(): PageTag =
         PageTag(

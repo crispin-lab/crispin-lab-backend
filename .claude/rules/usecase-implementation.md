@@ -187,6 +187,14 @@ class PageDeletingUseCase(
 - 표준은 **`repository.delete(id)` 한 줄** — entity 가 `SoftDeletable` 이면 어댑터의 base 가 자동 분기로 `UPDATE deleted_at = now()`, 아니면 hard `DELETE` (`repository.md`). entity 에는 `delete()` 도메인 메서드를 두지 않는다 — 이중 삭제 invariant 는 `findBy` 자동 필터가 deleted entity 를 못 찾는 것으로 자연 보호 (NotFoundException 으로 fallback). 미래에 상태 머신·부수효과 같은 추가 invariant 가 필요해지면 그 PR 에서 도메인 메서드와 호출처를 함께 도입 (`entity.md` "SoftDeletable entity 패턴" 참조).
 - **`.withdraw()` 확장 함수**로 어댑터 호출을 분리 — `.let { repo.delete(it.id) }` 형태의 `it.id` 추출이 어색하므로 `private fun Entity.withdraw()` 로 한 단어. `withdraw` 는 위키/블로그 도메인에서 "게시물을 내린다" 의 사용자 행위. 본 저장소의 `toEntity` / `toResult` / `editWith` 단계 분리 패턴과 정합.
 
+### 권한 통과 후 멱등 — association / admin-gate 삭제
+
+association entity (예: `PageTag`) 의 `detach` 와 admin-only 삭제 (예: `TagDeleting`) 는 `findBy + takeIf` 로 엔티티 자체를 다시 조회하지 않고, 권한 검증만 한 뒤 `repository.detach(...)` / `repository.delete(id)` 를 호출한다. 매핑이 없거나 이미 삭제된 row 라도 `WHERE` 절이 0 rows affected 로 끝나 응답은 동일 (204). 의도:
+
+- **enumeration 방지**: 매핑 존재 여부 / row 존재 여부를 응답으로 구분하지 않는다 — IDOR/enumeration 정보 누출 없음 (`error-messages.md` "정보 노출 방지" 정합).
+- **race 안전**: ADMIN 두 명이 동시에 같은 `delete` 를 요청해도 둘 다 204. "X 가 없도록 만들어 달라" 는 의도라 race 마다 404 분기가 무의미.
+- **단건 entity 삭제와 다른 결**: `PageDeleting` / `CommentDeleting` 은 author/admin 검증을 위해 `findBy + takeIf` 가 필요하지만, association / admin-gate 는 권한 검증 자체가 entity 본체에 의존하지 않으므로 추가 조회를 두지 않는다.
+
 ## 트랜잭션 경계
 
 `lab-common` 의 `TransactionProvider` 를 UseCase 생성자로 주입받아 **`perform` 진입에서 한 번** 감싼다. 구현체(`DefaultTransactionProvider`) 는 `lab-common-infra` 가 Spring Boot auto-config 로 등록하므로 app 모듈은 의존만 추가하면 된다.

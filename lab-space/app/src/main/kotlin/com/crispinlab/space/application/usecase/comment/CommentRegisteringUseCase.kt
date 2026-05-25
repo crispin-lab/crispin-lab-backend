@@ -8,6 +8,7 @@ import com.crispinlab.space.application.port.incoming.comment.CommentRegistering
 import com.crispinlab.space.application.port.incoming.comment.CommentRegistering.Result
 import com.crispinlab.space.application.port.outgoing.comment.CommentRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
+import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
 import com.crispinlab.space.domain.comment.Comment
 import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.domain.page.PageErrorCode
@@ -32,7 +33,10 @@ class CommentRegisteringUseCase(
         }
 
     private fun Request.validate() {
-        pageRepository.findBy(pageId)
+        val scope = VisibilityScope.of(viewer)
+        pageRepository
+            .findBy(pageId)
+            ?.takeIf { scope.allows(it.visibility, it.authorId) }
             ?: throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
     }
 
@@ -40,7 +44,7 @@ class CommentRegisteringUseCase(
         Comment(
             id = CommentId(idGenerator.next()),
             pageId = pageId,
-            authorId = currentUserId,
+            authorId = viewer.userId,
             body = body
         )
 

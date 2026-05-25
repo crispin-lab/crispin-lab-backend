@@ -1,5 +1,6 @@
 package com.crispinlab.space.adapter.web.comment
 
+import com.crispinlab.space.adapter.web.auth.toMember
 import com.crispinlab.space.application.port.incoming.comment.CommentDeleting
 import com.crispinlab.space.application.port.incoming.comment.CommentDeleting.Request
 import com.crispinlab.user.adapter.web.auth.Auth
@@ -25,7 +26,7 @@ class CommentDeletingController(
         Request(
             pageId = pageId,
             commentId = commentId,
-            currentUserId = auth.userId
+            viewer = auth.toMember()
         ).let {
             useCase.perform(it)
         }

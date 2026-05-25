@@ -8,6 +8,7 @@ import com.crispinlab.space.application.port.incoming.comment.CommentListing.Req
 import com.crispinlab.space.application.port.incoming.comment.CommentListing.Summary
 import com.crispinlab.space.application.port.outgoing.comment.CommentRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
+import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
 import com.crispinlab.space.domain.comment.Comment
 import com.crispinlab.space.domain.page.PageErrorCode
 import org.springframework.stereotype.Service
@@ -27,7 +28,10 @@ class CommentListingUseCase(
         }
 
     private fun Request.validate() {
-        pageRepository.findBy(pageId)
+        val scope = VisibilityScope.of(viewer)
+        pageRepository
+            .findBy(pageId)
+            ?.takeIf { scope.allows(it.visibility, it.authorId) }
             ?: throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
     }
 

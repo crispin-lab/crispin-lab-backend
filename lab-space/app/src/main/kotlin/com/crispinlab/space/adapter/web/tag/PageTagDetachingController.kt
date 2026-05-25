@@ -1,5 +1,6 @@
 package com.crispinlab.space.adapter.web.tag
 
+import com.crispinlab.space.adapter.web.auth.toMember
 import com.crispinlab.space.application.port.incoming.tag.PageTagDetaching
 import com.crispinlab.space.application.port.incoming.tag.PageTagDetaching.Request
 import com.crispinlab.user.adapter.web.auth.Auth
@@ -25,7 +26,7 @@ class PageTagDetachingController(
         Request(
             pageId = pageId,
             tagId = tagId,
-            currentUserId = auth.userId
+            viewer = auth.toMember()
         ).let {
             useCase.perform(it)
         }

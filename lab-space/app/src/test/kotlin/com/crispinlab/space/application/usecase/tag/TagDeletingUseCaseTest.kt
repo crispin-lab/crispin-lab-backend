@@ -1,12 +1,16 @@
 package com.crispinlab.space.application.usecase.tag
 
+import com.crispinlab.common.exception.ForbiddenException
 import com.crispinlab.space.application.port.incoming.tag.TagDeleting.Request
 import com.crispinlab.space.application.port.outgoing.tag.TagRepository
+import com.crispinlab.space.domain.access.Viewer
+import com.crispinlab.space.domain.tag.TagErrorCode
 import com.crispinlab.space.domain.tag.TagId
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
+import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.just
@@ -29,14 +33,24 @@ class TagDeletingUseCaseTest :
         }
 
         describe("태그 삭제") {
-            it("delete 를 호출한다") {
-                useCase.perform(basicRequest(tagId = "42"))
+            it("ADMIN 이면 delete 를 호출한다") {
+                useCase.perform(basicRequest(tagId = "42", isAdmin = true))
 
                 verify(exactly = 1) { tagRepository.delete(TagId(42L)) }
             }
 
-            it("Tag 가 없어도 멱등 성공 — delete 를 그대로 호출한다") {
-                useCase.perform(basicRequest(tagId = "9999"))
+            it("일반 USER 가 호출하면 TAG_ADMIN_ONLY 로 실패한다") {
+                val exception =
+                    shouldThrow<ForbiddenException> {
+                        useCase.perform(basicRequest(tagId = "42", isAdmin = false))
+                    }
+
+                exception.errorCode shouldBe TagErrorCode.TAG_ADMIN_ONLY
+                verify(exactly = 0) { tagRepository.delete(any()) }
+            }
+
+            it("ADMIN 이고 Tag 가 없어도 멱등 성공 — delete 를 그대로 호출한다") {
+                useCase.perform(basicRequest(tagId = "9999", isAdmin = true))
 
                 verify(exactly = 1) { tagRepository.delete(TagId(9999L)) }
             }
@@ -51,11 +65,12 @@ class TagDeletingUseCaseTest :
     companion object {
         fun basicRequest(
             tagId: String = "1",
-            currentUserId: UserId = UserId(100L)
+            userId: UserId = UserId(100L),
+            isAdmin: Boolean = false
         ): Request =
             Request(
                 tagId = tagId,
-                currentUserId = currentUserId
+                viewer = Viewer.Member(userId = userId, isAdmin = isAdmin)
             )
     }
 }

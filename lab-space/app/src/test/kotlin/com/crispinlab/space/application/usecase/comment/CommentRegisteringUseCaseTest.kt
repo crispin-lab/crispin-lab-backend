@@ -5,8 +5,10 @@ import com.crispinlab.common.id.IdGenerator
 import com.crispinlab.space.application.port.incoming.comment.CommentRegistering.Request
 import com.crispinlab.space.application.port.outgoing.comment.CommentRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.comment.Comment
 import com.crispinlab.space.domain.comment.CommentId
+import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicPage
 import com.crispinlab.user.domain.user.UserId
@@ -67,6 +69,26 @@ class CommentRegisteringUseCaseTest :
                 verify(exactly = 0) { commentRepository.save(any()) }
             }
 
+            it("다른 사용자의 DRAFT 페이지에는 댓글을 달 수 없다") {
+                every { pageRepository.findBy(any()) } returns
+                    basicPage(authorId = UserId(999L), visibility = Visibility.DRAFT)
+
+                shouldThrow<NotFoundException> {
+                    useCase.perform(basicRequest(userId = UserId(100L)))
+                }
+                verify(exactly = 0) { commentRepository.save(any()) }
+            }
+
+            it("ADMIN 은 다른 사용자의 DRAFT 페이지에도 댓글을 달 수 있다") {
+                every { idGenerator.next() } returns 42L
+                every { pageRepository.findBy(any()) } returns
+                    basicPage(authorId = UserId(999L), visibility = Visibility.DRAFT)
+
+                useCase.perform(basicRequest(isAdmin = true))
+
+                verify(exactly = 1) { commentRepository.save(any()) }
+            }
+
             it("body 가 비어 있으면 entity 생성에서 실패한다") {
                 every { idGenerator.next() } returns 1L
 
@@ -87,12 +109,13 @@ class CommentRegisteringUseCaseTest :
         fun basicRequest(
             pageId: String = "10",
             body: String = "댓글 내용",
-            currentUserId: UserId = UserId(100L)
+            userId: UserId = UserId(100L),
+            isAdmin: Boolean = false
         ): Request =
             Request(
                 pageId = pageId,
                 body = body,
-                currentUserId = currentUserId
+                viewer = Viewer.Member(userId = userId, isAdmin = isAdmin)
             )
     }
 }

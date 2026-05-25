@@ -18,30 +18,19 @@ class CommentEditingUseCase(
     override fun perform(request: Request): Result =
         transactionProvider.transactional {
             request
-                .also {
-                    it.validate()
-                }.toEntity()
+                .toEntity()
                 .editWith(request)
                 .let {
                     commentRepository.save(it)
                 }.toResult()
         }
 
-    private fun Request.validate() {
-        /*
-        todo    :: 비공개 페이지·권한 모델 도입 시 외부 의존 검증을 둘 자리.
-         author :: heechoel shin
-         date   :: 2026-05-14T00:00:00KST
-         ticket :: LAB-23
-         */
-    }
-
     private fun Request.toEntity(): Comment =
         commentRepository
             .findBy(commentId)
-            ?.takeIf {
-                it.pageId == pageId && it.authorId == currentUserId
-            } ?: throw NotFoundException(CommentErrorCode.COMMENT_NOT_FOUND)
+            ?.takeIf { it.pageId == pageId }
+            ?.takeIf { viewer.isAdmin || it.authorId == viewer.userId }
+            ?: throw NotFoundException(CommentErrorCode.COMMENT_NOT_FOUND)
 
     private fun Comment.editWith(request: Request): Comment =
         apply {

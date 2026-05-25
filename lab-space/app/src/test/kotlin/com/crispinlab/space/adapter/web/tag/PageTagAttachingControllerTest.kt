@@ -28,7 +28,7 @@ class PageTagAttachingControllerTest :
                         match {
                             it.pageId.value == 10L &&
                                 it.tagId.value == 200L &&
-                                it.currentUserId.value == 100L
+                                it.viewer.userId.value == 100L
                         }
                     )
                 } just runs

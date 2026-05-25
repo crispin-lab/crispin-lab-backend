@@ -1,10 +1,11 @@
 package com.crispinlab.space.adapter.web.comment
 
+import com.crispinlab.space.adapter.web.auth.toMember
 import com.crispinlab.space.application.port.incoming.comment.CommentEditing
 import com.crispinlab.space.application.port.incoming.comment.CommentEditing.Request
 import com.crispinlab.space.application.port.incoming.comment.CommentEditing.Result
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.user.adapter.web.auth.Auth
-import com.crispinlab.user.domain.user.UserId
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -27,7 +28,7 @@ class CommentEditingController(
             .toRequestWith(
                 pageId = pageId,
                 commentId = commentId,
-                userId = auth.userId
+                viewer = auth.toMember()
             ).let {
                 useCase.perform(it)
             }
@@ -38,13 +39,13 @@ class CommentEditingController(
         fun toRequestWith(
             pageId: String,
             commentId: String,
-            userId: UserId
+            viewer: Viewer.Member
         ): Request =
             Request(
                 pageId = pageId,
                 commentId = commentId,
                 body = body,
-                currentUserId = userId
+                viewer = viewer
             )
     }
 }

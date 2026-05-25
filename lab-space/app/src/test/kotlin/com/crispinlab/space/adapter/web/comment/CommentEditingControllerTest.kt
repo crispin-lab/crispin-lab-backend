@@ -31,7 +31,7 @@ class CommentEditingControllerTest :
                             it.pageId.value == 10L &&
                                 it.commentId.value == 7L &&
                                 it.body == "수정된 댓글" &&
-                                it.currentUserId.value == 100L
+                                it.viewer.userId.value == 100L
                         }
                     )
                 } returns
@@ -68,7 +68,7 @@ class CommentEditingControllerTest :
                             it.pageId.value == 10L &&
                                 it.commentId.value == 7L &&
                                 it.body == "수정된 댓글" &&
-                                it.currentUserId.value == 100L
+                                it.viewer.userId.value == 100L
                         }
                     )
                 }

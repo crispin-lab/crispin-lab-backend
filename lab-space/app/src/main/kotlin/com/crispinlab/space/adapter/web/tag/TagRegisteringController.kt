@@ -1,10 +1,11 @@
 package com.crispinlab.space.adapter.web.tag
 
+import com.crispinlab.space.adapter.web.auth.toMember
 import com.crispinlab.space.application.port.incoming.tag.TagRegistering
 import com.crispinlab.space.application.port.incoming.tag.TagRegistering.Request
 import com.crispinlab.space.application.port.incoming.tag.TagRegistering.Result
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.user.adapter.web.auth.Auth
-import com.crispinlab.user.domain.user.UserId
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -24,7 +25,7 @@ class TagRegisteringController(
         auth: Auth
     ): Result =
         body
-            .toRequestWith(userId = auth.userId)
+            .toRequestWith(viewer = auth.toMember())
             .let {
                 useCase.perform(it)
             }
@@ -33,11 +34,11 @@ class TagRegisteringController(
         val spaceId: String,
         val name: String
     ) {
-        fun toRequestWith(userId: UserId): Request =
+        fun toRequestWith(viewer: Viewer.Member): Request =
             Request(
                 spaceId = spaceId,
                 name = name,
-                currentUserId = userId
+                viewer = viewer
             )
     }
 }

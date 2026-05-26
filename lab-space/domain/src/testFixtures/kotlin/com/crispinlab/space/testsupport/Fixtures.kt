@@ -51,6 +51,7 @@ object Fixtures {
         visibility: Visibility = Visibility.DRAFT,
         currentVersion: Int = 1,
         createdAt: Instant = DUMMY_INSTANT,
+        updatedAt: Instant = createdAt,
         deletedAt: Instant? = null
     ): Page =
         Page(
@@ -63,6 +64,7 @@ object Fixtures {
             visibility = visibility,
             currentVersion = currentVersion,
             createdAt = createdAt,
+            updatedAt = updatedAt,
             deletedAt = deletedAt
         )
 

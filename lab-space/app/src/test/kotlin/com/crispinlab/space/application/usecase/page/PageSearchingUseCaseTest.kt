@@ -6,6 +6,7 @@ import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.application.port.incoming.page.PageSearching.Request
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.PageSummary
+import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.SortOption
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.domain.access.Viewer
@@ -61,6 +62,7 @@ class PageSearchingUseCaseTest :
                         keyword = "회고",
                         spaceId = SpaceId(10L),
                         tagIds = listOf(TagId(100L), TagId(200L)),
+                        sort = any(),
                         scope = any(),
                         pageRequest = any()
                     )
@@ -90,6 +92,7 @@ class PageSearchingUseCaseTest :
                         keyword = "회고",
                         spaceId = SpaceId(10L),
                         tagIds = listOf(TagId(100L), TagId(200L)),
+                        sort = any(),
                         scope = any(),
                         pageRequest =
                             withArg<PageRequest> {
@@ -106,6 +109,7 @@ class PageSearchingUseCaseTest :
                         keyword = null,
                         spaceId = null,
                         tagIds = emptyList(),
+                        sort = any(),
                         scope = any(),
                         pageRequest = any()
                     )
@@ -118,6 +122,7 @@ class PageSearchingUseCaseTest :
                         keyword = null,
                         spaceId = null,
                         tagIds = emptyList(),
+                        sort = any(),
                         scope = any(),
                         pageRequest = any()
                     )
@@ -130,6 +135,7 @@ class PageSearchingUseCaseTest :
                         keyword = null,
                         spaceId = null,
                         tagIds = emptyList(),
+                        sort = any(),
                         scope = any(),
                         pageRequest = any()
                     )
@@ -141,30 +147,55 @@ class PageSearchingUseCaseTest :
                 result.totalElements shouldBe 0L
             }
 
-            it("spaceId 형식이 숫자가 아니면 Request 생성에서 실패한다") {
-                shouldThrow<IllegalArgumentException> {
-                    basicRequest(spaceId = "abc")
+            it("sort 가 지정되면 SortOption 으로 변환되어 port 에 전달된다") {
+                every {
+                    pageSearchPort.search(
+                        keyword = any(),
+                        spaceId = any(),
+                        tagIds = any(),
+                        sort = any(),
+                        scope = any(),
+                        pageRequest = any()
+                    )
+                } returns PageResult.empty(basicRequest().pageRequest)
+
+                useCase.perform(basicRequest(sort = "CREATED_AT"))
+
+                verify {
+                    pageSearchPort.search(
+                        keyword = any(),
+                        spaceId = any(),
+                        tagIds = any(),
+                        sort = SortOption.CREATED_AT,
+                        scope = any(),
+                        pageRequest = any()
+                    )
                 }
             }
 
-            it("tagIds 중 하나라도 숫자가 아니면 Request 생성에서 실패한다") {
-                shouldThrow<IllegalArgumentException> {
-                    basicRequest(tagIds = listOf("1", "xx"))
-                }
-            }
+            it("sort 미지정 시 SortOption.UPDATED_AT 가 default 로 전달된다") {
+                every {
+                    pageSearchPort.search(
+                        keyword = any(),
+                        spaceId = any(),
+                        tagIds = any(),
+                        sort = any(),
+                        scope = any(),
+                        pageRequest = any()
+                    )
+                } returns PageResult.empty(basicRequest().pageRequest)
 
-            it("page 가 음수면 Request 생성에서 실패한다") {
-                shouldThrow<IllegalArgumentException> {
-                    basicRequest(page = -1)
-                }
-            }
+                useCase.perform(basicRequest(sort = null))
 
-            it("size 가 허용 범위를 벗어나면 Request 생성에서 실패한다") {
-                shouldThrow<IllegalArgumentException> {
-                    basicRequest(size = 0)
-                }
-                shouldThrow<IllegalArgumentException> {
-                    basicRequest(size = 201)
+                verify {
+                    pageSearchPort.search(
+                        keyword = any(),
+                        spaceId = any(),
+                        tagIds = any(),
+                        sort = SortOption.UPDATED_AT,
+                        scope = any(),
+                        pageRequest = any()
+                    )
                 }
             }
 
@@ -174,6 +205,7 @@ class PageSearchingUseCaseTest :
                         keyword = any(),
                         spaceId = any(),
                         tagIds = any(),
+                        sort = any(),
                         scope = any(),
                         pageRequest = any()
                     )
@@ -186,6 +218,7 @@ class PageSearchingUseCaseTest :
                         keyword = any(),
                         spaceId = any(),
                         tagIds = any(),
+                        sort = any(),
                         scope = VisibilityScope.Anonymous,
                         pageRequest = any()
                     )
@@ -201,6 +234,7 @@ class PageSearchingUseCaseTest :
                         keyword = any(),
                         spaceId = any(),
                         tagIds = any(),
+                        sort = any(),
                         scope = any(),
                         pageRequest = any()
                     )
@@ -217,6 +251,7 @@ class PageSearchingUseCaseTest :
                         keyword = any(),
                         spaceId = any(),
                         tagIds = any(),
+                        sort = any(),
                         scope =
                             VisibilityScope.Authenticated(
                                 viewerId = UserId(100L),
@@ -233,6 +268,7 @@ class PageSearchingUseCaseTest :
                         keyword = any(),
                         spaceId = any(),
                         tagIds = any(),
+                        sort = any(),
                         scope = any(),
                         pageRequest = any()
                     )
@@ -249,9 +285,45 @@ class PageSearchingUseCaseTest :
                         keyword = any(),
                         spaceId = any(),
                         tagIds = any(),
+                        sort = any(),
                         scope = VisibilityScope.Privileged,
                         pageRequest = any()
                     )
+                }
+            }
+        }
+
+        describe("Request 생성") {
+            it("지원하지 않는 sort 값이면 실패한다") {
+                shouldThrow<IllegalArgumentException> {
+                    basicRequest(sort = "UNKNOWN")
+                }
+            }
+
+            it("spaceId 형식이 숫자가 아니면 실패한다") {
+                shouldThrow<IllegalArgumentException> {
+                    basicRequest(spaceId = "abc")
+                }
+            }
+
+            it("tagIds 중 하나라도 숫자가 아니면 실패한다") {
+                shouldThrow<IllegalArgumentException> {
+                    basicRequest(tagIds = listOf("1", "xx"))
+                }
+            }
+
+            it("page 가 음수면 실패한다") {
+                shouldThrow<IllegalArgumentException> {
+                    basicRequest(page = -1)
+                }
+            }
+
+            it("size 가 허용 범위를 벗어나면 실패한다") {
+                shouldThrow<IllegalArgumentException> {
+                    basicRequest(size = 0)
+                }
+                shouldThrow<IllegalArgumentException> {
+                    basicRequest(size = 201)
                 }
             }
         }
@@ -261,6 +333,7 @@ class PageSearchingUseCaseTest :
             keyword: String? = null,
             spaceId: String? = null,
             tagIds: List<String> = emptyList(),
+            sort: String? = null,
             page: Int = 0,
             size: Int = DEFAULT_SIZE,
             viewer: Viewer = Viewer.Member(userId = UserId(100L), isAdmin = false)
@@ -269,6 +342,7 @@ class PageSearchingUseCaseTest :
                 keyword = keyword,
                 spaceId = spaceId,
                 tagIds = tagIds,
+                sort = sort,
                 page = page,
                 size = size,
                 viewer = viewer

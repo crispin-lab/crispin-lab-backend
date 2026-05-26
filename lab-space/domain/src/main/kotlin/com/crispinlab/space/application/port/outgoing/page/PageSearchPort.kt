@@ -15,9 +15,22 @@ interface PageSearchPort {
         keyword: String?,
         spaceId: SpaceId?,
         tagIds: Collection<TagId>,
+        sort: SortOption,
         scope: VisibilityScope,
         pageRequest: PageRequest
     ): PageResult<PageSummary>
+
+    enum class SortOption {
+        CREATED_AT,
+        UPDATED_AT,
+        RELEVANCE;
+
+        companion object {
+            fun String.asSortOption(): SortOption =
+                entries.firstOrNull { it.name == uppercase() }
+                    ?: throw IllegalArgumentException("지원하지 않는 정렬 옵션입니다.")
+        }
+    }
 
     sealed interface VisibilityScope {
         fun allows(

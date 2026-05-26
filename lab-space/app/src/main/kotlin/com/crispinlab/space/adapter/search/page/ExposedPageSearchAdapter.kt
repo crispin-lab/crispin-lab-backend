@@ -7,19 +7,23 @@ import com.crispinlab.space.adapter.persistence.tag.PageTags
 import com.crispinlab.space.adapter.persistence.toPageResult
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.PageSummary
+import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.SortOption
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.tag.TagId
+import org.jetbrains.exposed.v1.core.Expression
 import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.compoundAnd
+import org.jetbrains.exposed.v1.core.countDistinct
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.like
+import org.jetbrains.exposed.v1.core.lowerCase
 import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.jdbc.Query
 import org.jetbrains.exposed.v1.jdbc.select
@@ -32,6 +36,7 @@ class ExposedPageSearchAdapter : PageSearchPort {
         keyword: String?,
         spaceId: SpaceId?,
         tagIds: Collection<TagId>,
+        sort: SortOption,
         scope: VisibilityScope,
         pageRequest: PageRequest
     ): PageResult<PageSummary> {
@@ -45,26 +50,36 @@ class ExposedPageSearchAdapter : PageSearchPort {
             }
 
         return baseQuery(keyword, spaceId, tagPageIds, scope.toCondition())
-            .toPageResult(
-                pageRequest,
-                Pages.updatedAt to SortOrder.DESC,
-                Pages.id to SortOrder.DESC
-            ) { it.toSummary() }
+            .toPageResult(pageRequest, *sort.toOrderColumns()) { it.toSummary() }
     }
 
-    /*
-    todo    :: 한 태그에 매칭되는 page_id 수에 상한이 없어 메모리·IN 절 폭주 가능. ES 어댑터 교체 시 자연 해결.
-     author :: heechoel shin
-     date   :: 2026-05-15T17:30:00KST
-     ticket :: LAB-25
-     */
-    private fun matchedPageIdsByTag(tagIds: Collection<TagId>): List<Long> =
-        (PageTags innerJoin Pages)
+    private fun matchedPageIdsByTag(tagIds: Collection<TagId>): List<Long> {
+        val distinctTagIds = tagIds.map { it.value }.distinct()
+        return (PageTags innerJoin Pages)
             .select(PageTags.pageId)
             .where {
-                (PageTags.tagId inList tagIds.map { it.value }) and Pages.notDeleted()
-            }.withDistinct()
+                (PageTags.tagId inList distinctTagIds) and Pages.notDeleted()
+            }.groupBy(PageTags.pageId)
+            .having { PageTags.tagId.countDistinct() eq distinctTagIds.size.toLong() }
             .map { it[PageTags.pageId] }
+    }
+
+    private fun SortOption.toOrderColumns(): Array<Pair<Expression<*>, SortOrder>> =
+        when (this) {
+            SortOption.CREATED_AT -> {
+                arrayOf(
+                    Pages.createdAt to SortOrder.DESC,
+                    Pages.id to SortOrder.DESC
+                )
+            }
+
+            SortOption.UPDATED_AT, SortOption.RELEVANCE -> {
+                arrayOf(
+                    Pages.updatedAt to SortOrder.DESC,
+                    Pages.id to SortOrder.DESC
+                )
+            }
+        }
 
     private fun VisibilityScope.toCondition(): Op<Boolean> =
         when (this) {
@@ -103,8 +118,11 @@ class ExposedPageSearchAdapter : PageSearchPort {
                 add(Pages.notDeleted())
                 add(visibilityCondition)
                 keyword?.let {
-                    val pattern = "%${it.escapeLike()}%"
-                    add((Pages.title like pattern) or (Pages.content like pattern))
+                    val pattern = "%${it.lowercase().escapeLike()}%"
+                    add(
+                        (Pages.title.lowerCase() like pattern) or
+                            (Pages.content.lowerCase() like pattern)
+                    )
                 }
                 spaceId?.let { add(Pages.spaceId eq it.value) }
                 tagPageIds?.let { add(Pages.id inList it) }
@@ -113,7 +131,6 @@ class ExposedPageSearchAdapter : PageSearchPort {
         return Pages.selectAll().where { combined }
     }
 
-    // Postgres LIKE 의 default escape 문자(`\`)를 활용해 사용자 키워드 안의 wildcard 를 literal 로 만든다.
     private fun String.escapeLike(): String =
         replace("\\", "\\\\")
             .replace("%", "\\%")

@@ -4,6 +4,7 @@ import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder
 import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.application.port.incoming.page.PageSearching
 import com.crispinlab.space.application.port.incoming.page.PageSearching.Summary
+import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.SortOption
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.space.SpaceId
@@ -74,9 +75,12 @@ class PageSearchingControllerTest :
                     ).document(
                         authHeaderRequired(),
                         queryParameters(
-                            "query" isParameterFor "검색 키워드 (제목·본문 LIKE)" isOptional true,
+                            "query" isParameterFor "검색 키워드 (제목·본문, 대소문자 무시)" isOptional true,
                             "space" isParameterFor "스페이스 ID 필터" isOptional true,
-                            "tag" isParameterFor "태그 ID 필터 (다중 가능)" isOptional true
+                            "tag" isParameterFor "태그 ID 필터 (다중 시 AND 매칭)" isOptional true,
+                            "sort" isParameterFor
+                                "정렬 옵션 (CREATED_AT / UPDATED_AT / RELEVANCE, 기본값 UPDATED_AT)"
+                                isOptional true
                         ).withPaging(),
                         responseFields {
                             "items".array("검색 결과 목록") {
@@ -152,6 +156,39 @@ class PageSearchingControllerTest :
                         get("/v1/pages")
                             .withAuth()
                             .param("tag", "xx")
+                    ).then(
+                        status().isBadRequest,
+                        jsonPath("$.code").value("INVALID_REQUEST")
+                    )
+                verify(exactly = 0) { useCase.perform(any()) }
+            }
+
+            it("sort query param 이 UseCase Request 의 SortOption 으로 전달된다") {
+                val requestSlot = slot<PageSearching.Request>()
+                every { useCase.perform(capture(requestSlot)) } returns
+                    PageResult(
+                        items = emptyList(),
+                        page = 0,
+                        size = 20,
+                        totalElements = 0L
+                    )
+
+                controller
+                    .`when`(
+                        get("/v1/pages")
+                            .withAuth()
+                            .param("sort", "CREATED_AT")
+                    ).then(status().isOk)
+
+                requestSlot.captured.sort shouldBe SortOption.CREATED_AT
+            }
+
+            it("지원하지 않는 sort 값이면 400 을 반환한다") {
+                controller
+                    .`when`(
+                        get("/v1/pages")
+                            .withAuth()
+                            .param("sort", "UNKNOWN")
                     ).then(
                         status().isBadRequest,
                         jsonPath("$.code").value("INVALID_REQUEST")

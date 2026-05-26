@@ -44,7 +44,7 @@ class SpaceMemberRoleChangingUseCase(
         apply {
             if (role == SpaceMemberRole.OWNER &&
                 request.role != SpaceMemberRole.OWNER &&
-                spaceMemberRepository.lockAndCountOwners(request.spaceId) <= 1
+                spaceMemberRepository.countOwnersBy(request.spaceId) <= 1
             ) {
                 throw ConflictException(SpaceMemberErrorCode.CANNOT_REMOVE_LAST_OWNER)
             }

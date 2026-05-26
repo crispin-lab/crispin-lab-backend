@@ -104,7 +104,7 @@ class ExposedSpaceMemberRepository :
             .map { SpaceId(it[SpaceMembers.spaceId]) }
             .toSet()
 
-    override fun lockAndCountOwners(spaceId: SpaceId): Long =
+    override fun countOwnersBy(spaceId: SpaceId): Long =
         SpaceMembers
             .select(SpaceMembers.id)
             .where {

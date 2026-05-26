@@ -107,7 +107,7 @@ class SpaceMemberRemovingUseCaseTest :
                         userId = UserId(100L),
                         role = SpaceMemberRole.OWNER
                     )
-                every { spaceMemberRepository.lockAndCountOwners(SpaceId(10L)) } returns 1L
+                every { spaceMemberRepository.countOwnersBy(SpaceId(10L)) } returns 1L
 
                 shouldThrow<ConflictException> {
                     useCase.perform(basicRequest(targetUserId = "100"))

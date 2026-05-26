@@ -5,7 +5,9 @@ import com.crispinlab.space.application.port.incoming.page.PageRevisionGetting.R
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRevisionRepository
 import com.crispinlab.space.domain.access.Viewer
+import com.crispinlab.space.domain.page.PageErrorCode
 import com.crispinlab.space.domain.page.PageId
+import com.crispinlab.space.domain.page.PageRevisionErrorCode
 import com.crispinlab.space.domain.page.PageRevisionId
 import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.testsupport.DummyTransactionProvider
@@ -59,9 +61,11 @@ class PageRevisionGettingUseCaseTest :
             it("Page 가 없으면 PAGE_NOT_FOUND 로 응답한다") {
                 every { pageRepository.findBy(any()) } returns null
 
-                shouldThrow<NotFoundException> {
-                    useCase.perform(basicRequest())
-                }
+                val exception =
+                    shouldThrow<NotFoundException> {
+                        useCase.perform(basicRequest())
+                    }
+                exception.errorCode shouldBe PageErrorCode.PAGE_NOT_FOUND
                 verify(exactly = 0) {
                     pageRevisionRepository.findBy(any<PageId>(), any<Int>())
                 }
@@ -71,9 +75,11 @@ class PageRevisionGettingUseCaseTest :
                 every { pageRepository.findBy(any()) } returns
                     basicPage(authorId = UserId(999L), visibility = Visibility.DRAFT)
 
-                shouldThrow<NotFoundException> {
-                    useCase.perform(basicRequest())
-                }
+                val exception =
+                    shouldThrow<NotFoundException> {
+                        useCase.perform(basicRequest())
+                    }
+                exception.errorCode shouldBe PageErrorCode.PAGE_NOT_FOUND
                 verify(exactly = 0) {
                     pageRevisionRepository.findBy(any<PageId>(), any<Int>())
                 }
@@ -84,9 +90,11 @@ class PageRevisionGettingUseCaseTest :
                     pageRevisionRepository.findBy(any<PageId>(), any<Int>())
                 } returns null
 
-                shouldThrow<NotFoundException> {
-                    useCase.perform(basicRequest(version = 99))
-                }
+                val exception =
+                    shouldThrow<NotFoundException> {
+                        useCase.perform(basicRequest(version = 99))
+                    }
+                exception.errorCode shouldBe PageRevisionErrorCode.PAGE_REVISION_NOT_FOUND
             }
 
             it("비로그인 상태에서 PUBLIC 페이지의 리비전은 조회 가능하다") {

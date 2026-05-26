@@ -85,7 +85,7 @@ class SpaceMemberRoleChangingUseCaseTest :
                 }
             }
 
-            it("마지막 OWNER 를 강등하려 하면 ConflictException") {
+            it("마지막 OWNER 강등을 application 가드가 차단한다 (race 직렬화는 어댑터 .forUpdate() 책임)") {
                 every {
                     spaceMemberRepository.findBySpaceIdAndUserId(SpaceId(10L), UserId(100L))
                 } returns basicSpaceMember(userId = UserId(100L), role = SpaceMemberRole.OWNER)

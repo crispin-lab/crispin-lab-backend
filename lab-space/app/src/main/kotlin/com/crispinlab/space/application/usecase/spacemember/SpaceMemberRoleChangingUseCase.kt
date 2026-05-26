@@ -1,6 +1,5 @@
 package com.crispinlab.space.application.usecase.spacemember
 
-import com.crispinlab.common.exception.ConflictException
 import com.crispinlab.common.exception.ForbiddenException
 import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.common.transaction.TransactionProvider
@@ -8,6 +7,7 @@ import com.crispinlab.space.application.port.incoming.spacemember.SpaceMemberRol
 import com.crispinlab.space.application.port.incoming.spacemember.SpaceMemberRoleChanging.Request
 import com.crispinlab.space.application.port.incoming.spacemember.SpaceMemberRoleChanging.Result
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
+import com.crispinlab.space.application.usecase.access.ensureOwnerWillRemain
 import com.crispinlab.space.domain.spacemember.SpaceMember
 import com.crispinlab.space.domain.spacemember.SpaceMemberErrorCode
 import com.crispinlab.space.domain.spacemember.SpaceMemberRole
@@ -23,7 +23,14 @@ class SpaceMemberRoleChangingUseCase(
             request
                 .also { it.validate() }
                 .toEntity()
-                .changeRoleWith(request)
+                .also { target ->
+                    spaceMemberRepository.ensureOwnerWillRemain(
+                        spaceId = request.spaceId,
+                        isLosingOwner =
+                            target.role == SpaceMemberRole.OWNER &&
+                                request.role != SpaceMemberRole.OWNER
+                    )
+                }.changeRoleWith(request)
                 .let { spaceMemberRepository.save(it) }
                 .toResult()
         }
@@ -42,12 +49,6 @@ class SpaceMemberRoleChangingUseCase(
 
     private fun SpaceMember.changeRoleWith(request: Request): SpaceMember =
         apply {
-            if (role == SpaceMemberRole.OWNER &&
-                request.role != SpaceMemberRole.OWNER &&
-                spaceMemberRepository.countOwnersBy(request.spaceId) <= 1
-            ) {
-                throw ConflictException(SpaceMemberErrorCode.CANNOT_REMOVE_LAST_OWNER)
-            }
             changeRole(request.role)
         }
 

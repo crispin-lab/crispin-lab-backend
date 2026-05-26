@@ -16,6 +16,10 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit.MILLISECONDS
+import java.util.concurrent.TimeUnit.SECONDS
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 class ExposedSpaceMemberRepositoryTest :
@@ -246,6 +250,47 @@ class ExposedSpaceMemberRepositoryTest :
             it("findSpaceIdsByUserId 가 빈 set 을 다룬다") {
                 transaction(database) {
                     repository.findSpaceIdsByUserId(UserId(0L)) shouldBe emptySet()
+                }
+            }
+
+            it("countOwnersBy 는 다른 트랜잭션을 commit 까지 wait 시킨다 — FOR UPDATE race 보호") {
+                transaction(database) {
+                    repository.save(
+                        basicSpaceMember(
+                            id = SpaceMemberId(90L),
+                            spaceId = SpaceId(90L),
+                            userId = UserId(901L),
+                            role = SpaceMemberRole.OWNER
+                        )
+                    )
+                }
+
+                val executor = Executors.newFixedThreadPool(2)
+                val t1Locked = CountDownLatch(1)
+                val t1Proceed = CountDownLatch(1)
+                val t2Acquired = CountDownLatch(1)
+                try {
+                    executor.submit {
+                        transaction(database) {
+                            repository.countOwnersBy(SpaceId(90L))
+                            t1Locked.countDown()
+                            t1Proceed.await(5, SECONDS)
+                        }
+                    }
+                    t1Locked.await(5, SECONDS) shouldBe true
+
+                    executor.submit {
+                        transaction(database) {
+                            repository.countOwnersBy(SpaceId(90L))
+                            t2Acquired.countDown()
+                        }
+                    }
+                    t2Acquired.await(500, MILLISECONDS) shouldBe false
+
+                    t1Proceed.countDown()
+                    t2Acquired.await(5, SECONDS) shouldBe true
+                } finally {
+                    executor.shutdownNow()
                 }
             }
 

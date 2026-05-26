@@ -98,7 +98,7 @@ class SpaceMemberRemovingUseCaseTest :
                 verify(exactly = 0) { spaceMemberRepository.delete(any()) }
             }
 
-            it("마지막 OWNER 를 제거하려 하면 ConflictException") {
+            it("마지막 OWNER 제거를 application 가드가 차단한다 (race 직렬화는 어댑터 .forUpdate() 책임)") {
                 every {
                     spaceMemberRepository.findBySpaceIdAndUserId(SpaceId(10L), UserId(100L))
                 } returns

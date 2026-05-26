@@ -7,6 +7,7 @@ import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.application.port.incoming.page.PageRevisionListing.Request
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRevisionRepository
+import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.PageRevisionId
@@ -28,16 +29,19 @@ class PageRevisionListingUseCaseTest :
     DescribeSpec({
         val pageRepository = mockk<PageRepository>()
         val pageRevisionRepository = mockk<PageRevisionRepository>()
+        val spaceMemberRepository = mockk<SpaceMemberRepository>()
         val useCase =
             PageRevisionListingUseCase(
                 pageRepository = pageRepository,
                 pageRevisionRepository = pageRevisionRepository,
+                spaceMemberRepository = spaceMemberRepository,
                 transactionProvider = DummyTransactionProvider()
             )
 
         beforeEach {
-            clearMocks(pageRepository, pageRevisionRepository)
+            clearMocks(pageRepository, pageRevisionRepository, spaceMemberRepository)
             every { pageRepository.findBy(any()) } returns basicPage()
+            every { spaceMemberRepository.findSpaceIdsByUserId(any()) } returns emptySet()
         }
 
         describe("페이지 리비전 목록 조회") {

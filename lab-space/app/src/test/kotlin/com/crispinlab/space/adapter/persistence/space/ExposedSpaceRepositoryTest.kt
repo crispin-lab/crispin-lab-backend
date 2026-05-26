@@ -2,10 +2,12 @@ package com.crispinlab.space.adapter.persistence.space
 
 import com.crispinlab.common.pagination.PageRequest
 import com.crispinlab.common.persistence.PostgresTestContext
+import com.crispinlab.space.application.port.outgoing.space.SpaceVisibilityScope
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.Fixtures.basicSpace
+import com.crispinlab.user.domain.user.UserId
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -18,6 +20,7 @@ class ExposedSpaceRepositoryTest :
     DescribeSpec({
         val database = PostgresTestContext.database
         val repository = ExposedSpaceRepository()
+        val privileged: SpaceVisibilityScope = SpaceVisibilityScope.Privileged
 
         afterEach {
             PostgresTestContext.truncateAll()
@@ -94,7 +97,7 @@ class ExposedSpaceRepositoryTest :
                     val result =
                         repository.findPage(
                             PageRequest(page = 0, size = 10),
-                            SpaceVisibility.entries.toSet()
+                            privileged
                         )
                     result.totalElements shouldBe 1L
                     result.items.map { it.id } shouldBe listOf(SpaceId(41L))
@@ -104,11 +107,7 @@ class ExposedSpaceRepositoryTest :
             it("findPage 는 createdAt DESC 로 정렬해 페이지를 돌려준다") {
                 transaction(database) {
                     repository.save(
-                        basicSpace(
-                            id = SpaceId(11L),
-                            name = "오래된",
-                            createdAt = DUMMY_INSTANT
-                        )
+                        basicSpace(id = SpaceId(11L), name = "오래된", createdAt = DUMMY_INSTANT)
                     )
                     repository.save(
                         basicSpace(
@@ -129,11 +128,8 @@ class ExposedSpaceRepositoryTest :
                 transaction(database) {
                     val result =
                         repository.findPage(
-                            PageRequest(
-                                page = 0,
-                                size = 10
-                            ),
-                            SpaceVisibility.entries.toSet()
+                            PageRequest(page = 0, size = 10),
+                            privileged
                         )
 
                     result.totalElements shouldBe 3L
@@ -158,11 +154,8 @@ class ExposedSpaceRepositoryTest :
                 transaction(database) {
                     val secondPage =
                         repository.findPage(
-                            PageRequest(
-                                page = 1,
-                                size = 2
-                            ),
-                            SpaceVisibility.entries.toSet()
+                            PageRequest(page = 1, size = 2),
+                            privileged
                         )
 
                     secondPage.page shouldBe 1
@@ -177,11 +170,8 @@ class ExposedSpaceRepositoryTest :
                 transaction(database) {
                     val result =
                         repository.findPage(
-                            PageRequest(
-                                page = 0,
-                                size = 10
-                            ),
-                            SpaceVisibility.entries.toSet()
+                            PageRequest(page = 0, size = 10),
+                            privileged
                         )
 
                     result.items shouldBe emptyList()
@@ -244,36 +234,21 @@ class ExposedSpaceRepositoryTest :
             it("findPage 는 createdAt 이 동일하면 id DESC 로 결정적으로 정렬한다") {
                 transaction(database) {
                     repository.save(
-                        basicSpace(
-                            id = SpaceId(31L),
-                            name = "첫번째",
-                            createdAt = DUMMY_INSTANT
-                        )
+                        basicSpace(id = SpaceId(31L), name = "첫번째", createdAt = DUMMY_INSTANT)
                     )
                     repository.save(
-                        basicSpace(
-                            id = SpaceId(32L),
-                            name = "두번째",
-                            createdAt = DUMMY_INSTANT
-                        )
+                        basicSpace(id = SpaceId(32L), name = "두번째", createdAt = DUMMY_INSTANT)
                     )
                     repository.save(
-                        basicSpace(
-                            id = SpaceId(33L),
-                            name = "세번째",
-                            createdAt = DUMMY_INSTANT
-                        )
+                        basicSpace(id = SpaceId(33L), name = "세번째", createdAt = DUMMY_INSTANT)
                     )
                 }
 
                 transaction(database) {
                     val result =
                         repository.findPage(
-                            PageRequest(
-                                page = 0,
-                                size = 10
-                            ),
-                            SpaceVisibility.entries.toSet()
+                            PageRequest(page = 0, size = 10),
+                            privileged
                         )
 
                     result.items.map { it.id } shouldBe
@@ -281,7 +256,7 @@ class ExposedSpaceRepositoryTest :
                 }
             }
 
-            it("visibility 필터는 요청한 set 에 포함된 스페이스만 반환한다") {
+            it("Anonymous scope 는 PUBLIC 만 반환한다") {
                 transaction(database) {
                     repository.save(
                         basicSpace(
@@ -302,39 +277,40 @@ class ExposedSpaceRepositoryTest :
                 }
 
                 transaction(database) {
-                    val publicOnly =
+                    val result =
                         repository.findPage(
                             PageRequest(page = 0, size = 10),
-                            setOf(SpaceVisibility.PUBLIC)
+                            SpaceVisibilityScope.Anonymous
                         )
-                    publicOnly.items.map { it.id } shouldBe listOf(SpaceId(50L))
-                    publicOnly.totalElements shouldBe 1L
-
-                    val internalOnly =
-                        repository.findPage(
-                            PageRequest(page = 0, size = 10),
-                            setOf(SpaceVisibility.INTERNAL)
-                        )
-                    internalOnly.items.map { it.id } shouldBe listOf(SpaceId(51L))
-                    internalOnly.totalElements shouldBe 1L
-
-                    val both =
-                        repository.findPage(
-                            PageRequest(page = 0, size = 10),
-                            setOf(SpaceVisibility.PUBLIC, SpaceVisibility.INTERNAL)
-                        )
-                    both.items.map { it.id } shouldBe listOf(SpaceId(51L), SpaceId(50L))
-                    both.totalElements shouldBe 2L
+                    result.items.map { it.id } shouldBe listOf(SpaceId(50L))
+                    result.totalElements shouldBe 1L
                 }
             }
 
-            it("visibility set 이 비어 있으면 빈 페이지를 돌려준다") {
+            it("Authenticated scope 는 PUBLIC + 멤버 INTERNAL 만 반환한다") {
                 transaction(database) {
                     repository.save(
                         basicSpace(
                             id = SpaceId(60L),
+                            name = "공개",
                             visibility = SpaceVisibility.PUBLIC,
                             createdAt = DUMMY_INSTANT
+                        )
+                    )
+                    repository.save(
+                        basicSpace(
+                            id = SpaceId(61L),
+                            name = "내부 멤버",
+                            visibility = SpaceVisibility.INTERNAL,
+                            createdAt = DUMMY_INSTANT.plusSeconds(1)
+                        )
+                    )
+                    repository.save(
+                        basicSpace(
+                            id = SpaceId(62L),
+                            name = "내부 비멤버",
+                            visibility = SpaceVisibility.INTERNAL,
+                            createdAt = DUMMY_INSTANT.plusSeconds(2)
                         )
                     )
                 }
@@ -343,10 +319,44 @@ class ExposedSpaceRepositoryTest :
                     val result =
                         repository.findPage(
                             PageRequest(page = 0, size = 10),
-                            emptySet()
+                            SpaceVisibilityScope.Authenticated(
+                                viewerId = UserId(100L),
+                                memberOfSpaceIds = setOf(SpaceId(61L))
+                            )
                         )
-                    result.items shouldBe emptyList()
-                    result.totalElements shouldBe 0L
+                    result.items.map { it.id } shouldBe listOf(SpaceId(61L), SpaceId(60L))
+                    result.totalElements shouldBe 2L
+                }
+            }
+
+            it("Authenticated scope 의 memberOfSpaceIds 가 비어 있으면 PUBLIC 만 반환한다") {
+                transaction(database) {
+                    repository.save(
+                        basicSpace(
+                            id = SpaceId(70L),
+                            visibility = SpaceVisibility.PUBLIC,
+                            createdAt = DUMMY_INSTANT
+                        )
+                    )
+                    repository.save(
+                        basicSpace(
+                            id = SpaceId(71L),
+                            visibility = SpaceVisibility.INTERNAL,
+                            createdAt = DUMMY_INSTANT.plusSeconds(1)
+                        )
+                    )
+                }
+
+                transaction(database) {
+                    val result =
+                        repository.findPage(
+                            PageRequest(page = 0, size = 10),
+                            SpaceVisibilityScope.Authenticated(
+                                viewerId = UserId(100L),
+                                memberOfSpaceIds = emptySet()
+                            )
+                        )
+                    result.items.map { it.id } shouldBe listOf(SpaceId(70L))
                 }
             }
         }

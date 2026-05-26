@@ -13,6 +13,9 @@ import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.space.Space
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.space.SpaceVisibility
+import com.crispinlab.space.domain.spacemember.SpaceMember
+import com.crispinlab.space.domain.spacemember.SpaceMemberId
+import com.crispinlab.space.domain.spacemember.SpaceMemberRole
 import com.crispinlab.space.domain.tag.PageTag
 import com.crispinlab.space.domain.tag.Tag
 import com.crispinlab.space.domain.tag.TagId
@@ -138,5 +141,20 @@ object Fixtures {
             pageId = pageId,
             tagId = tagId,
             createdAt = createdAt
+        )
+
+    fun basicSpaceMember(
+        id: SpaceMemberId = SpaceMemberId(1L),
+        spaceId: SpaceId = SpaceId(10L),
+        userId: UserId = UserId(100L),
+        role: SpaceMemberRole = SpaceMemberRole.MEMBER,
+        joinedAt: Instant = DUMMY_INSTANT
+    ): SpaceMember =
+        SpaceMember(
+            id = id,
+            spaceId = spaceId,
+            userId = userId,
+            role = role,
+            joinedAt = joinedAt
         )
 }

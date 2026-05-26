@@ -4,6 +4,7 @@ import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.space.application.port.incoming.comment.CommentGetting.Request
 import com.crispinlab.space.application.port.outgoing.comment.CommentRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
+import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.domain.page.PageId
@@ -24,15 +25,18 @@ class CommentGettingUseCaseTest :
     DescribeSpec({
         val commentRepository = mockk<CommentRepository>()
         val pageRepository = mockk<PageRepository>()
+        val spaceMemberRepository = mockk<SpaceMemberRepository>()
         val useCase =
             CommentGettingUseCase(
-                commentRepository,
-                pageRepository,
-                DummyTransactionProvider()
+                commentRepository = commentRepository,
+                pageRepository = pageRepository,
+                spaceMemberRepository = spaceMemberRepository,
+                transactionProvider = DummyTransactionProvider()
             )
 
         beforeEach {
-            clearMocks(commentRepository, pageRepository)
+            clearMocks(commentRepository, pageRepository, spaceMemberRepository)
+            every { spaceMemberRepository.findSpaceIdsByUserId(any()) } returns emptySet()
         }
 
         describe("댓글 단건 조회") {

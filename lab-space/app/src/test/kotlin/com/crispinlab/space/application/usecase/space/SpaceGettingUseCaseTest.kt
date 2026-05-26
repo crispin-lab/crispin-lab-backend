@@ -3,7 +3,9 @@ package com.crispinlab.space.application.usecase.space
 import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.space.application.port.incoming.space.SpaceGetting.Request
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
+import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.domain.access.Viewer
+import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicSpace
@@ -18,15 +20,22 @@ import io.mockk.mockk
 class SpaceGettingUseCaseTest :
     DescribeSpec({
         val spaceRepository = mockk<SpaceRepository>()
-        val useCase = SpaceGettingUseCase(spaceRepository, DummyTransactionProvider())
+        val spaceMemberRepository = mockk<SpaceMemberRepository>()
+        val useCase =
+            SpaceGettingUseCase(
+                spaceRepository = spaceRepository,
+                spaceMemberRepository = spaceMemberRepository,
+                transactionProvider = DummyTransactionProvider()
+            )
 
         beforeEach {
-            clearMocks(spaceRepository)
+            clearMocks(spaceRepository, spaceMemberRepository)
+            every { spaceMemberRepository.findSpaceIdsByUserId(any()) } returns emptySet()
         }
 
         describe("스페이스 단건 조회") {
-            it("정상적으로 조회한다") {
-                val space = basicSpace(name = "팀 위키")
+            it("정상적으로 조회한다 — PUBLIC") {
+                val space = basicSpace(name = "팀 위키", visibility = SpaceVisibility.PUBLIC)
                 every { spaceRepository.findBy(space.id) } returns space
 
                 val result = useCase.perform(basicRequest())
@@ -68,11 +77,40 @@ class SpaceGettingUseCaseTest :
                 }
             }
 
-            it("로그인 상태에서는 INTERNAL 스페이스도 조회 가능하다") {
-                val space = basicSpace(visibility = SpaceVisibility.INTERNAL)
+            it("멤버가 아닌 USER 가 INTERNAL 스페이스를 보면 NotFoundException") {
+                val space = basicSpace(id = SpaceId(1L), visibility = SpaceVisibility.INTERNAL)
                 every { spaceRepository.findBy(space.id) } returns space
+                every {
+                    spaceMemberRepository.findSpaceIdsByUserId(UserId(100L))
+                } returns emptySet()
+
+                shouldThrow<NotFoundException> {
+                    useCase.perform(basicRequest())
+                }
+            }
+
+            it("멤버인 USER 는 INTERNAL 스페이스를 조회 가능하다") {
+                val space = basicSpace(id = SpaceId(1L), visibility = SpaceVisibility.INTERNAL)
+                every { spaceRepository.findBy(space.id) } returns space
+                every {
+                    spaceMemberRepository.findSpaceIdsByUserId(UserId(100L))
+                } returns setOf(SpaceId(1L))
 
                 val result = useCase.perform(basicRequest())
+
+                result.visibility shouldBe SpaceVisibility.INTERNAL
+            }
+
+            it("ADMIN 은 멤버가 아니어도 INTERNAL 스페이스를 조회 가능하다") {
+                val space = basicSpace(id = SpaceId(1L), visibility = SpaceVisibility.INTERNAL)
+                every { spaceRepository.findBy(space.id) } returns space
+
+                val result =
+                    useCase.perform(
+                        basicRequest(
+                            viewer = Viewer.Member(userId = UserId(100L), isAdmin = true)
+                        )
+                    )
 
                 result.visibility shouldBe SpaceVisibility.INTERNAL
             }

@@ -6,6 +6,7 @@ import com.crispinlab.common.pagination.PageRequest.Companion.DEFAULT_SIZE
 import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.application.port.incoming.tag.PageTagListing.Request
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
+import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.application.port.outgoing.tag.TagRepository
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.PageId
@@ -30,16 +31,19 @@ class PageTagListingUseCaseTest :
     DescribeSpec({
         val tagRepository = mockk<TagRepository>()
         val pageRepository = mockk<PageRepository>()
+        val spaceMemberRepository = mockk<SpaceMemberRepository>()
         val useCase =
             PageTagListingUseCase(
                 tagRepository = tagRepository,
                 pageRepository = pageRepository,
+                spaceMemberRepository = spaceMemberRepository,
                 transactionProvider = DummyTransactionProvider()
             )
 
         beforeEach {
-            clearMocks(tagRepository, pageRepository)
+            clearMocks(tagRepository, pageRepository, spaceMemberRepository)
             every { pageRepository.findBy(any()) } returns basicPage()
+            every { spaceMemberRepository.findSpaceIdsByUserId(any()) } returns emptySet()
         }
 
         describe("페이지 태그 목록 조회") {
@@ -130,6 +134,38 @@ class PageTagListingUseCaseTest :
                     )
 
                 useCase.perform(basicRequest(isAdmin = true))
+
+                verify(exactly = 1) { tagRepository.findTagsByPageId(any(), any()) }
+            }
+
+            it("INTERNAL 페이지는 Space 멤버가 아니면 NotFoundException") {
+                every { pageRepository.findBy(any()) } returns
+                    basicPage(spaceId = SpaceId(10L), visibility = Visibility.INTERNAL)
+                every {
+                    spaceMemberRepository.findSpaceIdsByUserId(any())
+                } returns emptySet()
+
+                shouldThrow<NotFoundException> {
+                    useCase.perform(basicRequest())
+                }
+                verify(exactly = 0) { tagRepository.findTagsByPageId(any(), any()) }
+            }
+
+            it("INTERNAL 페이지는 Space 멤버면 조회할 수 있다") {
+                every { pageRepository.findBy(any()) } returns
+                    basicPage(spaceId = SpaceId(10L), visibility = Visibility.INTERNAL)
+                every {
+                    spaceMemberRepository.findSpaceIdsByUserId(any())
+                } returns setOf(SpaceId(10L))
+                every { tagRepository.findTagsByPageId(any(), any()) } returns
+                    PageResult(
+                        items = emptyList(),
+                        page = 0,
+                        size = 20,
+                        totalElements = 0L
+                    )
+
+                useCase.perform(basicRequest())
 
                 verify(exactly = 1) { tagRepository.findTagsByPageId(any(), any()) }
             }

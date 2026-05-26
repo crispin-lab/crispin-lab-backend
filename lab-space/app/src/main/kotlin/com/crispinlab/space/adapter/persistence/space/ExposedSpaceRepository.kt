@@ -5,14 +5,18 @@ import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.common.persistence.ExposedEntityRepository
 import com.crispinlab.space.adapter.persistence.toPageResult
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
+import com.crispinlab.space.application.port.outgoing.space.SpaceVisibilityScope
 import com.crispinlab.space.domain.space.Space
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.domain.space.SpaceVisibility.Companion.asSpaceVisibility
+import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.core.statements.UpsertStatement
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.springframework.stereotype.Repository
@@ -55,19 +59,40 @@ class ExposedSpaceRepository :
 
     override fun findPage(
         pageRequest: PageRequest,
-        visibilities: Set<SpaceVisibility>
-    ): PageResult<Space> {
-        if (visibilities.isEmpty()) return PageResult.empty(pageRequest)
-        return Spaces
+        scope: SpaceVisibilityScope
+    ): PageResult<Space> =
+        Spaces
             .selectAll()
-            .where {
-                notDeleted() and (Spaces.visibility inList visibilities.map { it.name })
-            }.toPageResult(
+            .where { notDeleted() and scope.toCondition() }
+            .toPageResult(
                 pageRequest,
                 Spaces.createdAt to SortOrder.DESC,
                 Spaces.id to SortOrder.DESC
             ) { it.toEntity() }
-    }
+
+    private fun SpaceVisibilityScope.toCondition(): Op<Boolean> =
+        when (this) {
+            is SpaceVisibilityScope.Anonymous -> {
+                Spaces.visibility eq SpaceVisibility.PUBLIC.name
+            }
+
+            is SpaceVisibilityScope.Authenticated -> {
+                val publicClause = Spaces.visibility eq SpaceVisibility.PUBLIC.name
+                if (memberOfSpaceIds.isEmpty()) {
+                    publicClause
+                } else {
+                    publicClause or
+                        (
+                            (Spaces.visibility eq SpaceVisibility.INTERNAL.name) and
+                                (Spaces.id inList memberOfSpaceIds.map { it.value })
+                        )
+                }
+            }
+
+            is SpaceVisibilityScope.Privileged -> {
+                Op.TRUE
+            }
+        }
 
     private fun decodeVisibility(stored: String): SpaceVisibility =
         runCatching { stored.asSpaceVisibility() }

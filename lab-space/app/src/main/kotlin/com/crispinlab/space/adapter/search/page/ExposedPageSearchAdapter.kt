@@ -73,17 +73,18 @@ class ExposedPageSearchAdapter : PageSearchPort {
             }
 
             is VisibilityScope.Authenticated -> {
-                (
-                    Pages.visibility inList
-                        listOf(
-                            Visibility.PUBLIC.name,
-                            Visibility.INTERNAL.name
-                        )
-                ) or
-                    (
-                        (Pages.visibility eq Visibility.DRAFT.name) and
-                            (Pages.authorId eq viewerId.value)
-                    )
+                val publicClause = Pages.visibility eq Visibility.PUBLIC.name
+                val draftClause =
+                    (Pages.visibility eq Visibility.DRAFT.name) and
+                        (Pages.authorId eq viewerId.value)
+                if (memberOfSpaceIds.isEmpty()) {
+                    publicClause or draftClause
+                } else {
+                    val internalClause =
+                        (Pages.visibility eq Visibility.INTERNAL.name) and
+                            (Pages.spaceId inList memberOfSpaceIds.map { it.value })
+                    publicClause or internalClause or draftClause
+                }
             }
 
             is VisibilityScope.Privileged -> {

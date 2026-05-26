@@ -175,6 +175,10 @@ base 가 처음부터 public 이면 `PageRevisionRepository` 처럼 port 에 `de
 - **silent undelete 차단은 `updateExclude` 로**: SoftDeletable 어댑터의 `deletedAtColumn` 을 `updateExclude` 에 포함하면 base 의 upsert SQL 의 SET 절에서 자동 제외되어, `save` 가 임의의 entity 의 `deletedAt = null` 을 받아도 deleted row 의 `deleted_at` 을 덮지 못한다. 표준 삭제 흐름 (`repository.delete(id)`) 만이 `deleted_at` 을 갱신한다.
 - 어댑터 클래스명 prefix 는 **기술 스택**(`Exposed`) 으로. `MySql`, `Redis` 등도 같은 결.
 - 도메인 특화 메서드 (`findByPageId`, `findBySpaceId`, `attach/detach` 등) 는 어댑터에 그대로 둔다 — base 가 일반화하지 않는다.
+- **invariant 직렬화는 어댑터 안에서 `.forUpdate()` 로 격하**: 도메인 invariant 가 *count + 후속 write* 같이 read-then-write 흐름에 걸쳐 있을 때 (예: `SpaceMember` 의 "마지막 OWNER 차단"), application 사전 체크만으로는 READ_COMMITTED 에서 race window 가 열린다. 해결은 어댑터의 SELECT 에 `.forUpdate()` 한 줄 — 호출 측 (UseCase) 의 시그니처를 단순 read (`countOwnersBy(spaceId): Long`) 로 유지하면서 같은 트랜잭션의 후속 `delete`/`save` 가 commit 까지 자연 직렬화된다. lock 의도는 port 시그니처에 누설하지 않고 어댑터의 race 안전 메커니즘으로 남는다 (`ExposedSpaceMemberRepository.countOwnersBy` 가 예). SERIALIZABLE 격상은 retry infra 가 필요해 본 도메인에서는 과도.
+  - **호출 측 제약**: port 시그니처가 단순 read 처럼 보여도 호출은 반드시 `transactional { ... }` 안에서 — 트랜잭션 밖에서 호출하면 lock 자체가 의미 없음. 룰 어기면 race 보호가 silently 풀린다.
+  - **lock-set 한계**: `.forUpdate()` 는 결과 row 의 row lock (predicate / gap lock 아님). `WHERE role = 'OWNER'` 의 *기존* OWNER row 만 잡으므로, 다른 트랜잭션이 같은 Space 에 새 OWNER 를 INSERT 하는 race 는 직렬화되지 않는다. 본 도메인의 "마지막 OWNER 차단" invariant 는 *OWNER count 가 0 으로 떨어지지 않는다* 한 가지라 INSERT 가 늘리는 방향이라 자연 안전. 미래에 invariant 가 "OWNER 가 정확히 N 명" 같이 양방향으로 바뀌면 predicate lock / advisory lock (`pg_advisory_xact_lock`) 별도로.
+  - **row 수 제약**: `select(id).forUpdate().toList().size` 패턴은 lock 잡힐 row 가 작을 때 (OWNER 수십 명 단위) 만 안전. 수천 row 를 lock-then-count 하면 ResultSet materialize + lock 비용이 폭주. row 가 커지는 도메인이 등장하면 별도 SQL `COUNT(*)` + 명시적 advisory lock 으로 분리.
 - 도메인 port Repository 인터페이스 (`PageRepository` 등) 는 **공통 super type 없이** 각자 정의. base 가 강제하는 추상화는 어댑터 측에만.
 - `saveAll` / `batchInsert` 만 쓰는 어댑터 (예: `ExposedPageLinkRepository`) 는 base 의 단건 CRUD 가 무의미하므로 base 상속하지 않는다.
 

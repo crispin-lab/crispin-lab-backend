@@ -6,6 +6,9 @@ import com.crispinlab.space.application.port.incoming.space.SpaceGetting
 import com.crispinlab.space.application.port.incoming.space.SpaceGetting.Request
 import com.crispinlab.space.application.port.incoming.space.SpaceGetting.Result
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
+import com.crispinlab.space.application.port.outgoing.space.SpaceVisibilityScope
+import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
+import com.crispinlab.space.application.usecase.access.memberSpaceIdsOf
 import com.crispinlab.space.domain.space.Space
 import com.crispinlab.space.domain.space.SpaceErrorCode
 import org.springframework.stereotype.Service
@@ -13,6 +16,7 @@ import org.springframework.stereotype.Service
 @Service
 class SpaceGettingUseCase(
     private val spaceRepository: SpaceRepository,
+    private val spaceMemberRepository: SpaceMemberRepository,
     private val transactionProvider: TransactionProvider
 ) : SpaceGetting {
     override fun perform(request: Request): Result =
@@ -23,10 +27,11 @@ class SpaceGettingUseCase(
         }
 
     private fun Request.toEntity(): Space {
-        val allowed = viewer.allowedSpaceVisibilities()
+        val scope =
+            SpaceVisibilityScope.of(viewer, spaceMemberRepository.memberSpaceIdsOf(viewer))
         return spaceRepository
             .findBy(spaceId)
-            ?.takeIf { it.visibility in allowed }
+            ?.takeIf { scope.allows(it.visibility, it.id) }
             ?: throw NotFoundException(SpaceErrorCode.SPACE_NOT_FOUND)
     }
 

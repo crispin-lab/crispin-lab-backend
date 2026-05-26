@@ -104,13 +104,16 @@ class ExposedSpaceMemberRepository :
             .map { SpaceId(it[SpaceMembers.spaceId]) }
             .toSet()
 
-    override fun countOwnersBy(spaceId: SpaceId): Long =
+    override fun lockAndCountOwners(spaceId: SpaceId): Long =
         SpaceMembers
             .select(SpaceMembers.id)
             .where {
                 (SpaceMembers.spaceId eq spaceId.value) and
                     (SpaceMembers.role eq SpaceMemberRole.OWNER.name)
-            }.count()
+            }.forUpdate()
+            .toList()
+            .size
+            .toLong()
 
     private fun decodeRole(stored: String): SpaceMemberRole =
         runCatching { stored.asSpaceMemberRole() }

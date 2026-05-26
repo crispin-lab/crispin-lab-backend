@@ -24,7 +24,7 @@ class SpaceMemberRemovingUseCase(
                     .also { it.validate() }
                     .toEntity()
             if (target.role == SpaceMemberRole.OWNER &&
-                spaceMemberRepository.countOwnersBy(target.spaceId) <= 1
+                spaceMemberRepository.lockAndCountOwners(target.spaceId) <= 1
             ) {
                 throw ConflictException(SpaceMemberErrorCode.CANNOT_REMOVE_LAST_OWNER)
             }

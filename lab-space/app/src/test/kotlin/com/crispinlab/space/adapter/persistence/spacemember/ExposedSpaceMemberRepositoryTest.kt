@@ -194,7 +194,7 @@ class ExposedSpaceMemberRepositoryTest :
                 }
             }
 
-            it("countOwnersBy 는 OWNER 만 카운트한다") {
+            it("lockAndCountOwners 는 OWNER 만 카운트한다") {
                 transaction(database) {
                     repository.save(
                         basicSpaceMember(
@@ -223,7 +223,7 @@ class ExposedSpaceMemberRepositoryTest :
                 }
 
                 transaction(database) {
-                    repository.countOwnersBy(SpaceId(60L)) shouldBe 2L
+                    repository.lockAndCountOwners(SpaceId(60L)) shouldBe 2L
                 }
             }
 

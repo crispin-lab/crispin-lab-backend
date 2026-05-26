@@ -97,7 +97,7 @@ class SpaceMemberRoleChangingUseCaseTest :
                         userId = UserId(200L),
                         role = SpaceMemberRole.OWNER
                     )
-                every { spaceMemberRepository.countOwnersBy(SpaceId(10L)) } returns 1L
+                every { spaceMemberRepository.lockAndCountOwners(SpaceId(10L)) } returns 1L
 
                 shouldThrow<ConflictException> {
                     useCase.perform(basicRequest(targetUserId = "200", role = "MEMBER"))

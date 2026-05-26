@@ -59,7 +59,7 @@ description: PR 전 컨벤션 체크. 프로젝트의 conventions.md / architect
 **도메인 용어 체크 (project-context.md):**
 
 - `Space`, `Page`, `PageRevision`, `PageLink`, `Comment`, `Tag` 등 정해진 용어를 일관되게 쓰는가
-- 현재 스코프 외(`lab-user`, ES 검색 구현, 권한/인가)에 손대고 있지 않은가
+- 현재 스코프 외(ES 검색 구현)에 손대고 있지 않은가
 
 **작업 유형별 체크 (conventions.md "PR 전 사전 리뷰 체크리스트" 섹션):**
 

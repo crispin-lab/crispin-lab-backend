@@ -186,6 +186,8 @@ class PageGettingControllerTest(
 
 Exposed 어댑터는 **실제 Postgres** 와 같이 돌린다 — `PostgresTestContext` (Testcontainers + Flyway 적용된 스키마) 가 JVM-shared 으로 DB 를 제공. mock 으로 어댑터 스스로의 SQL 매핑을 검증할 수 없고, H2 호환 모드는 Postgres 고유 기능(`string_agg`, `RESTART IDENTITY CASCADE` 등) 회귀를 못 잡는다.
 
+`PostgresTestContext` / `TestcontainersConfig` 는 `lab-common-persistence` 의 testFixtures 가 제공 (`com.crispinlab.common.persistence` 패키지). 도메인 `app` 모듈은 `testImplementation(testFixtures(projects.labCommonPersistence))` 로 받는다.
+
 ```kotlin
 class ExposedPageRepositoryTest :
     DescribeSpec({

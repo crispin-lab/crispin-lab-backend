@@ -134,7 +134,7 @@ class ExposedPageRepository :
 
 ### ExposedEntityRepository base
 
-`lab-space/app/adapter/persistence/ExposedEntityRepository.kt` 에 다음 abstract class 가 있다:
+`lab-common-persistence/src/main/kotlin/com/crispinlab/common/persistence/ExposedEntityRepository.kt` 에 다음 abstract class 가 있다 (`com.crispinlab.common.persistence` 패키지):
 
 `E` 는 `Entity<I>` 마커를 만족해야 한다 (`entity.md` 참조). base 의 시그니처:
 

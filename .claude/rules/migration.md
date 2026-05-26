@@ -132,7 +132,7 @@ class ExposedSpaceRepositoryTest :
     })
 ```
 
-- `lab-space/app/src/test/.../testsupport/PostgresTestContext.kt` — JVM-shared Testcontainer + Flyway migrate + Exposed `Database`.
+- `lab-common-persistence/src/testFixtures/kotlin/com/crispinlab/common/persistence/PostgresTestContext.kt` — JVM-shared Testcontainer + Flyway migrate + Exposed `Database`. 도메인 `app` 모듈은 `testImplementation(testFixtures(projects.labCommonPersistence))` 로 받는다.
 - `afterEach { truncateAll() }` — `TRUNCATE ... CASCADE` 로 spec 간 격리. 테이블 목록은 `information_schema` 에서 동적으로 수집하므로 새 테이블 추가 시 헬퍼 갱신이 자동.
 - Spring `@SpringBootTest` 는 `TestcontainersConfig` 의 `@ServiceConnection PostgreSQLContainer<*>` 빈으로 datasource 가 자동 wiring 됨. `TestSpaceApplication` / `app` 모듈의 `ApplicationTest` 가 `@Import(TestcontainersConfig::class)` 로 가져온다.
 

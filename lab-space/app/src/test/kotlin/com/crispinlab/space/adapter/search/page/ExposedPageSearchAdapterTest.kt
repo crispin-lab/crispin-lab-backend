@@ -267,6 +267,30 @@ class ExposedPageSearchAdapterTest :
                 result.totalElements shouldBe 2L
             }
 
+            it("tagIds 에 같은 태그가 중복되어 들어와도 결과는 distinct 입력과 동일하다") {
+                transaction(database) {
+                    pageRepository.save(publicPage(id = PageId(1L)))
+                    pageRepository.save(publicPage(id = PageId(2L)))
+                    attachTag(pageId = 1L, tagId = 100L)
+                    attachTag(pageId = 2L, tagId = 100L)
+                }
+
+                val result =
+                    transaction(database) {
+                        adapter.search(
+                            keyword = null,
+                            spaceId = null,
+                            tagIds = listOf(TagId(100L), TagId(100L), TagId(100L)),
+                            sort = SortOption.UPDATED_AT,
+                            scope = VisibilityScope.Anonymous,
+                            pageRequest = PageRequest.firstPage()
+                        )
+                    }
+
+                result.items.map { it.id }.toSet() shouldBe setOf(PageId(1L), PageId(2L))
+                result.totalElements shouldBe 2L
+            }
+
             it("단일 태그 검색은 그 태그가 붙은 모든 페이지를 반환한다") {
                 transaction(database) {
                     pageRepository.save(publicPage(id = PageId(1L)))

@@ -53,14 +53,16 @@ class ExposedPageSearchAdapter : PageSearchPort {
             .toPageResult(pageRequest, *sort.toOrderColumns()) { it.toSummary() }
     }
 
-    private fun matchedPageIdsByTag(tagIds: Collection<TagId>): List<Long> =
-        (PageTags innerJoin Pages)
+    private fun matchedPageIdsByTag(tagIds: Collection<TagId>): List<Long> {
+        val distinctTagIds = tagIds.map { it.value }.distinct()
+        return (PageTags innerJoin Pages)
             .select(PageTags.pageId)
             .where {
-                (PageTags.tagId inList tagIds.map { it.value }) and Pages.notDeleted()
+                (PageTags.tagId inList distinctTagIds) and Pages.notDeleted()
             }.groupBy(PageTags.pageId)
-            .having { PageTags.tagId.countDistinct() eq tagIds.size.toLong() }
+            .having { PageTags.tagId.countDistinct() eq distinctTagIds.size.toLong() }
             .map { it[PageTags.pageId] }
+    }
 
     private fun SortOption.toOrderColumns(): Array<Pair<Expression<*>, SortOrder>> =
         when (this) {

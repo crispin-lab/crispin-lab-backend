@@ -5,6 +5,7 @@ import com.crispinlab.common.persistence.PostgresTestContext
 import com.crispinlab.space.adapter.persistence.page.ExposedPageRepository
 import com.crispinlab.space.adapter.persistence.tag.PageTags
 import com.crispinlab.space.adapter.persistence.tag.Tags
+import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.SortOption
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageContent
@@ -60,6 +61,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = emptyList(),
+                            sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
                         )
@@ -92,6 +94,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = "회고",
                             spaceId = null,
                             tagIds = emptyList(),
+                            sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
                         )
@@ -99,6 +102,54 @@ class ExposedPageSearchAdapterTest :
 
                 result.items.map { it.id }.toSet() shouldBe setOf(PageId(1L), PageId(2L))
                 result.totalElements shouldBe 2L
+            }
+
+            it("키워드는 대소문자를 구분하지 않고 title 을 매칭한다") {
+                transaction(database) {
+                    pageRepository.save(publicPage(id = PageId(1L), title = "회고 Note"))
+                    pageRepository.save(publicPage(id = PageId(2L), title = "관계없음"))
+                }
+
+                val result =
+                    transaction(database) {
+                        adapter.search(
+                            keyword = "NOTE",
+                            spaceId = null,
+                            tagIds = emptyList(),
+                            sort = SortOption.UPDATED_AT,
+                            scope = VisibilityScope.Anonymous,
+                            pageRequest = PageRequest.firstPage()
+                        )
+                    }
+
+                result.items.map { it.id } shouldBe listOf(PageId(1L))
+            }
+
+            it("키워드는 대소문자를 구분하지 않고 content 를 매칭한다") {
+                transaction(database) {
+                    pageRepository.save(
+                        publicPage(
+                            id = PageId(1L),
+                            title = "무관",
+                            content = PageContent("Spring Boot 셋업 기록")
+                        )
+                    )
+                    pageRepository.save(publicPage(id = PageId(2L), title = "관계없음"))
+                }
+
+                val result =
+                    transaction(database) {
+                        adapter.search(
+                            keyword = "spring",
+                            spaceId = null,
+                            tagIds = emptyList(),
+                            sort = SortOption.UPDATED_AT,
+                            scope = VisibilityScope.Anonymous,
+                            pageRequest = PageRequest.firstPage()
+                        )
+                    }
+
+                result.items.map { it.id } shouldBe listOf(PageId(1L))
             }
 
             it("키워드의 LIKE wildcard 문자는 literal 로 처리된다") {
@@ -114,6 +165,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = "90%",
                             spaceId = null,
                             tagIds = emptyList(),
+                            sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
                         )
@@ -126,6 +178,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = "snake_case",
                             spaceId = null,
                             tagIds = emptyList(),
+                            sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
                         )
@@ -153,6 +206,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = "회고",
                             spaceId = null,
                             tagIds = emptyList(),
+                            sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
                         )
@@ -174,6 +228,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = SpaceId(20L),
                             tagIds = emptyList(),
+                            sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
                         )
@@ -183,13 +238,16 @@ class ExposedPageSearchAdapterTest :
                 result.items.first().id shouldBe PageId(2L)
             }
 
-            it("tagIds 필터는 그 태그가 붙은 페이지만 반환한다") {
+            it("tagIds 가 여러 개면 모든 태그를 가진 페이지만 반환한다 (AND)") {
                 transaction(database) {
                     pageRepository.save(publicPage(id = PageId(1L)))
                     pageRepository.save(publicPage(id = PageId(2L)))
                     pageRepository.save(publicPage(id = PageId(3L)))
                     attachTag(pageId = 1L, tagId = 100L)
-                    attachTag(pageId = 2L, tagId = 200L)
+                    attachTag(pageId = 1L, tagId = 200L)
+                    attachTag(pageId = 2L, tagId = 100L)
+                    attachTag(pageId = 3L, tagId = 100L)
+                    attachTag(pageId = 3L, tagId = 200L)
                     attachTag(pageId = 3L, tagId = 300L)
                 }
 
@@ -199,6 +257,33 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = listOf(TagId(100L), TagId(200L)),
+                            sort = SortOption.UPDATED_AT,
+                            scope = VisibilityScope.Anonymous,
+                            pageRequest = PageRequest.firstPage()
+                        )
+                    }
+
+                result.items.map { it.id }.toSet() shouldBe setOf(PageId(1L), PageId(3L))
+                result.totalElements shouldBe 2L
+            }
+
+            it("단일 태그 검색은 그 태그가 붙은 모든 페이지를 반환한다") {
+                transaction(database) {
+                    pageRepository.save(publicPage(id = PageId(1L)))
+                    pageRepository.save(publicPage(id = PageId(2L)))
+                    pageRepository.save(publicPage(id = PageId(3L)))
+                    attachTag(pageId = 1L, tagId = 100L)
+                    attachTag(pageId = 2L, tagId = 100L)
+                    attachTag(pageId = 3L, tagId = 200L)
+                }
+
+                val result =
+                    transaction(database) {
+                        adapter.search(
+                            keyword = null,
+                            spaceId = null,
+                            tagIds = listOf(TagId(100L)),
+                            sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
                         )
@@ -222,6 +307,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = listOf(TagId(100L), TagId(200L), TagId(300L)),
+                            sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
                         )
@@ -243,6 +329,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = listOf(TagId(999L)),
+                            sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
                         )
@@ -274,12 +361,114 @@ class ExposedPageSearchAdapterTest :
                             keyword = "회고",
                             spaceId = SpaceId(10L),
                             tagIds = listOf(TagId(100L)),
+                            sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
                         )
                     }
 
                 result.items.map { it.id } shouldBe listOf(PageId(1L))
+            }
+
+            it("sort=CREATED_AT 은 createdAt 기준 내림차순으로 정렬한다") {
+                transaction(database) {
+                    pageRepository.save(
+                        publicPage(
+                            id = PageId(1L),
+                            title = "오래된 페이지",
+                            createdAt = DUMMY_INSTANT,
+                            updatedAt = DUMMY_INSTANT.plusSeconds(300)
+                        )
+                    )
+                    pageRepository.save(
+                        publicPage(
+                            id = PageId(2L),
+                            title = "중간 페이지",
+                            createdAt = DUMMY_INSTANT.plusSeconds(60),
+                            updatedAt = DUMMY_INSTANT.plusSeconds(200)
+                        )
+                    )
+                    pageRepository.save(
+                        publicPage(
+                            id = PageId(3L),
+                            title = "최신 페이지",
+                            createdAt = DUMMY_INSTANT.plusSeconds(120),
+                            updatedAt = DUMMY_INSTANT.plusSeconds(100)
+                        )
+                    )
+                }
+
+                val byCreated =
+                    transaction(database) {
+                        adapter.search(
+                            keyword = null,
+                            spaceId = null,
+                            tagIds = emptyList(),
+                            sort = SortOption.CREATED_AT,
+                            scope = VisibilityScope.Anonymous,
+                            pageRequest = PageRequest.firstPage()
+                        )
+                    }
+                val byUpdated =
+                    transaction(database) {
+                        adapter.search(
+                            keyword = null,
+                            spaceId = null,
+                            tagIds = emptyList(),
+                            sort = SortOption.UPDATED_AT,
+                            scope = VisibilityScope.Anonymous,
+                            pageRequest = PageRequest.firstPage()
+                        )
+                    }
+
+                byCreated.items.map { it.id } shouldBe
+                    listOf(PageId(3L), PageId(2L), PageId(1L))
+                byUpdated.items.map { it.id } shouldBe
+                    listOf(PageId(1L), PageId(2L), PageId(3L))
+            }
+
+            it("sort=RELEVANCE 는 UPDATED_AT 와 동일한 정렬을 적용한다 (임시 fallback)") {
+                transaction(database) {
+                    pageRepository.save(
+                        publicPage(
+                            id = PageId(1L),
+                            createdAt = DUMMY_INSTANT,
+                            updatedAt = DUMMY_INSTANT.plusSeconds(300)
+                        )
+                    )
+                    pageRepository.save(
+                        publicPage(
+                            id = PageId(2L),
+                            createdAt = DUMMY_INSTANT.plusSeconds(60),
+                            updatedAt = DUMMY_INSTANT.plusSeconds(200)
+                        )
+                    )
+                }
+
+                val byRelevance =
+                    transaction(database) {
+                        adapter.search(
+                            keyword = null,
+                            spaceId = null,
+                            tagIds = emptyList(),
+                            sort = SortOption.RELEVANCE,
+                            scope = VisibilityScope.Anonymous,
+                            pageRequest = PageRequest.firstPage()
+                        )
+                    }
+                val byUpdated =
+                    transaction(database) {
+                        adapter.search(
+                            keyword = null,
+                            spaceId = null,
+                            tagIds = emptyList(),
+                            sort = SortOption.UPDATED_AT,
+                            scope = VisibilityScope.Anonymous,
+                            pageRequest = PageRequest.firstPage()
+                        )
+                    }
+
+                byRelevance.items.map { it.id } shouldBe byUpdated.items.map { it.id }
             }
 
             it("page/size 로 결과를 슬라이스한다") {
@@ -300,6 +489,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = emptyList(),
+                            sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest(page = 1, size = 2)
                         )
@@ -326,6 +516,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = emptyList(),
+                            sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
                         )
@@ -353,6 +544,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = listOf(TagId(100L)),
+                            sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
                         )
@@ -404,6 +596,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = emptyList(),
+                            sort = SortOption.UPDATED_AT,
                             scope =
                                 VisibilityScope.Authenticated(
                                     viewerId = UserId(100L),
@@ -439,6 +632,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = emptyList(),
+                            sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Privileged,
                             pageRequest = PageRequest.firstPage()
                         )
@@ -456,7 +650,8 @@ class ExposedPageSearchAdapterTest :
             spaceId: SpaceId = SpaceId(10L),
             title: String = "초안",
             content: PageContent = PageContent("본문"),
-            createdAt: Instant = DUMMY_INSTANT
+            createdAt: Instant = DUMMY_INSTANT,
+            updatedAt: Instant = createdAt
         ): Page =
             basicPage(
                 id = id,
@@ -464,7 +659,8 @@ class ExposedPageSearchAdapterTest :
                 title = title,
                 content = content,
                 visibility = Visibility.PUBLIC,
-                createdAt = createdAt
+                createdAt = createdAt,
+                updatedAt = updatedAt
             )
 
         fun attachTag(

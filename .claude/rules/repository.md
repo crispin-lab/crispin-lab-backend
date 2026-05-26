@@ -221,6 +221,16 @@ interface PageSearchPort {
 
 `project-context.md` 의 "Elasticsearch 기반 검색 — 지금은 인터페이스만, SQL `LIKE` 로 구현" 메모와 정합. SQL 어댑터는 같은 `PageSearchPort` 를 구현하면 ES 어댑터로 교체할 때도 인바운드는 그대로.
 
+### SQL 검색 어댑터 정책
+
+`ExposedPageSearchAdapter` 같은 SQL 기반 검색 어댑터의 두 invariant — ES 어댑터 교체 전까지 유효.
+
+**case-insensitive 매칭은 `LOWER() + LIKE`**: Postgres ILIKE 직접 사용 대신 `Column.lowerCase() like %lower(keyword)%` 조합 (Exposed v1 core 의 `lowerCase()`). ANSI 표준 LIKE 만 사용해 vendor portable, `escapeLike()` (`%` / `_` / `\` → `\` prefix) 가 그대로 유효. Exposed v1 의 `like` infix 는 `String` 인자를 `LikePattern(pattern, escapeChar = null)` 로 wrap 하므로 `ESCAPE` 절을 SQL 에 명시하지 않는다 — Postgres LIKE 의 표준 default escape 가 `\` 이고 `standard_conforming_strings = on` (PG 9.1+ default) 가정에서 안전. column 쪽 SQL `LOWER` 와 pattern 쪽 Kotlin `lowercase()` 의 locale 차이는 ASCII / 한국어 한정 무해 — 비-ASCII case-insensitive 가 요구되면 ICU locale 정합을 별도로.
+
+**정렬 옵션 — RELEVANCE 는 임시로 UPDATED_AT 컬럼 fallback**: `PageSearchPort.SortOption` 의 `CREATED_AT` / `UPDATED_AT` 은 실제 컬럼 정렬, `RELEVANCE` 는 임시로 `UPDATED_AT` 과 동일 컬럼 (`Pages.updatedAt DESC, Pages.id DESC`) 으로 fallback. SQL `LOWER + LIKE` 는 진짜 ranking 을 제공하지 않으므로 별도 분기를 두지 않고 묶는다. ES 어댑터 교체 시점 (BM25 / 벡터 ranking 도입) 에 분기를 분리. 어댑터의 `when` 분기에서 `UPDATED_AT, RELEVANCE -> { ... }` 한 케이스로 묶여 있는 것은 이 정책의 표현이다 — 코드 옆에 별도 주석을 두지 않고 본 룰 문서가 의도를 운반한다.
+
+**태그 AND 매칭은 두 단계 분리 쿼리**: 다중 tagIds 의 AND 보장 (`HAVING COUNT(DISTINCT tag_id) = N`) 은 별도 `matchedPageIdsByTag` 쿼리로 page_id 리스트를 먼저 모은 뒤 baseQuery 의 `Pages.id inList tagPageIds` 로 합성. 단일 쿼리에 group by + having + 일반 where 를 통합하지 않는 이유: baseQuery 의 `count()` (`toPageResult` 내부) 가 join row 곱셈으로 부풀려지는 회귀 방지. round-trip 1회 추가는 의도된 비용.
+
 ## 자주 빠뜨리는 것
 
 - **port 가 `lab-{domain}/domain` 에 들어감** — port 는 `application` 패키지. domain 은 entity / value object 만.

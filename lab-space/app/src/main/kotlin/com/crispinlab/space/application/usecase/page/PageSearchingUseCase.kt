@@ -29,6 +29,7 @@ class PageSearchingUseCase(
                 keyword = keyword,
                 spaceId = spaceId,
                 tagIds = tagIds,
+                sort = sort,
                 scope =
                     VisibilityScope.of(
                         viewer,

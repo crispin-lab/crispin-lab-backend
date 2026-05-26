@@ -1,6 +1,9 @@
 package com.crispinlab.space.adapter.persistence.page
 
+import com.crispinlab.common.pagination.PageRequest
+import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.common.persistence.ExposedEntityRepository
+import com.crispinlab.space.adapter.persistence.toPageResult
 import com.crispinlab.space.application.port.outgoing.page.PageRevisionRepository
 import com.crispinlab.space.domain.page.PageContent
 import com.crispinlab.space.domain.page.PageId
@@ -9,6 +12,7 @@ import com.crispinlab.space.domain.page.PageRevisionId
 import com.crispinlab.user.domain.user.UserId
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.statements.UpsertStatement
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -47,18 +51,25 @@ class ExposedPageRevisionRepository :
         builder[PageRevisions.createdAt] = entity.createdAt
     }
 
-    override fun findByPageId(pageId: PageId): List<PageRevision> =
+    override fun findBy(
+        pageId: PageId,
+        version: Int
+    ): PageRevision? =
         PageRevisions
             .selectAll()
-            .where { PageRevisions.pageId eq pageId.value }
-            .orderBy(PageRevisions.version, SortOrder.DESC)
-            .map { it.toEntity() }
-
-    override fun findLatestByPageId(pageId: PageId): PageRevision? =
-        PageRevisions
-            .selectAll()
-            .where { PageRevisions.pageId eq pageId.value }
-            .orderBy(PageRevisions.version, SortOrder.DESC)
+            .where { (PageRevisions.pageId eq pageId.value) and (PageRevisions.version eq version) }
             .firstOrNull()
             ?.toEntity()
+
+    override fun findByPageId(
+        pageId: PageId,
+        pageRequest: PageRequest
+    ): PageResult<PageRevision> =
+        PageRevisions
+            .selectAll()
+            .where { PageRevisions.pageId eq pageId.value }
+            .toPageResult(
+                pageRequest,
+                PageRevisions.version to SortOrder.DESC
+            ) { it.toEntity() }
 }

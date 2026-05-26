@@ -4,6 +4,7 @@ import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.space.application.port.incoming.page.PageRevisionGetting.Request
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRevisionRepository
+import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.PageErrorCode
 import com.crispinlab.space.domain.page.PageId
@@ -26,16 +27,19 @@ class PageRevisionGettingUseCaseTest :
     DescribeSpec({
         val pageRepository = mockk<PageRepository>()
         val pageRevisionRepository = mockk<PageRevisionRepository>()
+        val spaceMemberRepository = mockk<SpaceMemberRepository>()
         val useCase =
             PageRevisionGettingUseCase(
                 pageRepository = pageRepository,
                 pageRevisionRepository = pageRevisionRepository,
+                spaceMemberRepository = spaceMemberRepository,
                 transactionProvider = DummyTransactionProvider()
             )
 
         beforeEach {
-            clearMocks(pageRepository, pageRevisionRepository)
+            clearMocks(pageRepository, pageRevisionRepository, spaceMemberRepository)
             every { pageRepository.findBy(any()) } returns basicPage()
+            every { spaceMemberRepository.findSpaceIdsByUserId(any()) } returns emptySet()
         }
 
         describe("페이지 리비전 단건 조회") {

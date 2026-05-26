@@ -10,6 +10,8 @@ import com.crispinlab.space.application.port.outgoing.page.PageLinkRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRevisionRepository
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
+import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
+import com.crispinlab.space.application.usecase.access.requireWritePermission
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageContent
 import com.crispinlab.space.domain.page.PageErrorCode
@@ -27,6 +29,7 @@ class PageRegisteringUseCase(
     private val pageRevisionRepository: PageRevisionRepository,
     private val pageLinkRepository: PageLinkRepository,
     private val spaceRepository: SpaceRepository,
+    private val spaceMemberRepository: SpaceMemberRepository,
     private val idGenerator: IdGenerator,
     private val transactionProvider: TransactionProvider
 ) : PageRegistering {
@@ -45,6 +48,7 @@ class PageRegisteringUseCase(
     private fun Request.validate() {
         spaceRepository.findBy(spaceId)
             ?: throw NotFoundException(SpaceErrorCode.SPACE_NOT_FOUND)
+        spaceMemberRepository.requireWritePermission(viewer, spaceId)
         parentPageId?.let { parentId ->
             pageRepository
                 .findBy(parentId)

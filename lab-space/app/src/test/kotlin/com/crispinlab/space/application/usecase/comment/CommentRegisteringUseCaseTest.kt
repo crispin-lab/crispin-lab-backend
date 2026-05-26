@@ -1,16 +1,20 @@
 package com.crispinlab.space.application.usecase.comment
 
+import com.crispinlab.common.exception.ForbiddenException
 import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.common.id.IdGenerator
 import com.crispinlab.space.application.port.incoming.comment.CommentRegistering.Request
 import com.crispinlab.space.application.port.outgoing.comment.CommentRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
+import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.comment.Comment
 import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.domain.page.Visibility
+import com.crispinlab.space.domain.spacemember.SpaceMemberRole
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicPage
+import com.crispinlab.space.testsupport.Fixtures.basicSpaceMember
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -25,18 +29,24 @@ class CommentRegisteringUseCaseTest :
     DescribeSpec({
         val commentRepository = mockk<CommentRepository>()
         val pageRepository = mockk<PageRepository>()
+        val spaceMemberRepository = mockk<SpaceMemberRepository>()
         val idGenerator = mockk<IdGenerator>()
         val useCase =
             CommentRegisteringUseCase(
                 commentRepository = commentRepository,
                 pageRepository = pageRepository,
+                spaceMemberRepository = spaceMemberRepository,
                 idGenerator = idGenerator,
                 transactionProvider = DummyTransactionProvider()
             )
 
         beforeEach {
-            clearMocks(commentRepository, pageRepository, idGenerator)
+            clearMocks(commentRepository, pageRepository, spaceMemberRepository, idGenerator)
             every { pageRepository.findBy(any()) } returns basicPage()
+            every { spaceMemberRepository.findSpaceIdsByUserId(any()) } returns emptySet()
+            every {
+                spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
+            } returns basicSpaceMember(role = SpaceMemberRole.MEMBER)
             every { commentRepository.save(any()) } answers { firstArg() }
         }
 
@@ -75,6 +85,28 @@ class CommentRegisteringUseCaseTest :
 
                 shouldThrow<NotFoundException> {
                     useCase.perform(basicRequest(userId = UserId(100L)))
+                }
+                verify(exactly = 0) { commentRepository.save(any()) }
+            }
+
+            it("Space 멤버가 아니면 ForbiddenException") {
+                every {
+                    spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
+                } returns null
+
+                shouldThrow<ForbiddenException> {
+                    useCase.perform(basicRequest())
+                }
+                verify(exactly = 0) { commentRepository.save(any()) }
+            }
+
+            it("VIEWER role 은 ForbiddenException") {
+                every {
+                    spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
+                } returns basicSpaceMember(role = SpaceMemberRole.VIEWER)
+
+                shouldThrow<ForbiddenException> {
+                    useCase.perform(basicRequest())
                 }
                 verify(exactly = 0) { commentRepository.save(any()) }
             }

@@ -4,11 +4,14 @@ import com.crispinlab.common.exception.ForbiddenException
 import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.space.application.port.incoming.space.SpaceEditing.Request
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
+import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.space.Space
+import com.crispinlab.space.domain.spacemember.SpaceMemberRole
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicSpace
+import com.crispinlab.space.testsupport.Fixtures.basicSpaceMember
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -23,18 +26,23 @@ import io.mockk.verify
 class SpaceEditingUseCaseTest :
     DescribeSpec({
         val spaceRepository = mockk<SpaceRepository>()
+        val spaceMemberRepository = mockk<SpaceMemberRepository>()
         val useCase =
             SpaceEditingUseCase(
                 spaceRepository = spaceRepository,
+                spaceMemberRepository = spaceMemberRepository,
                 transactionProvider = DummyTransactionProvider()
             )
 
         beforeEach {
-            clearMocks(spaceRepository)
+            clearMocks(spaceRepository, spaceMemberRepository)
+            every {
+                spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
+            } returns basicSpaceMember(role = SpaceMemberRole.OWNER)
         }
 
         describe("스페이스 수정") {
-            it("이름·설명을 모두 변경하면 updatedAt 이 새 값으로 갱신된다") {
+            it("OWNER 가 이름·설명을 모두 변경하면 updatedAt 이 새 값으로 갱신된다") {
                 val space = basicSpace(name = "이전 이름", description = "이전 설명")
                 every { spaceRepository.findBy(space.id) } returns space
                 val saved = slot<Space>()
@@ -67,11 +75,39 @@ class SpaceEditingUseCaseTest :
                 }
             }
 
-            it("USER 가 호출하면 ForbiddenException 으로 차단되고 저장이 일어나지 않는다") {
+            it("OWNER 가 아니면 ForbiddenException") {
+                every {
+                    spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
+                } returns basicSpaceMember(role = SpaceMemberRole.MEMBER)
+
                 shouldThrow<ForbiddenException> {
-                    useCase.perform(basicRequest(name = "x", isAdmin = false))
+                    useCase.perform(basicRequest(name = "x"))
                 }
                 verify(exactly = 0) { spaceRepository.save(any()) }
+            }
+
+            it("멤버가 아니면 ForbiddenException") {
+                every {
+                    spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
+                } returns null
+
+                shouldThrow<ForbiddenException> {
+                    useCase.perform(basicRequest(name = "x"))
+                }
+                verify(exactly = 0) { spaceRepository.save(any()) }
+            }
+
+            it("ADMIN 은 멤버가 아니어도 수정할 수 있다") {
+                val space = basicSpace(name = "이전")
+                every { spaceRepository.findBy(space.id) } returns space
+                every { spaceRepository.save(any()) } answers { firstArg() }
+
+                useCase.perform(basicRequest(name = "새", isAdmin = true))
+
+                verify(exactly = 1) { spaceRepository.save(any()) }
+                verify(exactly = 0) {
+                    spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
+                }
             }
         }
     }) {
@@ -82,7 +118,7 @@ class SpaceEditingUseCaseTest :
             description: String? = null,
             visibility: String? = null,
             userId: UserId = UserId(100L),
-            isAdmin: Boolean = true
+            isAdmin: Boolean = false
         ): Request =
             Request(
                 spaceId = spaceId,

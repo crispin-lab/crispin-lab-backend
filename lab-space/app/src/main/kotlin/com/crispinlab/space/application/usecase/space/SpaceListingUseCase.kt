@@ -6,12 +6,16 @@ import com.crispinlab.space.application.port.incoming.space.SpaceListing
 import com.crispinlab.space.application.port.incoming.space.SpaceListing.Request
 import com.crispinlab.space.application.port.incoming.space.SpaceListing.Summary
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
+import com.crispinlab.space.application.port.outgoing.space.SpaceVisibilityScope
+import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
+import com.crispinlab.space.application.usecase.access.lookupMemberSpaceIds
 import com.crispinlab.space.domain.space.Space
 import org.springframework.stereotype.Service
 
 @Service
 class SpaceListingUseCase(
     private val spaceRepository: SpaceRepository,
+    private val spaceMemberRepository: SpaceMemberRepository,
     private val transactionProvider: TransactionProvider
 ) : SpaceListing {
     override fun perform(request: Request): PageResult<Summary> =
@@ -21,8 +25,10 @@ class SpaceListingUseCase(
 
     private fun Request.toResult(): PageResult<Summary> =
         spaceRepository
-            .findPage(pageRequest, viewer.allowedSpaceVisibilities())
-            .map { it.toSummary() }
+            .findPage(
+                pageRequest,
+                SpaceVisibilityScope.of(viewer, spaceMemberRepository.lookupMemberSpaceIds(viewer))
+            ).map { it.toSummary() }
 
     private fun Space.toSummary(): Summary =
         Summary(

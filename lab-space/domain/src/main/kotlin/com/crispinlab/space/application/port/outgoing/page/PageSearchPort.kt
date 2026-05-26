@@ -22,25 +22,30 @@ interface PageSearchPort {
     sealed interface VisibilityScope {
         fun allows(
             visibility: Visibility,
+            spaceId: SpaceId,
             authorId: UserId
         ): Boolean
 
         data object Anonymous : VisibilityScope {
             override fun allows(
                 visibility: Visibility,
+                spaceId: SpaceId,
                 authorId: UserId
             ): Boolean = visibility == Visibility.PUBLIC
         }
 
         data class Authenticated(
-            val viewerId: UserId
+            val viewerId: UserId,
+            val memberOfSpaceIds: Set<SpaceId>
         ) : VisibilityScope {
             override fun allows(
                 visibility: Visibility,
+                spaceId: SpaceId,
                 authorId: UserId
             ): Boolean =
                 when (visibility) {
-                    Visibility.PUBLIC, Visibility.INTERNAL -> true
+                    Visibility.PUBLIC -> true
+                    Visibility.INTERNAL -> spaceId in memberOfSpaceIds
                     Visibility.DRAFT -> authorId == viewerId
                 }
         }
@@ -48,15 +53,19 @@ interface PageSearchPort {
         data object Privileged : VisibilityScope {
             override fun allows(
                 visibility: Visibility,
+                spaceId: SpaceId,
                 authorId: UserId
             ): Boolean = true
         }
 
         companion object {
-            fun of(viewer: Viewer): VisibilityScope =
+            fun of(
+                viewer: Viewer,
+                memberOfSpaceIds: Set<SpaceId>
+            ): VisibilityScope =
                 when {
                     viewer.isAdmin -> Privileged
-                    viewer is Viewer.Member -> Authenticated(viewer.userId)
+                    viewer is Viewer.Member -> Authenticated(viewer.userId, memberOfSpaceIds)
                     else -> Anonymous
                 }
         }

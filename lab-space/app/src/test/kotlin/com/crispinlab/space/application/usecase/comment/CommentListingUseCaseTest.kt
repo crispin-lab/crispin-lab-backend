@@ -7,6 +7,7 @@ import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.application.port.incoming.comment.CommentListing.Request
 import com.crispinlab.space.application.port.outgoing.comment.CommentRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
+import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.comment.Comment
 import com.crispinlab.space.domain.comment.CommentId
@@ -29,16 +30,19 @@ class CommentListingUseCaseTest :
     DescribeSpec({
         val commentRepository = mockk<CommentRepository>()
         val pageRepository = mockk<PageRepository>()
+        val spaceMemberRepository = mockk<SpaceMemberRepository>()
         val useCase =
             CommentListingUseCase(
                 commentRepository = commentRepository,
                 pageRepository = pageRepository,
+                spaceMemberRepository = spaceMemberRepository,
                 transactionProvider = DummyTransactionProvider()
             )
 
         beforeEach {
-            clearMocks(commentRepository, pageRepository)
+            clearMocks(commentRepository, pageRepository, spaceMemberRepository)
             every { pageRepository.findBy(any()) } returns basicPage()
+            every { spaceMemberRepository.findSpaceIdsByUserId(any()) } returns emptySet()
         }
 
         describe("댓글 목록 조회") {

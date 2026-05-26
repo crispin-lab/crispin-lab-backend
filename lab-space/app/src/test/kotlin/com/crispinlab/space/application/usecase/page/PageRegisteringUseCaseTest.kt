@@ -1,5 +1,6 @@
 package com.crispinlab.space.application.usecase.page
 
+import com.crispinlab.common.exception.ForbiddenException
 import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.common.id.IdGenerator
 import com.crispinlab.space.application.port.incoming.page.PageRegistering.Request
@@ -7,15 +8,18 @@ import com.crispinlab.space.application.port.outgoing.page.PageLinkRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRevisionRepository
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
+import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.PageLink
 import com.crispinlab.space.domain.page.PageRevision
 import com.crispinlab.space.domain.space.SpaceId
+import com.crispinlab.space.domain.spacemember.SpaceMemberRole
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicPage
 import com.crispinlab.space.testsupport.Fixtures.basicSpace
+import com.crispinlab.space.testsupport.Fixtures.basicSpaceMember
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -35,6 +39,7 @@ class PageRegisteringUseCaseTest :
         val pageRevisionRepository = mockk<PageRevisionRepository>()
         val pageLinkRepository = mockk<PageLinkRepository>()
         val spaceRepository = mockk<SpaceRepository>()
+        val spaceMemberRepository = mockk<SpaceMemberRepository>()
         val idGenerator = mockk<IdGenerator>()
         val useCase =
             PageRegisteringUseCase(
@@ -42,6 +47,7 @@ class PageRegisteringUseCaseTest :
                 pageRevisionRepository = pageRevisionRepository,
                 pageLinkRepository = pageLinkRepository,
                 spaceRepository = spaceRepository,
+                spaceMemberRepository = spaceMemberRepository,
                 idGenerator = idGenerator,
                 transactionProvider = DummyTransactionProvider()
             )
@@ -52,9 +58,13 @@ class PageRegisteringUseCaseTest :
                 pageRevisionRepository,
                 pageLinkRepository,
                 spaceRepository,
+                spaceMemberRepository,
                 idGenerator
             )
             every { spaceRepository.findBy(any()) } returns basicSpace()
+            every {
+                spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
+            } returns basicSpaceMember(role = SpaceMemberRole.MEMBER)
             every { pageRepository.save(any()) } answers { firstArg() }
             every { pageRevisionRepository.save(any()) } answers { firstArg() }
             every { pageLinkRepository.saveAll(any()) } answers { firstArg() }
@@ -101,6 +111,39 @@ class PageRegisteringUseCaseTest :
                     useCase.perform(basicRequest())
                 }
                 verify(exactly = 0) { pageRepository.save(any()) }
+            }
+
+            it("멤버가 아니면 ForbiddenException 으로 차단된다") {
+                every {
+                    spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
+                } returns null
+
+                shouldThrow<ForbiddenException> {
+                    useCase.perform(basicRequest())
+                }
+                verify(exactly = 0) { pageRepository.save(any()) }
+            }
+
+            it("VIEWER role 은 ForbiddenException 으로 차단된다") {
+                every {
+                    spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
+                } returns basicSpaceMember(role = SpaceMemberRole.VIEWER)
+
+                shouldThrow<ForbiddenException> {
+                    useCase.perform(basicRequest())
+                }
+                verify(exactly = 0) { pageRepository.save(any()) }
+            }
+
+            it("ADMIN 은 멤버가 아니어도 페이지를 생성할 수 있다") {
+                every { idGenerator.next() } returnsMany listOf(1L, 2L)
+
+                useCase.perform(basicRequest(isAdmin = true))
+
+                verify(exactly = 1) { pageRepository.save(any()) }
+                verify(exactly = 0) {
+                    spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
+                }
             }
 
             it("부모 페이지가 없으면 NotFoundException") {

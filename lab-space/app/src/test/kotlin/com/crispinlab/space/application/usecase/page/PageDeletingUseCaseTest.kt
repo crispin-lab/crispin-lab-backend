@@ -1,11 +1,15 @@
 package com.crispinlab.space.application.usecase.page
 
+import com.crispinlab.common.exception.ForbiddenException
 import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.space.application.port.incoming.page.PageDeleting.Request
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
+import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.domain.access.Viewer
+import com.crispinlab.space.domain.spacemember.SpaceMemberRole
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicPage
+import com.crispinlab.space.testsupport.Fixtures.basicSpaceMember
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -18,10 +22,19 @@ import io.mockk.verify
 class PageDeletingUseCaseTest :
     DescribeSpec({
         val pageRepository = mockk<PageRepository>()
-        val useCase = PageDeletingUseCase(pageRepository, DummyTransactionProvider())
+        val spaceMemberRepository = mockk<SpaceMemberRepository>()
+        val useCase =
+            PageDeletingUseCase(
+                pageRepository = pageRepository,
+                spaceMemberRepository = spaceMemberRepository,
+                transactionProvider = DummyTransactionProvider()
+            )
 
         beforeEach {
-            clearMocks(pageRepository)
+            clearMocks(pageRepository, spaceMemberRepository)
+            every {
+                spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
+            } returns basicSpaceMember(role = SpaceMemberRole.MEMBER)
         }
 
         describe("페이지 삭제") {
@@ -49,6 +62,19 @@ class PageDeletingUseCaseTest :
                 every { pageRepository.findBy(page.id) } returns page
 
                 shouldThrow<NotFoundException> {
+                    useCase.perform(basicRequest(userId = UserId(100L)))
+                }
+                verify(exactly = 0) { pageRepository.delete(any()) }
+            }
+
+            it("작성자더라도 멤버에서 추방됐으면 ForbiddenException") {
+                val page = basicPage(authorId = UserId(100L))
+                every { pageRepository.findBy(page.id) } returns page
+                every {
+                    spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
+                } returns null
+
+                shouldThrow<ForbiddenException> {
                     useCase.perform(basicRequest(userId = UserId(100L)))
                 }
                 verify(exactly = 0) { pageRepository.delete(any()) }

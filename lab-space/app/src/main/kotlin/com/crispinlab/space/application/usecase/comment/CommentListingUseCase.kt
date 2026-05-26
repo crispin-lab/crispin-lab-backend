@@ -1,6 +1,5 @@
 package com.crispinlab.space.application.usecase.comment
 
-import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.common.transaction.TransactionProvider
 import com.crispinlab.space.application.port.incoming.comment.CommentListing
@@ -8,15 +7,16 @@ import com.crispinlab.space.application.port.incoming.comment.CommentListing.Req
 import com.crispinlab.space.application.port.incoming.comment.CommentListing.Summary
 import com.crispinlab.space.application.port.outgoing.comment.CommentRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
-import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
+import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
+import com.crispinlab.space.application.usecase.access.findReadableBy
 import com.crispinlab.space.domain.comment.Comment
-import com.crispinlab.space.domain.page.PageErrorCode
 import org.springframework.stereotype.Service
 
 @Service
 class CommentListingUseCase(
     private val commentRepository: CommentRepository,
     private val pageRepository: PageRepository,
+    private val spaceMemberRepository: SpaceMemberRepository,
     private val transactionProvider: TransactionProvider
 ) : CommentListing {
     override fun perform(request: Request): PageResult<Summary> =
@@ -28,11 +28,7 @@ class CommentListingUseCase(
         }
 
     private fun Request.validate() {
-        val scope = VisibilityScope.of(viewer)
-        pageRepository
-            .findBy(pageId)
-            ?.takeIf { scope.allows(it.visibility, it.authorId) }
-            ?: throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
+        pageRepository.findReadableBy(viewer, pageId, spaceMemberRepository)
     }
 
     private fun Request.toResult(): PageResult<Summary> =

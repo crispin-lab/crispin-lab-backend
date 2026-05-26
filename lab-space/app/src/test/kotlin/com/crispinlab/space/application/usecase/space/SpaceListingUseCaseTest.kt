@@ -5,16 +5,18 @@ import com.crispinlab.common.pagination.PageRequest.Companion.DEFAULT_SIZE
 import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.application.port.incoming.space.SpaceListing.Request
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
+import com.crispinlab.space.application.port.outgoing.space.SpaceVisibilityScope
+import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.space.Space
 import com.crispinlab.space.domain.space.SpaceId
-import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicSpace
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -23,10 +25,17 @@ import io.mockk.verify
 class SpaceListingUseCaseTest :
     DescribeSpec({
         val spaceRepository = mockk<SpaceRepository>()
-        val useCase = SpaceListingUseCase(spaceRepository, DummyTransactionProvider())
+        val spaceMemberRepository = mockk<SpaceMemberRepository>()
+        val useCase =
+            SpaceListingUseCase(
+                spaceRepository = spaceRepository,
+                spaceMemberRepository = spaceMemberRepository,
+                transactionProvider = DummyTransactionProvider()
+            )
 
         beforeEach {
-            clearMocks(spaceRepository)
+            clearMocks(spaceRepository, spaceMemberRepository)
+            every { spaceMemberRepository.findSpaceIdsByUserId(any()) } returns emptySet()
         }
 
         describe("스페이스 목록 조회") {
@@ -98,7 +107,7 @@ class SpaceListingUseCaseTest :
                 }
             }
 
-            it("비로그인 상태에서는 PUBLIC 만 필터한 visibility 로 조회한다") {
+            it("비로그인 상태에서는 Anonymous scope 로 조회한다") {
                 every { spaceRepository.findPage(any(), any()) } returns
                     PageResult.empty(PageRequest.firstPage())
 
@@ -107,14 +116,17 @@ class SpaceListingUseCaseTest :
                 verify {
                     spaceRepository.findPage(
                         any(),
-                        withArg<Set<SpaceVisibility>> {
-                            it shouldBe setOf(SpaceVisibility.PUBLIC)
+                        withArg<SpaceVisibilityScope> {
+                            it shouldBe SpaceVisibilityScope.Anonymous
                         }
                     )
                 }
             }
 
-            it("로그인 상태에서는 PUBLIC + INTERNAL visibility 로 조회한다") {
+            it("로그인 USER 는 Authenticated scope (memberOfSpaceIds 포함) 로 조회한다") {
+                every {
+                    spaceMemberRepository.findSpaceIdsByUserId(UserId(100L))
+                } returns setOf(SpaceId(10L), SpaceId(20L))
                 every { spaceRepository.findPage(any(), any()) } returns
                     PageResult.empty(PageRequest.firstPage())
 
@@ -123,14 +135,16 @@ class SpaceListingUseCaseTest :
                 verify {
                     spaceRepository.findPage(
                         any(),
-                        withArg<Set<SpaceVisibility>> {
-                            it shouldBe setOf(SpaceVisibility.PUBLIC, SpaceVisibility.INTERNAL)
+                        withArg<SpaceVisibilityScope> {
+                            it.shouldBeInstanceOf<SpaceVisibilityScope.Authenticated>()
+                            it.viewerId shouldBe UserId(100L)
+                            it.memberOfSpaceIds shouldBe setOf(SpaceId(10L), SpaceId(20L))
                         }
                     )
                 }
             }
 
-            it("ADMIN 도 PUBLIC + INTERNAL visibility 로 조회한다 (Space 는 ADMIN-only visibility 없음)") {
+            it("ADMIN 은 Privileged scope 로 조회한다") {
                 every { spaceRepository.findPage(any(), any()) } returns
                     PageResult.empty(PageRequest.firstPage())
 
@@ -143,8 +157,8 @@ class SpaceListingUseCaseTest :
                 verify {
                     spaceRepository.findPage(
                         any(),
-                        withArg<Set<SpaceVisibility>> {
-                            it shouldBe setOf(SpaceVisibility.PUBLIC, SpaceVisibility.INTERNAL)
+                        withArg<SpaceVisibilityScope> {
+                            it shouldBe SpaceVisibilityScope.Privileged
                         }
                     )
                 }

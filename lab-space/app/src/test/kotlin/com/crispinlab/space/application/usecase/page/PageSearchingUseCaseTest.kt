@@ -7,6 +7,7 @@ import com.crispinlab.space.application.port.incoming.page.PageSearching.Request
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.PageSummary
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
+import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.space.SpaceId
@@ -25,10 +26,17 @@ import io.mockk.verify
 class PageSearchingUseCaseTest :
     DescribeSpec({
         val pageSearchPort = mockk<PageSearchPort>()
-        val useCase = PageSearchingUseCase(pageSearchPort, DummyTransactionProvider())
+        val spaceMemberRepository = mockk<SpaceMemberRepository>()
+        val useCase =
+            PageSearchingUseCase(
+                pageSearchPort = pageSearchPort,
+                spaceMemberRepository = spaceMemberRepository,
+                transactionProvider = DummyTransactionProvider()
+            )
 
         beforeEach {
-            clearMocks(pageSearchPort)
+            clearMocks(pageSearchPort, spaceMemberRepository)
+            every { spaceMemberRepository.findSpaceIdsByUserId(any()) } returns emptySet()
         }
 
         describe("페이지 검색") {
@@ -184,7 +192,10 @@ class PageSearchingUseCaseTest :
                 }
             }
 
-            it("USER 는 Authenticated(viewerId) scope 로 검색한다") {
+            it("USER 는 Authenticated(viewerId, memberSpaceIds) scope 로 검색한다") {
+                every {
+                    spaceMemberRepository.findSpaceIdsByUserId(UserId(100L))
+                } returns setOf(SpaceId(10L), SpaceId(20L))
                 every {
                     pageSearchPort.search(
                         keyword = any(),
@@ -206,7 +217,11 @@ class PageSearchingUseCaseTest :
                         keyword = any(),
                         spaceId = any(),
                         tagIds = any(),
-                        scope = VisibilityScope.Authenticated(viewerId = UserId(100L)),
+                        scope =
+                            VisibilityScope.Authenticated(
+                                viewerId = UserId(100L),
+                                memberOfSpaceIds = setOf(SpaceId(10L), SpaceId(20L))
+                            ),
                         pageRequest = any()
                     )
                 }

@@ -396,7 +396,11 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = emptyList(),
-                            scope = VisibilityScope.Authenticated(viewerId = UserId(100L)),
+                            scope =
+                                VisibilityScope.Authenticated(
+                                    viewerId = UserId(100L),
+                                    memberOfSpaceIds = setOf(SpaceId(10L))
+                                ),
                             pageRequest = PageRequest.firstPage()
                         )
                     }

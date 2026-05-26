@@ -1,17 +1,21 @@
 package com.crispinlab.space.application.usecase.page
 
+import com.crispinlab.common.exception.ForbiddenException
 import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.common.id.IdGenerator
 import com.crispinlab.space.application.port.incoming.page.PageEditing.Request
 import com.crispinlab.space.application.port.outgoing.page.PageLinkRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRevisionRepository
+import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageLink
 import com.crispinlab.space.domain.page.PageRevision
+import com.crispinlab.space.domain.spacemember.SpaceMemberRole
 import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicPage
+import com.crispinlab.space.testsupport.Fixtures.basicSpaceMember
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -30,18 +34,29 @@ class PageEditingUseCaseTest :
         val pageRepository = mockk<PageRepository>()
         val pageRevisionRepository = mockk<PageRevisionRepository>()
         val pageLinkRepository = mockk<PageLinkRepository>()
+        val spaceMemberRepository = mockk<SpaceMemberRepository>()
         val idGenerator = mockk<IdGenerator>()
         val useCase =
             PageEditingUseCase(
                 pageRepository = pageRepository,
                 pageRevisionRepository = pageRevisionRepository,
                 pageLinkRepository = pageLinkRepository,
+                spaceMemberRepository = spaceMemberRepository,
                 idGenerator = idGenerator,
                 transactionProvider = DummyTransactionProvider()
             )
 
         beforeEach {
-            clearMocks(pageRepository, pageRevisionRepository, pageLinkRepository, idGenerator)
+            clearMocks(
+                pageRepository,
+                pageRevisionRepository,
+                pageLinkRepository,
+                spaceMemberRepository,
+                idGenerator
+            )
+            every {
+                spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
+            } returns basicSpaceMember(role = SpaceMemberRole.MEMBER)
             every { pageRepository.save(any()) } answers { firstArg() }
             every { pageRevisionRepository.save(any()) } answers { firstArg() }
             every { pageLinkRepository.saveAll(any()) } answers { firstArg() }
@@ -105,6 +120,19 @@ class PageEditingUseCaseTest :
                 every { pageRepository.findBy(page.id) } returns page
 
                 shouldThrow<NotFoundException> {
+                    useCase.perform(basicRequest(userId = UserId(100L)))
+                }
+                verify(exactly = 0) { pageRepository.save(any()) }
+            }
+
+            it("작성자더라도 멤버에서 추방됐으면 ForbiddenException") {
+                val page = basicPage(authorId = UserId(100L))
+                every { pageRepository.findBy(page.id) } returns page
+                every {
+                    spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
+                } returns null
+
+                shouldThrow<ForbiddenException> {
                     useCase.perform(basicRequest(userId = UserId(100L)))
                 }
                 verify(exactly = 0) { pageRepository.save(any()) }

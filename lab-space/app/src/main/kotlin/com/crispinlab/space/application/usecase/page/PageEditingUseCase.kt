@@ -9,6 +9,8 @@ import com.crispinlab.space.application.port.incoming.page.PageEditing.Result
 import com.crispinlab.space.application.port.outgoing.page.PageLinkRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRevisionRepository
+import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
+import com.crispinlab.space.application.usecase.access.requireWritePermission
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageErrorCode
 import com.crispinlab.space.domain.page.PageLink
@@ -22,6 +24,7 @@ class PageEditingUseCase(
     private val pageRepository: PageRepository,
     private val pageRevisionRepository: PageRevisionRepository,
     private val pageLinkRepository: PageLinkRepository,
+    private val spaceMemberRepository: SpaceMemberRepository,
     private val idGenerator: IdGenerator,
     private val transactionProvider: TransactionProvider
 ) : PageEditing {
@@ -38,6 +41,8 @@ class PageEditingUseCase(
             .findBy(pageId)
             ?.takeIf {
                 viewer.isAdmin || it.authorId == viewer.userId
+            }?.also {
+                spaceMemberRepository.requireWritePermission(viewer, it.spaceId)
             } ?: throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
 
     private fun Page.applyEditWith(request: Request): Page =

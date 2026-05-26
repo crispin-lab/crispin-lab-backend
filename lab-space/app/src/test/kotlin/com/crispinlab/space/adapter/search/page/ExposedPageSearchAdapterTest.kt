@@ -362,13 +362,13 @@ class ExposedPageSearchAdapterTest :
                 result.totalElements shouldBe 1L
             }
 
-            it("Authenticated scope 는 PUBLIC + INTERNAL + 본인 DRAFT 를 노출한다") {
+            it("Authenticated scope 는 PUBLIC + 멤버 INTERNAL + 본인 DRAFT 를 노출하고 비멤버 INTERNAL 은 제외한다") {
                 transaction(database) {
                     pageRepository.save(publicPage(id = PageId(1L), title = "공개"))
                     pageRepository.save(
                         basicPage(
                             id = PageId(2L),
-                            title = "내부",
+                            title = "멤버 내부",
                             visibility = Visibility.INTERNAL
                         )
                     )
@@ -386,6 +386,14 @@ class ExposedPageSearchAdapterTest :
                             authorId = UserId(200L),
                             title = "타인 초안",
                             visibility = Visibility.DRAFT
+                        )
+                    )
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(5L),
+                            spaceId = SpaceId(99L),
+                            title = "비멤버 내부",
+                            visibility = Visibility.INTERNAL
                         )
                     )
                 }

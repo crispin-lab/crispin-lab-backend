@@ -80,9 +80,12 @@ class PageDeletingUseCaseTest :
                 verify(exactly = 0) { pageRepository.delete(any()) }
             }
 
-            it("ADMIN 은 작성자가 아니어도 삭제 가능하다") {
+            it("ADMIN 은 작성자가 아니어도, 멤버가 아니어도 삭제 가능하다") {
                 val page = basicPage(authorId = UserId(200L))
                 every { pageRepository.findBy(page.id) } returns page
+                every {
+                    spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
+                } returns null
                 justRun { pageRepository.delete(page.id) }
 
                 useCase.perform(

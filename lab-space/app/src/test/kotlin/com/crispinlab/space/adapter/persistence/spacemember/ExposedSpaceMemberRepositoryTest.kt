@@ -31,7 +31,13 @@ private fun awaitLockWaiter(
         val waiterCount =
             transaction(database) {
                 exec(
-                    "SELECT count(*) FROM pg_stat_activity WHERE wait_event_type = 'Lock'"
+                    """
+                    SELECT count(*)
+                    FROM pg_stat_activity
+                    WHERE wait_event_type = 'Lock'
+                      AND datname = current_database()
+                      AND pid <> pg_backend_pid()
+                    """.trimIndent()
                 ) { rs ->
                     if (rs.next()) rs.getLong(1) else 0L
                 } ?: 0L

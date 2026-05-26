@@ -83,6 +83,9 @@ class SpaceDeletingUseCaseTest :
             it("ADMIN 은 멤버가 아니어도 삭제할 수 있다") {
                 val space = basicSpace(id = SpaceId(1L))
                 every { spaceRepository.findBy(space.id) } returns space
+                every {
+                    spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
+                } returns null
                 justRun { spaceRepository.delete(space.id) }
 
                 useCase.perform(basicRequest(isAdmin = true))

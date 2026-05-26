@@ -111,10 +111,13 @@ class CommentRegisteringUseCaseTest :
                 verify(exactly = 0) { commentRepository.save(any()) }
             }
 
-            it("ADMIN 은 다른 사용자의 DRAFT 페이지에도 댓글을 달 수 있다") {
+            it("ADMIN 은 다른 사용자의 DRAFT 페이지에도, 비멤버 상태에서도 댓글을 달 수 있다") {
                 every { idGenerator.next() } returns 42L
                 every { pageRepository.findBy(any()) } returns
                     basicPage(authorId = UserId(999L), visibility = Visibility.DRAFT)
+                every {
+                    spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
+                } returns null
 
                 useCase.perform(basicRequest(isAdmin = true))
 

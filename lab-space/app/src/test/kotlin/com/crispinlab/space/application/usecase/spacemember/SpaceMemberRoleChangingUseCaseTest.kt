@@ -89,18 +89,10 @@ class SpaceMemberRoleChangingUseCaseTest :
                 every {
                     spaceMemberRepository.findBySpaceIdAndUserId(SpaceId(10L), UserId(100L))
                 } returns basicSpaceMember(userId = UserId(100L), role = SpaceMemberRole.OWNER)
-                every {
-                    spaceMemberRepository.findBySpaceIdAndUserId(SpaceId(10L), UserId(200L))
-                } returns
-                    basicSpaceMember(
-                        id = SpaceMemberId(2L),
-                        userId = UserId(200L),
-                        role = SpaceMemberRole.OWNER
-                    )
                 every { spaceMemberRepository.countOwnersBy(SpaceId(10L)) } returns 1L
 
                 shouldThrow<ConflictException> {
-                    useCase.perform(basicRequest(targetUserId = "200", role = "MEMBER"))
+                    useCase.perform(basicRequest(targetUserId = "100", role = "MEMBER"))
                 }
                 verify(exactly = 0) { spaceMemberRepository.save(any()) }
             }

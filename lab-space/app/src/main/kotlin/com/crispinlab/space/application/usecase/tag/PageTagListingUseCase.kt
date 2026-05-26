@@ -8,7 +8,7 @@ import com.crispinlab.space.application.port.incoming.tag.PageTagListing.Summary
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.application.port.outgoing.tag.TagRepository
-import com.crispinlab.space.application.usecase.access.findReadableBy
+import com.crispinlab.space.application.usecase.access.findReadablePage
 import com.crispinlab.space.domain.tag.Tag
 import org.springframework.stereotype.Service
 
@@ -28,7 +28,7 @@ class PageTagListingUseCase(
         }
 
     private fun Request.validate() {
-        pageRepository.findReadableBy(viewer, pageId, spaceMemberRepository)
+        findReadablePage(pageRepository, spaceMemberRepository, viewer, pageId)
     }
 
     private fun Request.toResult(): PageResult<Summary> =

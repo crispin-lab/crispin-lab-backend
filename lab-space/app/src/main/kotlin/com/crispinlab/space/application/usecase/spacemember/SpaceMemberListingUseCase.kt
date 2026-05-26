@@ -9,7 +9,7 @@ import com.crispinlab.space.application.port.incoming.spacemember.SpaceMemberLis
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.space.SpaceVisibilityScope
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
-import com.crispinlab.space.application.usecase.access.lookupMemberSpaceIds
+import com.crispinlab.space.application.usecase.access.memberSpaceIdsOf
 import com.crispinlab.space.domain.space.Space
 import com.crispinlab.space.domain.space.SpaceErrorCode
 import com.crispinlab.space.domain.spacemember.SpaceMember
@@ -33,7 +33,7 @@ class SpaceMemberListingUseCase(
             spaceRepository.findBy(spaceId)
                 ?: throw NotFoundException(SpaceErrorCode.SPACE_NOT_FOUND)
         val scope =
-            SpaceVisibilityScope.of(viewer, spaceMemberRepository.lookupMemberSpaceIds(viewer))
+            SpaceVisibilityScope.of(viewer, spaceMemberRepository.memberSpaceIdsOf(viewer))
         if (!scope.allows(space.visibility, space.id)) {
             throw NotFoundException(SpaceErrorCode.SPACE_NOT_FOUND)
         }

@@ -8,7 +8,7 @@ import com.crispinlab.space.application.port.incoming.page.PageRevisionGetting.R
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRevisionRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
-import com.crispinlab.space.application.usecase.access.findReadableBy
+import com.crispinlab.space.application.usecase.access.findReadablePage
 import com.crispinlab.space.domain.page.PageRevision
 import com.crispinlab.space.domain.page.PageRevisionErrorCode
 import org.springframework.stereotype.Service
@@ -30,7 +30,7 @@ class PageRevisionGettingUseCase(
         }
 
     private fun Request.validate() {
-        pageRepository.findReadableBy(viewer, pageId, spaceMemberRepository)
+        findReadablePage(pageRepository, spaceMemberRepository, viewer, pageId)
     }
 
     private fun Request.toEntity(): PageRevision =

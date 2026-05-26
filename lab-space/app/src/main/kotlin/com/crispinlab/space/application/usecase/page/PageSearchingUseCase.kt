@@ -9,7 +9,7 @@ import com.crispinlab.space.application.port.outgoing.page.PageSearchPort
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.PageSummary
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
-import com.crispinlab.space.application.usecase.access.lookupMemberSpaceIds
+import com.crispinlab.space.application.usecase.access.memberSpaceIdsOf
 import org.springframework.stereotype.Service
 
 @Service
@@ -32,7 +32,7 @@ class PageSearchingUseCase(
                 scope =
                     VisibilityScope.of(
                         viewer,
-                        spaceMemberRepository.lookupMemberSpaceIds(viewer)
+                        spaceMemberRepository.memberSpaceIdsOf(viewer)
                     ),
                 pageRequest = pageRequest
             ).map { it.toSummary() }

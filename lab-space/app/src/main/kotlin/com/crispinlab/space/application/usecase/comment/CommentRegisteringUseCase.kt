@@ -10,7 +10,7 @@ import com.crispinlab.space.application.port.outgoing.comment.CommentRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
-import com.crispinlab.space.application.usecase.access.lookupMemberSpaceIds
+import com.crispinlab.space.application.usecase.access.memberSpaceIdsOf
 import com.crispinlab.space.application.usecase.access.requireWritePermission
 import com.crispinlab.space.domain.comment.Comment
 import com.crispinlab.space.domain.comment.CommentId
@@ -39,7 +39,7 @@ class CommentRegisteringUseCase(
 
     private fun Request.validate() {
         val scope =
-            VisibilityScope.of(viewer, spaceMemberRepository.lookupMemberSpaceIds(viewer))
+            VisibilityScope.of(viewer, spaceMemberRepository.memberSpaceIdsOf(viewer))
         val page: Page =
             pageRepository
                 .findBy(pageId)

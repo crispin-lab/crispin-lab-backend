@@ -8,7 +8,7 @@ import com.crispinlab.space.application.port.incoming.space.SpaceListing.Summary
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.space.SpaceVisibilityScope
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
-import com.crispinlab.space.application.usecase.access.lookupMemberSpaceIds
+import com.crispinlab.space.application.usecase.access.memberSpaceIdsOf
 import com.crispinlab.space.domain.space.Space
 import org.springframework.stereotype.Service
 
@@ -27,7 +27,7 @@ class SpaceListingUseCase(
         spaceRepository
             .findPage(
                 pageRequest,
-                SpaceVisibilityScope.of(viewer, spaceMemberRepository.lookupMemberSpaceIds(viewer))
+                SpaceVisibilityScope.of(viewer, spaceMemberRepository.memberSpaceIdsOf(viewer))
             ).map { it.toSummary() }
 
     private fun Space.toSummary(): Summary =

@@ -8,7 +8,7 @@ import com.crispinlab.space.application.port.incoming.page.PageGetting.Result
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
-import com.crispinlab.space.application.usecase.access.lookupMemberSpaceIds
+import com.crispinlab.space.application.usecase.access.memberSpaceIdsOf
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageErrorCode
 import org.springframework.stereotype.Service
@@ -28,7 +28,7 @@ class PageGettingUseCase(
 
     private fun Request.toEntity(): Page {
         val scope =
-            VisibilityScope.of(viewer, spaceMemberRepository.lookupMemberSpaceIds(viewer))
+            VisibilityScope.of(viewer, spaceMemberRepository.memberSpaceIdsOf(viewer))
         return pageRepository
             .findBy(pageId)
             ?.takeIf { scope.allows(it.visibility, it.spaceId, it.authorId) }

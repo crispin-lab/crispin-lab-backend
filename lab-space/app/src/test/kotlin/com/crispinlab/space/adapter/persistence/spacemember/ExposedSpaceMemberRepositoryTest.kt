@@ -18,9 +18,29 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit.MILLISECONDS
 import java.util.concurrent.TimeUnit.SECONDS
+import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+
+private fun awaitLockWaiter(
+    database: Database,
+    deadlineMs: Long = 5000
+): Boolean {
+    val deadline = System.currentTimeMillis() + deadlineMs
+    while (System.currentTimeMillis() < deadline) {
+        val waiterCount =
+            transaction(database) {
+                exec(
+                    "SELECT count(*) FROM pg_stat_activity WHERE wait_event_type = 'Lock'"
+                ) { rs ->
+                    if (rs.next()) rs.getLong(1) else 0L
+                } ?: 0L
+            }
+        if (waiterCount > 0) return true
+        Thread.sleep(50)
+    }
+    return false
+}
 
 class ExposedSpaceMemberRepositoryTest :
     DescribeSpec({
@@ -285,7 +305,8 @@ class ExposedSpaceMemberRepositoryTest :
                             t2Acquired.countDown()
                         }
                     }
-                    t2Acquired.await(500, MILLISECONDS) shouldBe false
+                    awaitLockWaiter(database) shouldBe true
+                    t2Acquired.count shouldBe 1L
 
                     t1Proceed.countDown()
                     t2Acquired.await(5, SECONDS) shouldBe true

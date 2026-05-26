@@ -8,7 +8,7 @@ import com.crispinlab.space.application.port.incoming.space.SpaceGetting.Result
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.space.SpaceVisibilityScope
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
-import com.crispinlab.space.application.usecase.access.lookupMemberSpaceIds
+import com.crispinlab.space.application.usecase.access.memberSpaceIdsOf
 import com.crispinlab.space.domain.space.Space
 import com.crispinlab.space.domain.space.SpaceErrorCode
 import org.springframework.stereotype.Service
@@ -28,7 +28,7 @@ class SpaceGettingUseCase(
 
     private fun Request.toEntity(): Space {
         val scope =
-            SpaceVisibilityScope.of(viewer, spaceMemberRepository.lookupMemberSpaceIds(viewer))
+            SpaceVisibilityScope.of(viewer, spaceMemberRepository.memberSpaceIdsOf(viewer))
         return spaceRepository
             .findBy(spaceId)
             ?.takeIf { scope.allows(it.visibility, it.id) }

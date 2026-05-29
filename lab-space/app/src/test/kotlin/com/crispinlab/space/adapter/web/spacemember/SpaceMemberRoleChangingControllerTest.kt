@@ -61,7 +61,9 @@ class SpaceMemberRoleChangingControllerTest :
                             "spaceId".string("스페이스 식별자")
                             "userId".string("사용자 식별자")
                             "role".string("갱신된 역할")
-                        }
+                        },
+                        requestSchema = "SpaceMemberRoleChangeRequest",
+                        responseSchema = "SpaceMemberRoleChangeResponse"
                     )
             }
 

@@ -95,7 +95,8 @@ class PageSearchingControllerTest :
                             "totalPages".number("총 페이지 수")
                             "hasNext".boolean("다음 페이지 존재 여부")
                             "isEmpty".boolean("결과 비어 있음 여부")
-                        }
+                        },
+                        responseSchema = "PageSearchResponse"
                     )
             }
 

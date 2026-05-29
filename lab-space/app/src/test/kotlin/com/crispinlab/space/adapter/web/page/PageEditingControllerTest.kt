@@ -54,7 +54,9 @@ class PageEditingControllerTest :
                             "title".string("갱신된 제목")
                             "version".number("갱신 후 currentVersion")
                             "updatedAt".datetime("갱신 시각")
-                        }
+                        },
+                        requestSchema = "PageEditRequest",
+                        responseSchema = "PageEditResponse"
                     )
             }
 

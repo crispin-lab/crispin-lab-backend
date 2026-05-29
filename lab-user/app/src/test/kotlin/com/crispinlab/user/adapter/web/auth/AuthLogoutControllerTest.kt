@@ -32,7 +32,8 @@ class AuthLogoutControllerTest :
                     ).document(
                         requestFields {
                             "token".string("revoke 대상 세션 토큰")
-                        }
+                        },
+                        requestSchema = "AuthLogoutRequest"
                     )
                 verify(exactly = 1) { useCase.perform(any()) }
             }

@@ -60,7 +60,9 @@ class UserSigningControllerTest :
                         responseFields {
                             "userId".string("생성된 사용자 식별자")
                             "token".string("발급된 세션 토큰")
-                        }
+                        },
+                        requestSchema = "UserSignupRequest",
+                        responseSchema = "UserSignupResponse"
                     )
             }
 

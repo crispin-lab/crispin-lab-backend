@@ -50,7 +50,9 @@ class TagRegisteringControllerTest :
                         },
                         responseFields {
                             "tagId".string("생성된 태그 식별자")
-                        }
+                        },
+                        requestSchema = "TagRegisterRequest",
+                        responseSchema = "TagRegisterResponse"
                     )
 
                 verify(exactly = 1) {

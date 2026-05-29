@@ -49,7 +49,9 @@ class CommentRegisteringControllerTest :
                         },
                         responseFields {
                             "commentId".string("생성된 댓글 식별자")
-                        }
+                        },
+                        requestSchema = "CommentRegisterRequest",
+                        responseSchema = "CommentRegisterResponse"
                     )
             }
 

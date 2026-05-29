@@ -59,7 +59,9 @@ class CommentEditingControllerTest :
                             "commentId".string("댓글 식별자")
                             "body".string("갱신된 본문")
                             "updatedAt".datetime("갱신 시각")
-                        }
+                        },
+                        requestSchema = "CommentEditRequest",
+                        responseSchema = "CommentEditResponse"
                     )
 
                 verify(exactly = 1) {

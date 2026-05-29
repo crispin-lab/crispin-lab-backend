@@ -62,7 +62,8 @@ class CommentGettingControllerTest :
                             "body".string("본문")
                             "createdAt".datetime("생성 시각")
                             "updatedAt".datetime("최근 갱신 시각")
-                        }
+                        },
+                        responseSchema = "CommentGetResponse"
                     )
 
                 verify(exactly = 1) {

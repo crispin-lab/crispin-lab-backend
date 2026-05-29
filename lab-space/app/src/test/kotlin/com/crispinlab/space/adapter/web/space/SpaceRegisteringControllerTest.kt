@@ -58,7 +58,9 @@ class SpaceRegisteringControllerTest :
                         },
                         responseFields {
                             "spaceId".string("생성된 스페이스 식별자")
-                        }
+                        },
+                        requestSchema = "SpaceRegisterRequest",
+                        responseSchema = "SpaceRegisterResponse"
                     )
             }
 

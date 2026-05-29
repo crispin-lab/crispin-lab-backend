@@ -54,7 +54,8 @@ class SpaceGettingControllerTest :
                             "visibility".string("공개 범위")
                             "createdAt".datetime("생성 시각")
                             "updatedAt".datetime("최근 갱신 시각")
-                        }
+                        },
+                        responseSchema = "SpaceGetResponse"
                     )
             }
 

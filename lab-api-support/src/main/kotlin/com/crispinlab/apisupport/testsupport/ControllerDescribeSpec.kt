@@ -7,6 +7,7 @@ import com.crispinlab.common.infra.jackson.EntityIdSerializer
 import com.crispinlab.common.infra.jackson.StringValueSerializer
 import com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper.document
 import com.epages.restdocs.apispec.ResourceSnippetParametersBuilder
+import com.epages.restdocs.apispec.Schema
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS
 import com.fasterxml.jackson.databind.module.SimpleModule
@@ -172,7 +173,11 @@ abstract class ControllerDescribeSpec(
             "size" isParameterFor "페이지당 항목 수" isOptional sizeOptional
         )
 
-    private fun basicDocument(vararg snippets: Snippet): RestDocumentationResultHandler =
+    private fun basicDocument(
+        vararg snippets: Snippet,
+        requestSchema: String?,
+        responseSchema: String?
+    ): RestDocumentationResultHandler =
         document(
             identifier = identifier,
             resourceDetails =
@@ -182,12 +187,26 @@ abstract class ControllerDescribeSpec(
                             service?.let { "[$it]" },
                             tag
                         ).joinToString(" ")
-                    ).description(description),
+                    ).description(description)
+                    .also { builder ->
+                        requestSchema?.let { builder.requestSchema(Schema(it)) }
+                        responseSchema?.let { builder.responseSchema(Schema(it)) }
+                    },
             snippets = snippets
         )
 
-    fun ResultActions.document(vararg snippets: Snippet): ResultActions =
-        andDo(basicDocument(snippets = snippets))
+    fun ResultActions.document(
+        vararg snippets: Snippet,
+        requestSchema: String? = null,
+        responseSchema: String? = null
+    ): ResultActions =
+        andDo(
+            basicDocument(
+                snippets = snippets,
+                requestSchema = requestSchema,
+                responseSchema = responseSchema
+            )
+        )
 
     fun authHeaderRequired(optional: Boolean = false): Snippet =
         requestHeaders(

@@ -57,7 +57,9 @@ class SpaceMemberJoiningControllerTest :
                             "spaceId".string("스페이스 식별자")
                             "userId".string("사용자 식별자")
                             "role".string("부여된 역할")
-                        }
+                        },
+                        requestSchema = "SpaceMemberJoinRequest",
+                        responseSchema = "SpaceMemberJoinResponse"
                     )
             }
 
@@ -83,7 +85,9 @@ class SpaceMemberJoiningControllerTest :
                         requestFields {
                             "userId".string("초대 대상 사용자 식별자", optional = true)
                             "role".string("부여할 역할", optional = true)
-                        }
+                        },
+                        requestSchema = "SpaceMemberJoinRequest",
+                        responseSchema = "SpaceMemberJoinResponse"
                     )
             }
 

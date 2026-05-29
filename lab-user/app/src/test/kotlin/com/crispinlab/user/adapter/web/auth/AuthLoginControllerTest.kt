@@ -56,7 +56,9 @@ class AuthLoginControllerTest :
                         responseFields {
                             "userId".string("사용자 식별자")
                             "token".string("발급된 세션 토큰")
-                        }
+                        },
+                        requestSchema = "AuthLoginRequest",
+                        responseSchema = "AuthLoginResponse"
                     )
             }
 

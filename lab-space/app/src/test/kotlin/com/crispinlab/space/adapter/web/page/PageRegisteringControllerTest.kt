@@ -64,7 +64,9 @@ class PageRegisteringControllerTest :
                         },
                         responseFields {
                             "pageId".string("생성된 페이지 식별자")
-                        }
+                        },
+                        requestSchema = "PageRegisterRequest",
+                        responseSchema = "PageRegisterResponse"
                     )
             }
 

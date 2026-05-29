@@ -59,7 +59,9 @@ class SpaceEditingControllerTest :
                             "description".string("갱신된 설명")
                             "visibility".string("갱신된 공개 범위")
                             "updatedAt".datetime("갱신 시각")
-                        }
+                        },
+                        requestSchema = "SpaceEditRequest",
+                        responseSchema = "SpaceEditResponse"
                     )
             }
 

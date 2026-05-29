@@ -61,7 +61,8 @@ class PageRevisionGettingControllerTest :
                             "content".string("그 시점의 본문")
                             "authorId".string("작성자 식별자")
                             "createdAt".datetime("기록된 시각")
-                        }
+                        },
+                        responseSchema = "PageRevisionGetResponse"
                     )
             }
 

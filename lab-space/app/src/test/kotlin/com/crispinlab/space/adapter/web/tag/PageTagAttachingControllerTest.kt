@@ -43,7 +43,8 @@ class PageTagAttachingControllerTest :
                         authHeaderRequired(),
                         requestFields {
                             "tagId".string("매핑할 태그 식별자")
-                        }
+                        },
+                        requestSchema = "PageTagAttachRequest"
                     )
 
                 verify(exactly = 1) {

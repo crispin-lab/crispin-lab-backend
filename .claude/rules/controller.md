@@ -261,6 +261,22 @@ val useCase: SpaceRegistering = successfulUseCase<SpaceRegistering, Request, Res
 
 `mockk<T>() + every { perform(any<R>()) } returns ...` 보일러플레이트를 한 줄로 줄인다. `Unit` 반환 UseCase 는 인자 없이 `successfulUseCase<SpaceDeleting, Request>()`.
 
+### `document(...)` 의 schema name 명시
+
+`document(...)` 호출은 vararg snippets 뒤에 named-only `requestSchema` / `responseSchema` 두 인자를 받는다. 명명 정책은 `{Entity}{Action}{Request|Response}` (`PageRegisterRequest`, `PageGetResponse`, `AuthLoginResponse`). 누락하면 restdocs-api-spec 이 path 기반 hash (예: `v1-pages365256445`) 로 자동 생성하므로 프론트 OpenAPI 타입 import 가 fragile. `verifyOpenApiSchemaNames` task 가 `openapi3.json` 의 `components.schemas` 키를 PascalCase 정규식 (`^(?:[A-Z][a-z0-9]+)+$`) 으로 검증해 fail-fast.
+
+```kotlin
+.document(
+    authHeaderRequired(),
+    requestFields { ... },
+    responseFields { ... },
+    requestSchema = "PageRegisterRequest",
+    responseSchema = "PageRegisterResponse"
+)
+```
+
+**한 컨트롤러 안에서 `.document(...)` 가 두 번 이상 호출되며 같은 schema name 을 공유할 때**: 한 호출만 schema body 를 정의 (request/responseFields snippet 포함) 하고 다른 호출은 schema name 만 매기는 패턴이 표준 — 두번째 호출이 schema name 만 매겨야 자기 response 가 path 기반 hash schema (`v1-...-12345`) 로 떨어지지 않고 첫 호출의 body 를 공유한다. 두 호출 모두 schema body 를 정의하면서 다른 fields 를 갖는 경우 마지막 호출이 첫 호출을 덮어쓴다 (silent override — `extractOrFindSchema` 의 map 동작). 그 경우 두 호출에 다른 schema name 을 주거나 한 호출로 합쳐 둔다.
+
 ## 자주 빠뜨리는 것
 
 - **Result 를 다시 감싸기** — `ApiResponse(data = result, message = "ok")` 같은 envelope 은 정말 필요할 때만 도입. 도입한다면 전 계층 일관되게.

@@ -34,7 +34,6 @@ class RestdocsConventionPlugin : Plugin<Project> {
                     group = "verification"
                     description =
                         "openapi3.json 의 components.schemas 이름이 도메인 의미를 갖는지 검증"
-                    inputs.file(specFile)
                     outputs.upToDateWhen { false }
                     doLast {
                         val file = specFile.get().asFile

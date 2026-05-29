@@ -275,7 +275,7 @@ val useCase: SpaceRegistering = successfulUseCase<SpaceRegistering, Request, Res
 )
 ```
 
-**한 컨트롤러 안에서 `.document(...)` 가 두 번 이상 호출되며 같은 schema name 을 공유할 때**: 두 호출의 snippet 이 보완적 (한쪽은 requestFields 만, 한쪽은 responseFields 만) 이라 schema body 가 합쳐지는 형태면 OK. 단 한쪽이 다른 fields 를 추가·변경하면 마지막 호출의 schema body 가 첫 호출의 것을 덮어쓴다 (silent override — `extractOrFindSchema` 의 map 동작). 두 호출에 다른 schema name 을 주거나 한 호출로 합쳐 둔다.
+**한 컨트롤러 안에서 `.document(...)` 가 두 번 이상 호출되며 같은 schema name 을 공유할 때**: 한 호출만 schema body 를 정의 (request/responseFields snippet 포함) 하고 다른 호출은 schema name 만 매기는 패턴이 표준 — 두번째 호출이 schema name 만 매겨야 자기 response 가 path 기반 hash schema (`v1-...-12345`) 로 떨어지지 않고 첫 호출의 body 를 공유한다. 두 호출 모두 schema body 를 정의하면서 다른 fields 를 갖는 경우 마지막 호출이 첫 호출을 덮어쓴다 (silent override — `extractOrFindSchema` 의 map 동작). 그 경우 두 호출에 다른 schema name 을 주거나 한 호출로 합쳐 둔다.
 
 ## 자주 빠뜨리는 것
 

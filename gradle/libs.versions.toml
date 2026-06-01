@@ -10,7 +10,7 @@ rest-assured = "6.0.0"
 restdocs-api-spec = "0.19.4"
 swagger-models = "2.2.50"
 springmockk = "4.0.2"
-mockk = "1.14.9"
+mockk = "1.14.11"
 
 [libraries]
 # build-logic

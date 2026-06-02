@@ -2,6 +2,7 @@ package com.crispinlab.user.application.usecase.user
 
 import com.crispinlab.common.exception.ConflictException
 import com.crispinlab.common.id.IdGenerator
+import com.crispinlab.common.transaction.DummyTransactionProvider
 import com.crispinlab.user.application.port.incoming.user.UserSigning.Request
 import com.crispinlab.user.application.port.outgoing.credential.PasswordEncoder
 import com.crispinlab.user.application.port.outgoing.credential.UserCredentialRepository
@@ -11,7 +12,6 @@ import com.crispinlab.user.domain.credential.PasswordHash
 import com.crispinlab.user.domain.credential.UserCredential
 import com.crispinlab.user.domain.user.User
 import com.crispinlab.user.domain.user.UserErrorCode
-import com.crispinlab.user.testsupport.DummyTransactionProvider
 import com.crispinlab.user.testsupport.Fixtures.basicSessionToken
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec

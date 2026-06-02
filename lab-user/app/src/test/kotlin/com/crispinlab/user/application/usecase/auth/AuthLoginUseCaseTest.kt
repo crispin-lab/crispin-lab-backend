@@ -1,6 +1,7 @@
 package com.crispinlab.user.application.usecase.auth
 
 import com.crispinlab.common.exception.AuthenticationException
+import com.crispinlab.common.transaction.DummyTransactionProvider
 import com.crispinlab.user.application.port.incoming.auth.AuthLogin.Request
 import com.crispinlab.user.application.port.outgoing.credential.PasswordEncoder
 import com.crispinlab.user.application.port.outgoing.credential.UserCredentialRepository
@@ -9,7 +10,6 @@ import com.crispinlab.user.application.port.outgoing.user.UserRepository
 import com.crispinlab.user.domain.credential.Credential
 import com.crispinlab.user.domain.credential.PasswordHash
 import com.crispinlab.user.domain.user.UserErrorCode
-import com.crispinlab.user.testsupport.DummyTransactionProvider
 import com.crispinlab.user.testsupport.Fixtures.basicSessionToken
 import com.crispinlab.user.testsupport.Fixtures.basicUser
 import com.crispinlab.user.testsupport.Fixtures.basicUserCredential

@@ -1,12 +1,12 @@
 package com.crispinlab.space.application.usecase.tag
 
 import com.crispinlab.common.exception.ForbiddenException
+import com.crispinlab.common.transaction.DummyTransactionProvider
 import com.crispinlab.space.application.port.incoming.tag.TagDeleting.Request
 import com.crispinlab.space.application.port.outgoing.tag.TagRepository
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.tag.TagErrorCode
 import com.crispinlab.space.domain.tag.TagId
-import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec

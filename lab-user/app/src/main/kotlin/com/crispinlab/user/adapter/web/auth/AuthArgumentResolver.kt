@@ -2,6 +2,7 @@ package com.crispinlab.user.adapter.web.auth
 
 import com.crispinlab.common.exception.AuthenticationException
 import com.crispinlab.common.logging.LogContext.Field
+import com.crispinlab.common.transaction.TransactionProvider
 import com.crispinlab.user.application.port.outgoing.session.SessionService
 import com.crispinlab.user.application.port.outgoing.user.UserRepository
 import com.crispinlab.user.domain.session.SessionErrorCode.INVALID_SESSION
@@ -18,7 +19,8 @@ import org.springframework.web.method.support.ModelAndViewContainer
 @Component
 class AuthArgumentResolver(
     private val sessionService: SessionService,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val transactionProvider: TransactionProvider
 ) : HandlerMethodArgumentResolver {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -48,7 +50,10 @@ class AuthArgumentResolver(
             runCatching { SessionToken(stripped) }
                 .getOrElse { throw invalidSession("bad_token_format", cause = it) }
         val userId = sessionService.find(token) ?: throw invalidSession("session_miss")
-        val user = userRepository.findBy(userId) ?: throw invalidSession("user_miss")
+        val user =
+            transactionProvider.transactional(readOnly = true) {
+                userRepository.findBy(userId) ?: throw invalidSession("user_miss")
+            }
         return Auth(userId = user.id, role = user.role)
     }
 

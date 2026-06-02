@@ -4,6 +4,7 @@ import com.crispinlab.common.exception.ConflictException
 import com.crispinlab.common.exception.ForbiddenException
 import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.common.id.IdGenerator
+import com.crispinlab.common.transaction.DummyTransactionProvider
 import com.crispinlab.space.application.port.incoming.spacemember.SpaceMemberJoining.Request
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
@@ -11,7 +12,6 @@ import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.spacemember.SpaceMember
 import com.crispinlab.space.domain.spacemember.SpaceMemberRole
-import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicSpace
 import com.crispinlab.space.testsupport.Fixtures.basicSpaceMember
 import com.crispinlab.user.domain.user.UserId

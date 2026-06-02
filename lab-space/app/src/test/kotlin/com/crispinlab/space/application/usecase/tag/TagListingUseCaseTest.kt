@@ -4,6 +4,7 @@ import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.common.pagination.PageRequest
 import com.crispinlab.common.pagination.PageRequest.Companion.DEFAULT_SIZE
 import com.crispinlab.common.pagination.PageResult
+import com.crispinlab.common.transaction.DummyTransactionProvider
 import com.crispinlab.space.application.port.incoming.tag.TagListing.Request
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.tag.TagRepository
@@ -11,7 +12,6 @@ import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.tag.Tag
 import com.crispinlab.space.domain.tag.TagId
-import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicSpace
 import com.crispinlab.space.testsupport.Fixtures.basicTag
 import com.crispinlab.user.domain.user.UserId

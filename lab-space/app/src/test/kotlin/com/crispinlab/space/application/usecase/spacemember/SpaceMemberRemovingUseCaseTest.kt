@@ -3,13 +3,13 @@ package com.crispinlab.space.application.usecase.spacemember
 import com.crispinlab.common.exception.ConflictException
 import com.crispinlab.common.exception.ForbiddenException
 import com.crispinlab.common.exception.NotFoundException
+import com.crispinlab.common.transaction.DummyTransactionProvider
 import com.crispinlab.space.application.port.incoming.spacemember.SpaceMemberRemoving.Request
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.spacemember.SpaceMemberId
 import com.crispinlab.space.domain.spacemember.SpaceMemberRole
-import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicSpaceMember
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow

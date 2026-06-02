@@ -2,12 +2,12 @@ package com.crispinlab.space.application.usecase.page
 
 import com.crispinlab.common.exception.ForbiddenException
 import com.crispinlab.common.exception.NotFoundException
+import com.crispinlab.common.transaction.DummyTransactionProvider
 import com.crispinlab.space.application.port.incoming.page.PageDeleting.Request
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.spacemember.SpaceMemberRole
-import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicPage
 import com.crispinlab.space.testsupport.Fixtures.basicSpaceMember
 import com.crispinlab.user.domain.user.UserId

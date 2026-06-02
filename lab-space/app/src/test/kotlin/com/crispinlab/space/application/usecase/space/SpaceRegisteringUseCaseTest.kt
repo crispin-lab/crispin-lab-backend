@@ -1,6 +1,7 @@
 package com.crispinlab.space.application.usecase.space
 
 import com.crispinlab.common.id.IdGenerator
+import com.crispinlab.common.transaction.DummyTransactionProvider
 import com.crispinlab.space.application.port.incoming.space.SpaceRegistering.Request
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
@@ -9,7 +10,6 @@ import com.crispinlab.space.domain.space.Space
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.spacemember.SpaceMember
 import com.crispinlab.space.domain.spacemember.SpaceMemberRole
-import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec

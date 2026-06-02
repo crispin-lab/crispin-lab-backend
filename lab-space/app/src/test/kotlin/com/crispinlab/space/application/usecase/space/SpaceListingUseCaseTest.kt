@@ -3,6 +3,7 @@ package com.crispinlab.space.application.usecase.space
 import com.crispinlab.common.pagination.PageRequest
 import com.crispinlab.common.pagination.PageRequest.Companion.DEFAULT_SIZE
 import com.crispinlab.common.pagination.PageResult
+import com.crispinlab.common.transaction.DummyTransactionProvider
 import com.crispinlab.space.application.port.incoming.space.SpaceListing.Request
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.space.SpaceVisibilityScope
@@ -10,7 +11,6 @@ import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRep
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.space.Space
 import com.crispinlab.space.domain.space.SpaceId
-import com.crispinlab.space.testsupport.DummyTransactionProvider
 import com.crispinlab.space.testsupport.Fixtures.basicSpace
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow

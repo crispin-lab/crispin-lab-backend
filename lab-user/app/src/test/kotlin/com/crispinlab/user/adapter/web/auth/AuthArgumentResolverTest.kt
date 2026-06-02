@@ -1,6 +1,7 @@
 package com.crispinlab.user.adapter.web.auth
 
 import com.crispinlab.common.exception.AuthenticationException
+import com.crispinlab.common.transaction.DummyTransactionProvider
 import com.crispinlab.user.application.port.outgoing.session.SessionService
 import com.crispinlab.user.application.port.outgoing.user.UserRepository
 import com.crispinlab.user.domain.session.SessionErrorCode
@@ -16,6 +17,7 @@ import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.spyk
 import io.mockk.verify
 import io.mockk.verifyOrder
 import org.springframework.core.MethodParameter
@@ -27,9 +29,15 @@ class AuthArgumentResolverTest :
     DescribeSpec({
         val sessionService = mockk<SessionService>()
         val userRepository = mockk<UserRepository>()
-        val resolver = AuthArgumentResolver(sessionService, userRepository)
+        val transactionProvider = spyk(DummyTransactionProvider())
+        val resolver =
+            AuthArgumentResolver(
+                sessionService = sessionService,
+                userRepository = userRepository,
+                transactionProvider = transactionProvider
+            )
 
-        beforeEach { clearMocks(sessionService, userRepository) }
+        beforeEach { clearMocks(sessionService, userRepository, transactionProvider) }
 
         describe("AuthArgumentResolver") {
             it("Auth 파라미터를 처리할 수 있다고 보고한다") {
@@ -58,6 +66,7 @@ class AuthArgumentResolverTest :
                     sessionService.find(token)
                     userRepository.findBy(user.id)
                 }
+                verify { transactionProvider.transactional(readOnly = true, block = any()) }
             }
 
             it("ADMIN 역할 사용자도 동일하게 변환한다") {

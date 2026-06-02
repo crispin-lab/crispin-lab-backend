@@ -1,6 +1,4 @@
-package com.crispinlab.space.testsupport
-
-import com.crispinlab.common.transaction.TransactionProvider
+package com.crispinlab.common.transaction
 
 class DummyTransactionProvider : TransactionProvider {
     override fun <T> transactional(

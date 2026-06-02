@@ -27,6 +27,7 @@ dependencies {
     testFixturesImplementation(projects.labCommon)
 
     testImplementation(testFixtures(projects.labUser.domain))
+    testImplementation(testFixtures(projects.labCommon))
     testImplementation(testFixtures(projects.labCommonPersistence))
     testImplementation(projects.labApiSupport)
     testImplementation(libs.testcontainers)

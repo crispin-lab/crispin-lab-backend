@@ -6,6 +6,7 @@ import com.crispinlab.user.application.port.outgoing.session.SessionService
 import com.crispinlab.user.application.port.outgoing.user.UserRepository
 import com.crispinlab.user.domain.session.SessionErrorCode
 import com.crispinlab.user.domain.user.SystemRole
+import com.crispinlab.user.domain.user.User
 import com.crispinlab.user.domain.user.UserId
 import com.crispinlab.user.testsupport.Fixtures.basicSessionToken
 import com.crispinlab.user.testsupport.Fixtures.basicUser
@@ -51,8 +52,24 @@ class AuthArgumentResolverTest :
             it("정상 토큰을 받으면 Auth 로 변환한다") {
                 val token = basicSessionToken()
                 val user = basicUser(id = UserId(100L), role = SystemRole.USER)
+                var inTransaction = false
+                every {
+                    transactionProvider.transactional<User>(readOnly = true, block = any())
+                } answers {
+                    inTransaction = true
+                    try {
+                        callOriginal()
+                    } finally {
+                        inTransaction = false
+                    }
+                }
                 every { sessionService.find(token) } returns user.id
-                every { userRepository.findBy(user.id) } returns user
+                every { userRepository.findBy(user.id) } answers {
+                    check(inTransaction) {
+                        "userRepository.findBy 는 트랜잭션 안에서만 호출되어야 한다."
+                    }
+                    user
+                }
 
                 val auth =
                     resolver.resolveArgument(

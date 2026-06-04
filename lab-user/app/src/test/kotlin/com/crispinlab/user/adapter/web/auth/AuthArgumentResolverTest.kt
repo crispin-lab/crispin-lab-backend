@@ -79,6 +79,7 @@ class AuthArgumentResolverTest :
                 auth.userId shouldBe UserId(100L)
                 auth.role shouldBe SystemRole.USER
                 auth.isAdmin shouldBe false
+                auth.sessionToken shouldBe token
                 verifyOrder {
                     sessionService.find(token)
                     userRepository.findBy(user.id)
@@ -99,6 +100,7 @@ class AuthArgumentResolverTest :
 
                 auth.role shouldBe SystemRole.ADMIN
                 auth.isAdmin shouldBe true
+                auth.sessionToken shouldBe token
             }
 
             it("Authorization 헤더가 없으면 INVALID_SESSION 으로 401") {
@@ -195,6 +197,7 @@ class AuthArgumentResolverTest :
                 auth.shouldNotBeNull()
                 auth.userId shouldBe UserId(100L)
                 auth.role shouldBe SystemRole.USER
+                auth.sessionToken shouldBe token
             }
         }
     }) {

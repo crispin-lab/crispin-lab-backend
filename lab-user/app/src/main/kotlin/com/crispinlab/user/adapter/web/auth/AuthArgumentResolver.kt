@@ -54,7 +54,11 @@ class AuthArgumentResolver(
             transactionProvider.transactional(readOnly = true) {
                 userRepository.findBy(userId) ?: throw invalidSession("user_miss")
             }
-        return Auth(userId = user.id, role = user.role)
+        return Auth(
+            userId = user.id,
+            role = user.role,
+            sessionToken = token
+        )
     }
 
     private fun invalidSession(

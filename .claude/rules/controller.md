@@ -28,9 +28,15 @@ controller 가 **얇게** 유지되어야 UseCase 가 진짜 비즈니스 단위
 | 삭제 | DELETE | `/v1/{entities}/{id}` |
 | 특정 필드 조회 | GET | `/v1/{entities}/{id}/{field}` |
 | 특정 행위 | POST | `/v1/{entities}/{id}/{action}` |
+| 현재 사용자 self-alias | (위 동작과 동일) | `/v1/{entities}/me` |
 
 - path 는 영문 복수형, kebab-case 가 아닌 단순 명사.
 - 버전 prefix(`/v1`) 는 모든 endpoint 에 동일하게.
+- `/v1/{entities}/me` 는 현재 인증된 사용자의 리소스를 가리키는 self-alias. `{id}` 자리에 자기 식별자를 클라이언트가 직접 박지 않아도 되고, 다른 사용자 식별자를 추측해 끼워 넣는 enumeration 도 차단된다.
+  - 시그니처는 `auth: Auth` 로 인증 강제, controller 가 `auth.userId` / `auth.sessionToken` 등 인증 컨텍스트에서 추출한 값을 Request 로 넘긴다.
+  - path variable / body 가 별도로 필요 없는 self-action 에 쓴다.
+  - **controller 테스트에서 `auth.sessionToken` (또는 다른 Auth 필드) 의 전달을 검증할 때는 `withAuth(sessionToken = basicSessionToken())` 처럼 명시 인자로 호출한다.** `StubAuthArgumentResolver` 가 미지정 시 `stub_default_…` sentinel 토큰으로 채우므로, 미지정 + slot capture 어설션 조합은 silent 통과 가능. 명시 인자로 호출 측 의도를 드러낸다.
+  - 예: `DELETE /v1/sessions/me` — 현재 세션 로그아웃.
 
 ## 조회 controller
 

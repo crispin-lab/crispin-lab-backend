@@ -47,7 +47,9 @@ class PageEditingUseCase(
 
     private fun Page.applyEditWith(request: Request): Page =
         apply {
-            request.visibility?.also { changeVisibility(it) }
+            request.visibility
+                ?.takeIf { it != visibility }
+                ?.also { changeVisibility(it) }
             val editResult: Page.EditResult? =
                 takeIf { it.hasContentChange(request) }
                     ?.edit(

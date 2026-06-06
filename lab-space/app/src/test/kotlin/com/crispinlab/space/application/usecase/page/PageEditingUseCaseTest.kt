@@ -29,6 +29,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
+import java.time.Instant
 
 class PageEditingUseCaseTest :
     DescribeSpec({
@@ -195,6 +196,31 @@ class PageEditingUseCaseTest :
                 useCase.perform(basicRequest(pageId = page.id.value.toString()))
 
                 savedPage.captured.visibility shouldBe Visibility.INTERNAL
+            }
+
+            it("같은 공개 범위를 다시 보내면 updatedAt 이 보존된다") {
+                val page =
+                    basicPage(
+                        visibility = Visibility.INTERNAL,
+                        currentVersion = 3
+                    )
+                val before: Instant = page.updatedAt
+                every { pageRepository.findBy(page.id) } returns page
+                val savedPage = slot<Page>()
+                every { pageRepository.save(capture(savedPage)) } answers { savedPage.captured }
+
+                useCase.perform(
+                    basicRequest(
+                        pageId = page.id.value.toString(),
+                        title = page.title,
+                        content = page.content.raw,
+                        visibility = Visibility.INTERNAL.name
+                    )
+                )
+
+                savedPage.captured.updatedAt shouldBe before
+                savedPage.captured.currentVersion shouldBe 3
+                verify(exactly = 0) { pageRevisionRepository.save(any()) }
             }
 
             it("본문 변경 없이 공개 범위만 바뀌면 새 리비전을 만들지 않는다") {

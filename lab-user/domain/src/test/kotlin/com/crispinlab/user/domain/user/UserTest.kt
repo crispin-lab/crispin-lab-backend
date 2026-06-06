@@ -20,7 +20,7 @@ class UserTest :
             }
         }
 
-        describe("핸들 변경") {
+        describe("사용자 이름 변경") {
             it("정상 변경 시 handle 과 updatedAt 이 갱신된다") {
                 val user: User = basicUser()
 
@@ -30,7 +30,7 @@ class UserTest :
                 user.updatedAt shouldNotBe DUMMY_INSTANT
             }
 
-            it("삭제된 사용자는 핸들을 변경할 수 없다") {
+            it("삭제된 사용자는 사용자 이름을 변경할 수 없다") {
                 val user: User = basicUser(deletedAt = DUMMY_INSTANT)
 
                 shouldThrow<IllegalStateException> {

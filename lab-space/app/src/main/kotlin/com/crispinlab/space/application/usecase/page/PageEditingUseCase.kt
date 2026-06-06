@@ -47,14 +47,19 @@ class PageEditingUseCase(
 
     private fun Page.applyEditWith(request: Request): Page =
         apply {
-            val editResult: Page.EditResult =
-                edit(
-                    title = request.title,
-                    content = request.content
-                )
+            request.visibility?.also { changeVisibility(it) }
+            val editResult: Page.EditResult? =
+                takeIf { it.hasContentChange(request) }
+                    ?.edit(
+                        title = request.title,
+                        content = request.content
+                    )
             pageRepository.save(this)
-            saveRevisionAndLinksWith(editResult)
+            editResult?.let { saveRevisionAndLinksWith(it) }
         }
+
+    private fun Page.hasContentChange(request: Request): Boolean =
+        title != request.title || content.raw != request.content
 
     private fun Page.saveRevisionAndLinksWith(editResult: Page.EditResult) {
         val revision: PageRevision = saveRevisionWith(editResult)

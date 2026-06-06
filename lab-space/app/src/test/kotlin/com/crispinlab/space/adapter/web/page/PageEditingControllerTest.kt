@@ -5,6 +5,7 @@ import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder
 import com.crispinlab.space.application.port.incoming.page.PageEditing
 import com.crispinlab.space.application.port.incoming.page.PageEditing.Result
 import com.crispinlab.space.domain.page.PageId
+import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
 import com.crispinlab.user.testsupport.withAuth
@@ -37,7 +38,13 @@ class PageEditingControllerTest :
                     .`when`(
                         put("/v1/pages/{pageId}", 1)
                             .withAuth()
-                            .body(mapOf("title" to "새 제목", "content" to "새 본문 [[wiki]]"))
+                            .body(
+                                mapOf(
+                                    "title" to "새 제목",
+                                    "content" to "새 본문 [[wiki]]",
+                                    "visibility" to Visibility.PUBLIC.name
+                                )
+                            )
                     ).then(
                         status().isOk,
                         jsonPath("$.pageId").value("1"),
@@ -48,6 +55,10 @@ class PageEditingControllerTest :
                         requestFields {
                             "title".string("새 제목")
                             "content".string("새 본문")
+                            "visibility".string(
+                                "변경할 공개 범위 (DRAFT / INTERNAL / PUBLIC). 생략 시 기존 값 유지.",
+                                optional = true
+                            )
                         },
                         responseFields {
                             "pageId".string("페이지 식별자")
@@ -58,6 +69,26 @@ class PageEditingControllerTest :
                         requestSchema = "PageEditRequest",
                         responseSchema = "PageEditResponse"
                     )
+            }
+
+            it("지원하지 않는 공개 범위 값이면 400 을 반환한다") {
+                controller
+                    .`when`(
+                        put("/v1/pages/{pageId}", 1)
+                            .withAuth()
+                            .body(
+                                mapOf(
+                                    "title" to "새 제목",
+                                    "content" to "본문",
+                                    "visibility" to "SECRET"
+                                )
+                            )
+                    ).then(
+                        status().isBadRequest,
+                        jsonPath("$.code").value("INVALID_REQUEST"),
+                        jsonPath("$.message").value("지원하지 않는 공개 범위입니다.")
+                    )
+                verify(exactly = 0) { useCase.perform(any()) }
             }
 
             it("Authorization 토큰이 없으면 401 을 반환한다") {

@@ -13,6 +13,7 @@ import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageLink
 import com.crispinlab.space.domain.page.PageRevision
+import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.spacemember.SpaceMemberRole
 import com.crispinlab.space.testsupport.Fixtures.basicPage
 import com.crispinlab.space.testsupport.Fixtures.basicSpaceMember
@@ -28,6 +29,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
+import java.time.Instant
 
 class PageEditingUseCaseTest :
     DescribeSpec({
@@ -157,6 +159,90 @@ class PageEditingUseCaseTest :
                 result.title shouldBe "새 제목"
                 verify(exactly = 1) { pageRepository.save(any()) }
             }
+
+            it("공개 범위를 같이 보내면 page.updatedAt 와 새 리비전의 createdAt 이 동일하다") {
+                val page = basicPage(visibility = Visibility.DRAFT, currentVersion = 1)
+                every { pageRepository.findBy(page.id) } returns page
+                every { idGenerator.next() } returnsMany listOf(101L)
+                val savedPage = slot<Page>()
+                val savedRevision = slot<PageRevision>()
+                every { pageRepository.save(capture(savedPage)) } answers { savedPage.captured }
+                every { pageRevisionRepository.save(capture(savedRevision)) } answers
+                    { savedRevision.captured }
+
+                val result =
+                    useCase.perform(
+                        basicRequest(
+                            pageId = page.id.value.toString(),
+                            title = "새 제목",
+                            content = "본문",
+                            visibility = Visibility.PUBLIC.name
+                        )
+                    )
+
+                savedPage.captured.visibility shouldBe Visibility.PUBLIC
+                savedPage.captured.currentVersion shouldBe 2
+                result.version shouldBe 2
+                savedPage.captured.updatedAt shouldBe savedRevision.captured.createdAt
+            }
+
+            it("공개 범위를 생략하면 기존 값이 보존된다") {
+                val page = basicPage(visibility = Visibility.INTERNAL)
+                every { pageRepository.findBy(page.id) } returns page
+                every { idGenerator.next() } returnsMany listOf(101L)
+                val savedPage = slot<Page>()
+                every { pageRepository.save(capture(savedPage)) } answers { savedPage.captured }
+
+                useCase.perform(basicRequest(pageId = page.id.value.toString()))
+
+                savedPage.captured.visibility shouldBe Visibility.INTERNAL
+            }
+
+            it("같은 공개 범위를 다시 보내면 updatedAt 이 보존된다") {
+                val page =
+                    basicPage(
+                        visibility = Visibility.INTERNAL,
+                        currentVersion = 3
+                    )
+                val before: Instant = page.updatedAt
+                every { pageRepository.findBy(page.id) } returns page
+                val savedPage = slot<Page>()
+                every { pageRepository.save(capture(savedPage)) } answers { savedPage.captured }
+
+                useCase.perform(
+                    basicRequest(
+                        pageId = page.id.value.toString(),
+                        title = page.title,
+                        content = page.content.raw,
+                        visibility = Visibility.INTERNAL.name
+                    )
+                )
+
+                savedPage.captured.updatedAt shouldBe before
+                savedPage.captured.currentVersion shouldBe 3
+                verify(exactly = 0) { pageRevisionRepository.save(any()) }
+            }
+
+            it("본문 변경 없이 공개 범위만 바뀌면 새 리비전을 만들지 않는다") {
+                val page = basicPage(visibility = Visibility.DRAFT, currentVersion = 3)
+                every { pageRepository.findBy(page.id) } returns page
+                val savedPage = slot<Page>()
+                every { pageRepository.save(capture(savedPage)) } answers { savedPage.captured }
+
+                useCase.perform(
+                    basicRequest(
+                        pageId = page.id.value.toString(),
+                        title = page.title,
+                        content = page.content.raw,
+                        visibility = Visibility.PUBLIC.name
+                    )
+                )
+
+                savedPage.captured.visibility shouldBe Visibility.PUBLIC
+                savedPage.captured.currentVersion shouldBe 3
+                verify(exactly = 0) { pageRevisionRepository.save(any()) }
+                verify(exactly = 0) { pageLinkRepository.saveAll(any()) }
+            }
         }
     }) {
     companion object {
@@ -164,6 +250,7 @@ class PageEditingUseCaseTest :
             pageId: String = "1",
             title: String = "새 제목",
             content: String = "새 본문",
+            visibility: String? = null,
             userId: UserId = UserId(100L),
             isAdmin: Boolean = false
         ): Request =
@@ -171,6 +258,7 @@ class PageEditingUseCaseTest :
                 pageId = pageId,
                 title = title,
                 content = content,
+                visibility = visibility,
                 viewer = Viewer.Member(userId = userId, isAdmin = isAdmin)
             )
     }

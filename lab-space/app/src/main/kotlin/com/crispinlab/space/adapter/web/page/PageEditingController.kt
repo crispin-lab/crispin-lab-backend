@@ -31,7 +31,8 @@ class PageEditingController(
 
     data class Body(
         val title: String,
-        val content: String
+        val content: String,
+        val visibility: String? = null
     ) {
         fun toRequestWith(
             pageId: String,
@@ -41,6 +42,7 @@ class PageEditingController(
                 pageId = pageId,
                 title = title,
                 content = content,
+                visibility = visibility,
                 viewer = viewer
             )
     }

@@ -54,7 +54,7 @@ class UserSigningControllerTest :
                     ).document(
                         requestFields {
                             "email".string("이메일")
-                            "handle".string("핸들 (영문 소문자/숫자/_, 3~30자)")
+                            "handle".string("사용자 이름 (영문 소문자/숫자/_, 3~30자)")
                             "password".string("비밀번호")
                         },
                         responseFields {

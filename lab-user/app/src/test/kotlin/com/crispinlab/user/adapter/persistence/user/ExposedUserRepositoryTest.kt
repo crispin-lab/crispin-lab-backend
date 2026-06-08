@@ -156,7 +156,7 @@ class ExposedUserRepositoryTest :
                 }
             }
 
-            it("existsByHandle 은 동일 핸들 존재 여부를 반환한다") {
+            it("동일 사용자 이름이 존재하면 true 를 반환한다") {
                 transaction(database) {
                     repository.save(
                         basicUser(

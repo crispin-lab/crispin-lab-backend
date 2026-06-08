@@ -7,7 +7,7 @@ data class Handle(
 ) : StringValue {
     init {
         require(HANDLE_REGEX.matches(value)) {
-            "핸들은 영문 소문자, 숫자, 밑줄(_) 로 ${MIN_LENGTH}~${MAX_LENGTH}자여야 합니다."
+            "사용자 이름은 영문 소문자, 숫자, 밑줄(_) 로 구성된 ${MIN_LENGTH}~${MAX_LENGTH}자여야 합니다."
         }
     }
 

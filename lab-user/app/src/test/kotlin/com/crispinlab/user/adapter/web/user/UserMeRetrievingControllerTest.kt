@@ -50,7 +50,7 @@ class UserMeRetrievingControllerTest :
                         authHeaderRequired(),
                         responseFields {
                             "userId".string("사용자 식별자")
-                            "handle".string("핸들")
+                            "handle".string("사용자 이름")
                             "email".string("이메일")
                             "isAdmin".boolean("ADMIN 권한 보유 여부")
                         },

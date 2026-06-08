@@ -77,7 +77,7 @@ class UserSigningUseCaseTest :
                 verify(exactly = 0) { userRepository.save(any()) }
             }
 
-            it("핸들이 중복이면 HANDLE_DUPLICATED 로 실패한다") {
+            it("사용자 이름이 중복이면 HANDLE_DUPLICATED 로 실패한다") {
                 every { userRepository.existsByEmail(any()) } returns false
                 every { userRepository.existsByHandle(any()) } returns true
 

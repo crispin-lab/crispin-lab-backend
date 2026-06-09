@@ -71,6 +71,45 @@ class ExposedPageSearchAdapterTest :
                 result.totalElements shouldBe 2L
             }
 
+            it("Summary 에 parentPageId 가 노출된다 (root 는 null, 자식은 부모 ID)") {
+                transaction(database) {
+                    pageRepository.save(
+                        publicPage(
+                            id = PageId(1L),
+                            title = "루트",
+                            createdAt = DUMMY_INSTANT
+                        )
+                    )
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(2L),
+                            title = "자식",
+                            visibility = Visibility.PUBLIC,
+                            parentPageId = PageId(1L),
+                            createdAt = DUMMY_INSTANT.plusSeconds(60)
+                        )
+                    )
+                }
+
+                val result =
+                    transaction(database) {
+                        adapter.search(
+                            keyword = null,
+                            spaceId = null,
+                            tagIds = emptyList(),
+                            sort = SortOption.UPDATED_AT,
+                            scope = VisibilityScope.Anonymous,
+                            pageRequest = PageRequest.firstPage()
+                        )
+                    }
+
+                result.items.associate { it.id to it.parentPageId } shouldBe
+                    mapOf(
+                        PageId(1L) to null,
+                        PageId(2L) to PageId(1L)
+                    )
+            }
+
             it("키워드는 title 과 content 를 모두 LIKE 매칭한다") {
                 transaction(database) {
                     pageRepository.save(

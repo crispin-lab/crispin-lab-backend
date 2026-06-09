@@ -87,6 +87,7 @@ interface PageSearchPort {
     data class PageSummary(
         val id: PageId,
         val spaceId: SpaceId,
+        val parentPageId: PageId?,
         val title: String,
         val updatedAt: Instant
     )

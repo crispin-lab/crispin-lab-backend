@@ -42,6 +42,7 @@ class PageSearchingUseCase(
         Summary(
             pageId = id,
             spaceId = spaceId,
+            parentPageId = parentPageId,
             title = title,
             updatedAt = updatedAt
         )

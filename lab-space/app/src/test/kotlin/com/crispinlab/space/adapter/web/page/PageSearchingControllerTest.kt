@@ -17,6 +17,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
+import org.hamcrest.Matchers.nullValue
 import org.springframework.http.HttpHeaders
 import org.springframework.restdocs.request.RequestDocumentation.queryParameters
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
@@ -39,12 +40,14 @@ class PageSearchingControllerTest :
                                 Summary(
                                     pageId = PageId(2L),
                                     spaceId = SpaceId(10L),
+                                    parentPageId = PageId(1L),
                                     title = "오늘의 회고",
                                     updatedAt = DUMMY_INSTANT
                                 ),
                                 Summary(
                                     pageId = PageId(1L),
                                     spaceId = SpaceId(10L),
+                                    parentPageId = null,
                                     title = "어제의 회고",
                                     updatedAt = DUMMY_INSTANT
                                 )
@@ -68,7 +71,12 @@ class PageSearchingControllerTest :
                         jsonPath("$.items.length()").value(2),
                         jsonPath("$.items[0].pageId").value("2"),
                         jsonPath("$.items[0].spaceId").value("10"),
+                        jsonPath("$.items[0].parentPageId").value("1"),
                         jsonPath("$.items[0].title").value("오늘의 회고"),
+                        jsonPath("$.items[1].pageId").value("1"),
+                        jsonPath("$.items[1].spaceId").value("10"),
+                        jsonPath("$.items[1].parentPageId").value(nullValue()),
+                        jsonPath("$.items[1].title").value("어제의 회고"),
                         jsonPath("$.page").value(0),
                         jsonPath("$.size").value(20),
                         jsonPath("$.totalElements").value(2)
@@ -86,6 +94,7 @@ class PageSearchingControllerTest :
                             "items".array("검색 결과 목록") {
                                 "pageId".string("페이지 식별자")
                                 "spaceId".string("소속 스페이스 식별자")
+                                "parentPageId".string("부모 페이지 식별자", optional = true)
                                 "title".string("제목")
                                 "updatedAt".datetime("최근 갱신 시각")
                             }

@@ -40,6 +40,7 @@ interface PageSearching : UseCase<Request, PageResult<Summary>> {
     data class Summary(
         val pageId: PageId,
         val spaceId: SpaceId,
+        val parentPageId: PageId?,
         val title: String,
         val updatedAt: Instant
     )

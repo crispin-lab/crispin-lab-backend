@@ -140,6 +140,7 @@ class ExposedPageSearchAdapter : PageSearchPort {
         PageSummary(
             id = PageId(this[Pages.id]),
             spaceId = SpaceId(this[Pages.spaceId]),
+            parentPageId = this[Pages.parentPageId]?.let(::PageId),
             title = this[Pages.title],
             updatedAt = this[Pages.updatedAt]
         )

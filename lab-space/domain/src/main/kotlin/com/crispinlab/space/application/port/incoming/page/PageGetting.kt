@@ -28,6 +28,12 @@ interface PageGetting : UseCase<Request, Result> {
         val visibility: String,
         val currentVersion: Int,
         val createdAt: Instant,
-        val updatedAt: Instant
-    )
+        val updatedAt: Instant,
+        val ancestors: List<AncestorSummary>
+    ) {
+        data class AncestorSummary(
+            val pageId: PageId,
+            val title: String
+        )
+    }
 }

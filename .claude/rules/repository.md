@@ -231,6 +231,16 @@ interface PageSearchPort {
 
 **태그 AND 매칭은 두 단계 분리 쿼리**: 다중 tagIds 의 AND 보장 (`HAVING COUNT(DISTINCT tag_id) = N`) 은 별도 `matchedPageIdsByTag` 쿼리로 page_id 리스트를 먼저 모은 뒤 baseQuery 의 `Pages.id inList tagPageIds` 로 합성. 단일 쿼리에 group by + having + 일반 where 를 통합하지 않는 이유: baseQuery 의 `count()` (`toPageResult` 내부) 가 join row 곱셈으로 부풀려지는 회귀 방지. round-trip 1회 추가는 의도된 비용.
 
+### 트리 traversal 어댑터 정책
+
+`ExposedPageAncestorAdapter` 처럼 Postgres `WITH RECURSIVE` CTE 로 부모/자식 chain 을 따라가는 그래프 조회 어댑터의 invariant. Exposed v1 DSL 이 recursive CTE 를 표현하지 못해 본 어댑터들은 `TransactionManager.current().exec(stmt, args, StatementType.SELECT) { rs -> ... }` 로 raw SQL 을 실행한다 — 본 저장소의 첫 raw SQL 사용 케이스. 트랜잭션은 UseCase 의 `transactional` 안에서 흐른다 가정 (어댑터는 새 트랜잭션을 열지 않는다).
+
+**Cross-{aggregate scope} 차단은 SQL 레벨**: page chain 이 `parent_page_id` 만 따라가면 다른 스페이스의 page 가 끼어도 끌려온다. FK 가 없어 (`migration.md`) application 정책으로 보장된 invariant 라도 데이터 잔재·관리 콘솔 변경으로 깨질 수 있다. CTE anchor 는 `INNER JOIN pages target ON target.id = ? AND ... AND p.space_id = target.space_id` 로 target 의 space_id 와 같은 스페이스만 select, 재귀 절은 `INNER JOIN ancestor_chain ac ON ... AND p.space_id = ac.space_id` 로 chain 유지. visibility 마스킹 (UseCase 의 `scope.allows()`) 은 마지막 방어선이고, 첫 방어선은 SQL 의 same-scope 강제. cross-space invariant 가 깨질 가능성이 있는 다른 그래프 traversal (자식, 자손, 인접 등) 도 같은 패턴.
+
+**Soft delete 는 CTE 의 anchor + recursive 양쪽에 명시**: `WHERE p.deleted_at IS NULL` 을 둘 다 둔다. anchor 에만 두면 chain 중간의 deleted row 도 끌려와 응답에 노출. 양쪽에 두면 deleted row 에서 recursion 이 자연 종료 — 의도된 동작 ("deleted page 는 도메인적으로 존재하지 않음"). 본 어댑터의 base 자동 필터 (`notDeleted()`) 는 raw SQL 에 적용되지 않으므로 SQL 안에 명시 책임은 어댑터.
+
+**깊이 가드는 const 로**: 무한 순환 / 운영 사고 방지용 상한. `ExposedPageAncestorAdapter` 는 `MAX_ANCESTORS = 64`. 의미는 "본 시스템은 64 단계 이상의 페이지 chain 을 가정하지 않는다"  — 초과 시 silent truncation (root 가 응답에서 빠짐). 위키 실무 깊이를 충분히 덮는 보수적 값이라 트리거·모니터링 분리는 미도입. 64 단계가 부족해지는 정황이 보이면 응답에 truncation flag 를 추가하거나 가드 값을 늘리는 정책 결정이 필요 (별도 티켓). 다른 그래프 어댑터를 추가할 때도 같은 정책 — `const val MAX_<traversal> = N` 으로 한 곳에 모은다.
+
 ## 자주 빠뜨리는 것
 
 - **port 가 `lab-{domain}/domain` 에 들어감** — port 는 `application` 패키지. domain 은 entity / value object 만.

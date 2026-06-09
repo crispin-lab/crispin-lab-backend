@@ -5,6 +5,7 @@ import com.crispinlab.common.transaction.TransactionProvider
 import com.crispinlab.space.application.port.incoming.page.PageGetting
 import com.crispinlab.space.application.port.incoming.page.PageGetting.Request
 import com.crispinlab.space.application.port.incoming.page.PageGetting.Result
+import com.crispinlab.space.application.port.outgoing.page.PageAncestorPort
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
@@ -16,26 +17,26 @@ import org.springframework.stereotype.Service
 @Service
 class PageGettingUseCase(
     private val pageRepository: PageRepository,
+    private val pageAncestorPort: PageAncestorPort,
     private val spaceMemberRepository: SpaceMemberRepository,
     private val transactionProvider: TransactionProvider
 ) : PageGetting {
     override fun perform(request: Request): Result =
         transactionProvider.transactional(readOnly = true) {
-            request
-                .toEntity()
-                .toResult()
+            val scope = request.scopeOf()
+            request.toEntity(scope).toResult(scope)
         }
 
-    private fun Request.toEntity(): Page {
-        val scope =
-            VisibilityScope.of(viewer, spaceMemberRepository.memberSpaceIdsOf(viewer))
-        return pageRepository
+    private fun Request.scopeOf(): VisibilityScope =
+        VisibilityScope.of(viewer, spaceMemberRepository.memberSpaceIdsOf(viewer))
+
+    private fun Request.toEntity(scope: VisibilityScope): Page =
+        pageRepository
             .findBy(pageId)
             ?.takeIf { scope.allows(it.visibility, it.spaceId, it.authorId) }
             ?: throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
-    }
 
-    private fun Page.toResult(): Result =
+    private fun Page.toResult(scope: VisibilityScope): Result =
         Result(
             pageId = id,
             spaceId = spaceId,
@@ -46,6 +47,16 @@ class PageGettingUseCase(
             visibility = visibility.name,
             currentVersion = currentVersion,
             createdAt = createdAt,
-            updatedAt = updatedAt
+            updatedAt = updatedAt,
+            ancestors =
+                pageAncestorPort
+                    .findAncestorsOf(id)
+                    .filter { scope.allows(it.visibility, it.spaceId, it.authorId) }
+                    .map {
+                        Result.AncestorSummary(
+                            pageId = it.pageId,
+                            title = it.title
+                        )
+                    }
         )
 }

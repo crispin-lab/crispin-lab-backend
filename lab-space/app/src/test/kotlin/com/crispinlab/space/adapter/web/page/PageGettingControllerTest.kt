@@ -31,26 +31,41 @@ class PageGettingControllerTest :
             it("존재하면 200 과 정보를 반환한다") {
                 every { useCase.perform(any()) } returns
                     Result(
-                        pageId = PageId(1L),
+                        pageId = PageId(3L),
                         spaceId = SpaceId(10L),
-                        parentPageId = null,
+                        parentPageId = PageId(2L),
                         authorId = UserId(100L),
                         title = "오늘의 회고",
                         content = "본문",
                         visibility = "DRAFT",
                         currentVersion = 1,
                         createdAt = DUMMY_INSTANT,
-                        updatedAt = DUMMY_INSTANT
+                        updatedAt = DUMMY_INSTANT,
+                        ancestors =
+                            listOf(
+                                Result.AncestorSummary(
+                                    pageId = PageId(1L),
+                                    title = "개인 노트"
+                                ),
+                                Result.AncestorSummary(
+                                    pageId = PageId(2L),
+                                    title = "아이디어"
+                                )
+                            )
                     )
 
                 controller
                     .`when`(
-                        get("/v1/pages/{pageId}", 1).withAuth()
+                        get("/v1/pages/{pageId}", 3).withAuth()
                     ).then(
                         status().isOk,
-                        jsonPath("$.pageId").value("1"),
+                        jsonPath("$.pageId").value("3"),
                         jsonPath("$.title").value("오늘의 회고"),
-                        jsonPath("$.visibility").value("DRAFT")
+                        jsonPath("$.visibility").value("DRAFT"),
+                        jsonPath("$.ancestors[0].pageId").value("1"),
+                        jsonPath("$.ancestors[0].title").value("개인 노트"),
+                        jsonPath("$.ancestors[1].pageId").value("2"),
+                        jsonPath("$.ancestors[1].title").value("아이디어")
                     ).document(
                         authHeaderRequired(),
                         responseFields {
@@ -64,6 +79,10 @@ class PageGettingControllerTest :
                             "currentVersion".number("현재 버전")
                             "createdAt".datetime("생성 시각")
                             "updatedAt".datetime("최근 갱신 시각")
+                            "ancestors".array("조상 페이지 목록 — root → 직계 부모 순서") {
+                                "pageId".string("조상 페이지 식별자")
+                                "title".string("조상 페이지 제목")
+                            }
                         },
                         responseSchema = "PageGetResponse"
                     )
@@ -102,7 +121,8 @@ class PageGettingControllerTest :
                         visibility = "PUBLIC",
                         currentVersion = 1,
                         createdAt = DUMMY_INSTANT,
-                        updatedAt = DUMMY_INSTANT
+                        updatedAt = DUMMY_INSTANT,
+                        ancestors = emptyList()
                     )
 
                 controller

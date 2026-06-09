@@ -5,8 +5,6 @@ import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageContent
 import com.crispinlab.space.domain.page.PageId
-import com.crispinlab.space.domain.page.Visibility
-import com.crispinlab.space.domain.page.Visibility.Companion.asVisibility
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.user.domain.user.UserId
 import org.jetbrains.exposed.v1.core.ResultRow
@@ -75,10 +73,4 @@ class ExposedPageRepository :
                 (Pages.spaceId eq spaceId.value) and Pages.parentPageId.isNull() and
                     notDeleted()
             }.map { it.toEntity() }
-
-    private fun decodeVisibility(stored: String): Visibility =
-        runCatching { stored.asVisibility() }
-            .getOrElse { cause ->
-                throw IllegalStateException("저장된 visibility 값을 해석할 수 없습니다.", cause)
-            }
 }

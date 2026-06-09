@@ -62,6 +62,7 @@ class PageGettingControllerTest :
                         jsonPath("$.pageId").value("3"),
                         jsonPath("$.title").value("오늘의 회고"),
                         jsonPath("$.visibility").value("DRAFT"),
+                        jsonPath("$.ancestors.length()").value(2),
                         jsonPath("$.ancestors[0].pageId").value("1"),
                         jsonPath("$.ancestors[0].title").value("개인 노트"),
                         jsonPath("$.ancestors[1].pageId").value("2"),
@@ -129,7 +130,8 @@ class PageGettingControllerTest :
                     .`when`(get("/v1/pages/{pageId}", 1))
                     .then(
                         status().isOk,
-                        jsonPath("$.visibility").value("PUBLIC")
+                        jsonPath("$.visibility").value("PUBLIC"),
+                        jsonPath("$.ancestors.length()").value(0)
                     )
                 verify {
                     useCase.perform(

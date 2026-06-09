@@ -24,7 +24,9 @@ class PageGettingUseCase(
     override fun perform(request: Request): Result =
         transactionProvider.transactional(readOnly = true) {
             val scope = request.scopeOf()
-            request.toEntity(scope).toResult(scope)
+            val page = request.toEntity(scope)
+            val ancestors = page.ancestorsVisibleTo(scope)
+            page.toResult(ancestors)
         }
 
     private fun Request.scopeOf(): VisibilityScope =
@@ -36,7 +38,18 @@ class PageGettingUseCase(
             ?.takeIf { scope.allows(it.visibility, it.spaceId, it.authorId) }
             ?: throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
 
-    private fun Page.toResult(scope: VisibilityScope): Result =
+    private fun Page.ancestorsVisibleTo(scope: VisibilityScope): List<Result.AncestorSummary> =
+        pageAncestorPort
+            .findAncestorsOf(id)
+            .filter { scope.allows(it.visibility, it.spaceId, it.authorId) }
+            .map {
+                Result.AncestorSummary(
+                    pageId = it.pageId,
+                    title = it.title
+                )
+            }
+
+    private fun Page.toResult(ancestors: List<Result.AncestorSummary>): Result =
         Result(
             pageId = id,
             spaceId = spaceId,
@@ -48,15 +61,6 @@ class PageGettingUseCase(
             currentVersion = currentVersion,
             createdAt = createdAt,
             updatedAt = updatedAt,
-            ancestors =
-                pageAncestorPort
-                    .findAncestorsOf(id)
-                    .filter { scope.allows(it.visibility, it.spaceId, it.authorId) }
-                    .map {
-                        Result.AncestorSummary(
-                            pageId = it.pageId,
-                            title = it.title
-                        )
-                    }
+            ancestors = ancestors
         )
 }

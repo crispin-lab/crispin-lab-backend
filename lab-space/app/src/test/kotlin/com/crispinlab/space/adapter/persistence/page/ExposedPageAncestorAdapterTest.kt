@@ -5,6 +5,7 @@ import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.testsupport.Fixtures.basicPage
+import com.crispinlab.user.domain.user.UserId
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldHaveSize
@@ -55,24 +56,34 @@ class ExposedPageAncestorAdapterTest :
             }
 
             it("ancestor 의 metadata (spaceId / authorId / visibility) 도 함께 반환한다") {
+                val root =
+                    basicPage(
+                        id = PageId(1L),
+                        spaceId = SpaceId(11L),
+                        authorId = UserId(101L),
+                        visibility = Visibility.PUBLIC
+                    )
+                val leaf =
+                    basicPage(
+                        id = PageId(2L),
+                        spaceId = SpaceId(11L),
+                        authorId = UserId(102L),
+                        parentPageId = PageId(1L),
+                        visibility = Visibility.INTERNAL
+                    )
                 transaction(database) {
-                    repository.save(
-                        basicPage(id = PageId(1L), visibility = Visibility.PUBLIC)
-                    )
-                    repository.save(
-                        basicPage(
-                            id = PageId(2L),
-                            parentPageId = PageId(1L),
-                            visibility = Visibility.INTERNAL
-                        )
-                    )
+                    repository.save(root)
+                    repository.save(leaf)
                 }
 
                 transaction(database) {
                     val ancestors = adapter.findAncestorsOf(PageId(2L))
 
                     ancestors shouldHaveSize 1
-                    ancestors[0].visibility shouldBe Visibility.PUBLIC
+                    ancestors[0].pageId shouldBe root.id
+                    ancestors[0].spaceId shouldBe root.spaceId
+                    ancestors[0].authorId shouldBe root.authorId
+                    ancestors[0].visibility shouldBe root.visibility
                 }
             }
 

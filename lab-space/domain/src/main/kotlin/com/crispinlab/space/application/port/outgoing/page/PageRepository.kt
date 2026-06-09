@@ -13,5 +13,10 @@ interface PageRepository {
 
     fun findRoots(spaceId: SpaceId): List<Page>
 
+    fun nextDisplayOrderIn(
+        spaceId: SpaceId,
+        parentPageId: PageId?
+    ): Int
+
     fun delete(id: PageId)
 }

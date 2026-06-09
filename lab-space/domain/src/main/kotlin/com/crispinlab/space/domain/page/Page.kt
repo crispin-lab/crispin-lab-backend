@@ -16,6 +16,7 @@ class Page(
     content: PageContent,
     visibility: Visibility,
     currentVersion: Int,
+    displayOrder: Int = 0,
     val createdAt: Instant = now(),
     updatedAt: Instant = createdAt,
     deletedAt: Instant? = null
@@ -31,6 +32,8 @@ class Page(
         private set
     var currentVersion: Int = currentVersion
         private set
+    var displayOrder: Int = displayOrder
+        private set
     var updatedAt: Instant = updatedAt
         private set
     override var deletedAt: Instant? = deletedAt
@@ -40,6 +43,9 @@ class Page(
         validateTitle(title)
         require(currentVersion >= 1) {
             "현재 버전은 1 이상이어야 합니다."
+        }
+        require(displayOrder >= 0) {
+            "표시 순서는 0 이상이어야 합니다."
         }
         require(parentPageId != id) {
             "자기 자신을 부모로 설정할 수 없습니다."

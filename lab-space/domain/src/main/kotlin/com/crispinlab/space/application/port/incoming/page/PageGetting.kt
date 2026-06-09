@@ -27,6 +27,7 @@ interface PageGetting : UseCase<Request, Result> {
         val content: String,
         val visibility: String,
         val currentVersion: Int,
+        val displayOrder: Int,
         val createdAt: Instant,
         val updatedAt: Instant,
         val ancestors: List<AncestorSummary>

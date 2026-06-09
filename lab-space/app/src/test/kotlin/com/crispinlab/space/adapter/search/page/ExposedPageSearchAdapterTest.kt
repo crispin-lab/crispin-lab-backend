@@ -674,6 +674,63 @@ class ExposedPageSearchAdapterTest :
                 result.totalElements shouldBe 3L
             }
 
+            it("sort=TREE 는 (parentPageId NULLS FIRST, displayOrder ASC, id ASC) 로 정렬한다") {
+                transaction(database) {
+                    pageRepository.save(
+                        publicPage(id = PageId(10L), parentPageId = null, displayOrder = 1)
+                    )
+                    pageRepository.save(
+                        publicPage(id = PageId(11L), parentPageId = null, displayOrder = 0)
+                    )
+                    pageRepository.save(
+                        publicPage(id = PageId(12L), parentPageId = PageId(11L), displayOrder = 0)
+                    )
+                    pageRepository.save(
+                        publicPage(id = PageId(13L), parentPageId = PageId(11L), displayOrder = 1)
+                    )
+                    pageRepository.save(
+                        publicPage(id = PageId(14L), parentPageId = PageId(10L), displayOrder = 0)
+                    )
+                }
+
+                val result =
+                    transaction(database) {
+                        adapter.search(
+                            keyword = null,
+                            spaceId = null,
+                            tagIds = emptyList(),
+                            sort = SortOption.TREE,
+                            scope = VisibilityScope.Anonymous,
+                            pageRequest = PageRequest.firstPage()
+                        )
+                    }
+
+                result.items.map { it.id } shouldBe
+                    listOf(PageId(11L), PageId(10L), PageId(14L), PageId(12L), PageId(13L))
+            }
+
+            it("Summary 에 displayOrder 가 노출된다") {
+                transaction(database) {
+                    pageRepository.save(
+                        publicPage(id = PageId(20L), parentPageId = null, displayOrder = 3)
+                    )
+                }
+
+                val result =
+                    transaction(database) {
+                        adapter.search(
+                            keyword = null,
+                            spaceId = null,
+                            tagIds = emptyList(),
+                            sort = SortOption.UPDATED_AT,
+                            scope = VisibilityScope.Anonymous,
+                            pageRequest = PageRequest.firstPage()
+                        )
+                    }
+
+                result.items.first().displayOrder shouldBe 3
+            }
+
             it("Privileged scope 는 모든 visibility 의 페이지를 노출한다") {
                 transaction(database) {
                     pageRepository.save(publicPage(id = PageId(1L)))
@@ -711,17 +768,21 @@ class ExposedPageSearchAdapterTest :
         fun publicPage(
             id: PageId,
             spaceId: SpaceId = SpaceId(10L),
+            parentPageId: PageId? = null,
             title: String = "초안",
             content: PageContent = PageContent("본문"),
+            displayOrder: Int = 0,
             createdAt: Instant = DUMMY_INSTANT,
             updatedAt: Instant = createdAt
         ): Page =
             basicPage(
                 id = id,
                 spaceId = spaceId,
+                parentPageId = parentPageId,
                 title = title,
                 content = content,
                 visibility = Visibility.PUBLIC,
+                displayOrder = displayOrder,
                 createdAt = createdAt,
                 updatedAt = updatedAt
             )

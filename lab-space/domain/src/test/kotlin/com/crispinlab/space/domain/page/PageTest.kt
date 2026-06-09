@@ -36,6 +36,16 @@ class PageTest :
                     basicPage(id = PageId(1L), parentPageId = PageId(1L))
                 }
             }
+
+            it("displayOrder 가 음수면 실패한다") {
+                shouldThrow<IllegalArgumentException> {
+                    basicPage(displayOrder = -1)
+                }
+            }
+
+            it("displayOrder 디폴트는 0 이다") {
+                basicPage().displayOrder shouldBe 0
+            }
         }
 
         describe("본문 수정") {

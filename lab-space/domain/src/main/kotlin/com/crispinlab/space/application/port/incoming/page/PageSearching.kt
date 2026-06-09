@@ -42,6 +42,7 @@ interface PageSearching : UseCase<Request, PageResult<Summary>> {
         val spaceId: SpaceId,
         val parentPageId: PageId?,
         val title: String,
+        val displayOrder: Int,
         val updatedAt: Instant
     )
 }

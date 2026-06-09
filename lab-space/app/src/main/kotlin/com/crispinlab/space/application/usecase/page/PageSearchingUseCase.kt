@@ -44,6 +44,7 @@ class PageSearchingUseCase(
             spaceId = spaceId,
             parentPageId = parentPageId,
             title = title,
+            displayOrder = displayOrder,
             updatedAt = updatedAt
         )
 }

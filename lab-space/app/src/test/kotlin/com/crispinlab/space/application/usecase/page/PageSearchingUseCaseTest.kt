@@ -49,6 +49,7 @@ class PageSearchingUseCaseTest :
                             spaceId = SpaceId(10L),
                             parentPageId = PageId(1L),
                             title = "오늘의 회고",
+                            displayOrder = 1,
                             updatedAt = DUMMY_INSTANT
                         ),
                         PageSummary(
@@ -56,6 +57,7 @@ class PageSearchingUseCaseTest :
                             spaceId = SpaceId(10L),
                             parentPageId = null,
                             title = "어제의 회고",
+                            displayOrder = 0,
                             updatedAt = DUMMY_INSTANT
                         )
                     )
@@ -89,6 +91,7 @@ class PageSearchingUseCaseTest :
                 result.items.map { it.spaceId } shouldBe listOf(SpaceId(10L), SpaceId(10L))
                 result.items.map { it.parentPageId } shouldBe listOf(PageId(1L), null)
                 result.items.map { it.title } shouldBe listOf("오늘의 회고", "어제의 회고")
+                result.items.map { it.displayOrder } shouldBe listOf(1, 0)
                 result.totalElements shouldBe 2L
                 verify {
                     pageSearchPort.search(

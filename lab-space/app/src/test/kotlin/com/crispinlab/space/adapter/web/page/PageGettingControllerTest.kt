@@ -39,6 +39,7 @@ class PageGettingControllerTest :
                         content = "본문",
                         visibility = "DRAFT",
                         currentVersion = 1,
+                        displayOrder = 2,
                         createdAt = DUMMY_INSTANT,
                         updatedAt = DUMMY_INSTANT,
                         ancestors =
@@ -78,6 +79,7 @@ class PageGettingControllerTest :
                             "content".string("본문")
                             "visibility".string("공개 범위")
                             "currentVersion".number("현재 버전")
+                            "displayOrder".number("같은 부모 내 표시 순서 (0 부터 시작, 작을수록 앞)")
                             "createdAt".datetime("생성 시각")
                             "updatedAt".datetime("최근 갱신 시각")
                             "ancestors".array("조상 페이지 목록 — root → 직계 부모 순서") {
@@ -121,6 +123,7 @@ class PageGettingControllerTest :
                         content = "본문",
                         visibility = "PUBLIC",
                         currentVersion = 1,
+                        displayOrder = 0,
                         createdAt = DUMMY_INSTANT,
                         updatedAt = DUMMY_INSTANT,
                         ancestors = emptyList()

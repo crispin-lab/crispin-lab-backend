@@ -11,7 +11,9 @@ import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.core.max
 import org.jetbrains.exposed.v1.core.statements.UpsertStatement
+import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.springframework.stereotype.Repository
 
@@ -35,6 +37,7 @@ class ExposedPageRepository :
             content = PageContent(this[Pages.content]),
             visibility = decodeVisibility(this[Pages.visibility]),
             currentVersion = this[Pages.currentVersion],
+            displayOrder = this[Pages.displayOrder],
             createdAt = this[Pages.createdAt],
             updatedAt = this[Pages.updatedAt],
             deletedAt = this[Pages.deletedAt]
@@ -55,6 +58,7 @@ class ExposedPageRepository :
         builder[Pages.content] = entity.content.raw
         builder[Pages.visibility] = entity.visibility.name
         builder[Pages.currentVersion] = entity.currentVersion
+        builder[Pages.displayOrder] = entity.displayOrder
         builder[Pages.createdAt] = entity.createdAt
         builder[Pages.updatedAt] = entity.updatedAt
         builder[Pages.deletedAt] = entity.deletedAt
@@ -73,4 +77,22 @@ class ExposedPageRepository :
                 (Pages.spaceId eq spaceId.value) and Pages.parentPageId.isNull() and
                     notDeleted()
             }.map { it.toEntity() }
+
+    override fun nextDisplayOrderIn(
+        spaceId: SpaceId,
+        parentPageId: PageId?
+    ): Int {
+        val maxColumn = Pages.displayOrder.max()
+        val parentCondition =
+            parentPageId
+                ?.let { Pages.parentPageId eq it.value }
+                ?: Pages.parentPageId.isNull()
+        val current =
+            Pages
+                .select(maxColumn)
+                .where {
+                    (Pages.spaceId eq spaceId.value) and parentCondition and notDeleted()
+                }.single()[maxColumn]
+        return (current ?: -1) + 1
+    }
 }

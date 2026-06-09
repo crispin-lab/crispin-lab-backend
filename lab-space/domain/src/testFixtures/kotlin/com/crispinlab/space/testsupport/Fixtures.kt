@@ -50,6 +50,7 @@ object Fixtures {
         content: PageContent = PageContent("본문"),
         visibility: Visibility = Visibility.DRAFT,
         currentVersion: Int = 1,
+        displayOrder: Int = 0,
         createdAt: Instant = DUMMY_INSTANT,
         updatedAt: Instant = createdAt,
         deletedAt: Instant? = null
@@ -63,6 +64,7 @@ object Fixtures {
             content = content,
             visibility = visibility,
             currentVersion = currentVersion,
+            displayOrder = displayOrder,
             createdAt = createdAt,
             updatedAt = updatedAt,
             deletedAt = deletedAt

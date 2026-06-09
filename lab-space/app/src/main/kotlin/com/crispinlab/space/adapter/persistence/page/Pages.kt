@@ -15,6 +15,7 @@ object Pages : Table("pages") {
     val content = text("content")
     val visibility = varchar("visibility", length = 20)
     val currentVersion = integer("current_version")
+    val displayOrder = integer("display_order")
     val createdAt = timestamp("created_at")
     val updatedAt = timestamp("updated_at")
     val deletedAt = timestamp("deleted_at").nullable()

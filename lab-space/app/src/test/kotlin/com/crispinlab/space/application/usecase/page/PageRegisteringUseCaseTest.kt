@@ -65,6 +65,7 @@ class PageRegisteringUseCaseTest :
             every {
                 spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
             } returns basicSpaceMember(role = SpaceMemberRole.MEMBER)
+            every { pageRepository.nextDisplayOrderIn(any(), any()) } returns 0
             every { pageRepository.save(any()) } answers { firstArg() }
             every { pageRevisionRepository.save(any()) } answers { firstArg() }
             every { pageLinkRepository.saveAll(any()) } answers { firstArg() }
@@ -153,6 +154,24 @@ class PageRegisteringUseCaseTest :
                     useCase.perform(basicRequest(parentPageId = "99"))
                 }
                 verify(exactly = 0) { pageRepository.save(any()) }
+            }
+
+            it("같은 (spaceId, parentPageId) scope 의 MAX+1 을 displayOrder 로 자동 할당한다") {
+                every { idGenerator.next() } returnsMany listOf(1L, 2L, 3L)
+                every {
+                    pageRepository.nextDisplayOrderIn(SpaceId(10L), PageId(7L))
+                } returns 5
+                val savedPage = slot<Page>()
+                every { pageRepository.save(capture(savedPage)) } answers
+                    { savedPage.captured }
+                every { pageRepository.findBy(PageId(7L)) } returns
+                    basicPage(id = PageId(7L), spaceId = SpaceId(10L))
+
+                useCase.perform(
+                    basicRequest(spaceId = "10", parentPageId = "7")
+                )
+
+                savedPage.captured.displayOrder shouldBe 5
             }
 
             it("부모 페이지가 다른 스페이스에 속하면 NotFoundException (존재/소속 응답 통합)") {

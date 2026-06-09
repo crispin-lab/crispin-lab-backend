@@ -79,6 +79,14 @@ class ExposedPageSearchAdapter : PageSearchPort {
                     Pages.id to SortOrder.DESC
                 )
             }
+
+            SortOption.TREE -> {
+                arrayOf(
+                    Pages.parentPageId to SortOrder.ASC_NULLS_FIRST,
+                    Pages.displayOrder to SortOrder.ASC,
+                    Pages.id to SortOrder.ASC
+                )
+            }
         }
 
     private fun VisibilityScope.toCondition(): Op<Boolean> =
@@ -142,6 +150,7 @@ class ExposedPageSearchAdapter : PageSearchPort {
             spaceId = SpaceId(this[Pages.spaceId]),
             parentPageId = this[Pages.parentPageId]?.let(::PageId),
             title = this[Pages.title],
+            displayOrder = this[Pages.displayOrder],
             updatedAt = this[Pages.updatedAt]
         )
 }

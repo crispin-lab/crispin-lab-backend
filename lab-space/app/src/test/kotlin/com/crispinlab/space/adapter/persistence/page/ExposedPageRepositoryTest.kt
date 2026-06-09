@@ -224,6 +224,109 @@ class ExposedPageRepositoryTest :
                 }
             }
 
+            it("nextDisplayOrderIn 은 빈 scope 에서 0 을 반환한다") {
+                transaction(database) {
+                    repository.nextDisplayOrderIn(SpaceId(200L), null) shouldBe 0
+                    repository.nextDisplayOrderIn(SpaceId(200L), PageId(999L)) shouldBe 0
+                }
+            }
+
+            it("nextDisplayOrderIn 은 같은 (spaceId, parentPageId) scope 의 MAX + 1 을 반환한다") {
+                transaction(database) {
+                    repository.save(
+                        basicPage(
+                            id = PageId(201L),
+                            spaceId = SpaceId(201L),
+                            parentPageId = null,
+                            displayOrder = 0
+                        )
+                    )
+                    repository.save(
+                        basicPage(
+                            id = PageId(202L),
+                            spaceId = SpaceId(201L),
+                            parentPageId = null,
+                            displayOrder = 3
+                        )
+                    )
+                    repository.save(
+                        basicPage(
+                            id = PageId(203L),
+                            spaceId = SpaceId(201L),
+                            parentPageId = PageId(201L),
+                            displayOrder = 7
+                        )
+                    )
+                }
+
+                transaction(database) {
+                    repository.nextDisplayOrderIn(SpaceId(201L), null) shouldBe 4
+                    repository.nextDisplayOrderIn(SpaceId(201L), PageId(201L)) shouldBe 8
+                }
+            }
+
+            it("nextDisplayOrderIn 은 다른 스페이스의 displayOrder 를 포함하지 않는다") {
+                transaction(database) {
+                    repository.save(
+                        basicPage(
+                            id = PageId(210L),
+                            spaceId = SpaceId(210L),
+                            parentPageId = null,
+                            displayOrder = 9
+                        )
+                    )
+                }
+
+                transaction(database) {
+                    repository.nextDisplayOrderIn(SpaceId(211L), null) shouldBe 0
+                }
+            }
+
+            it("nextDisplayOrderIn 은 soft deleted 페이지를 제외한 MAX 를 반환한다") {
+                transaction(database) {
+                    repository.save(
+                        basicPage(
+                            id = PageId(220L),
+                            spaceId = SpaceId(220L),
+                            parentPageId = null,
+                            displayOrder = 0
+                        )
+                    )
+                    repository.save(
+                        basicPage(
+                            id = PageId(221L),
+                            spaceId = SpaceId(220L),
+                            parentPageId = null,
+                            displayOrder = 5
+                        )
+                    )
+                }
+
+                transaction(database) {
+                    repository.delete(PageId(221L))
+                }
+
+                transaction(database) {
+                    repository.nextDisplayOrderIn(SpaceId(220L), null) shouldBe 1
+                }
+            }
+
+            it("save / findBy 가 displayOrder 를 그대로 보존한다") {
+                transaction(database) {
+                    repository.save(
+                        basicPage(
+                            id = PageId(230L),
+                            spaceId = SpaceId(230L),
+                            displayOrder = 12
+                        )
+                    )
+                }
+
+                transaction(database) {
+                    repository.findBy(PageId(230L)).shouldNotBeNull().displayOrder shouldBe 12
+                }
+            }
+
             it("save 는 immutable 컬럼 (spaceId / authorId / createdAt) 을 덮지 않는다") {
                 transaction(database) {
                     repository.save(

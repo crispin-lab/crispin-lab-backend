@@ -59,6 +59,7 @@ class PageGettingUseCase(
             content = content.raw,
             visibility = visibility.name,
             currentVersion = currentVersion,
+            displayOrder = displayOrder,
             createdAt = createdAt,
             updatedAt = updatedAt,
             ancestors = ancestors

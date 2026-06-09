@@ -42,6 +42,7 @@ class PageSearchingControllerTest :
                                     spaceId = SpaceId(10L),
                                     parentPageId = PageId(1L),
                                     title = "오늘의 회고",
+                                    displayOrder = 1,
                                     updatedAt = DUMMY_INSTANT
                                 ),
                                 Summary(
@@ -49,6 +50,7 @@ class PageSearchingControllerTest :
                                     spaceId = SpaceId(10L),
                                     parentPageId = null,
                                     title = "어제의 회고",
+                                    displayOrder = 0,
                                     updatedAt = DUMMY_INSTANT
                                 )
                             ),
@@ -87,7 +89,7 @@ class PageSearchingControllerTest :
                             "space" isParameterFor "스페이스 ID 필터" isOptional true,
                             "tag" isParameterFor "태그 ID 필터 (다중 시 AND 매칭)" isOptional true,
                             "sort" isParameterFor
-                                "정렬 옵션 (CREATED_AT / UPDATED_AT / RELEVANCE, 기본값 UPDATED_AT)"
+                                "정렬 옵션 (CREATED_AT / UPDATED_AT / RELEVANCE / TREE, 기본값 UPDATED_AT)"
                                 isOptional true
                         ).withPaging(),
                         responseFields {
@@ -96,6 +98,7 @@ class PageSearchingControllerTest :
                                 "spaceId".string("소속 스페이스 식별자")
                                 "parentPageId".string("부모 페이지 식별자", optional = true)
                                 "title".string("제목")
+                                "displayOrder".number("같은 부모 내 표시 순서 (0 부터 시작, 작을수록 앞)")
                                 "updatedAt".datetime("최근 갱신 시각")
                             }
                             "page".number("현재 페이지")
@@ -191,6 +194,26 @@ class PageSearchingControllerTest :
                     ).then(status().isOk)
 
                 requestSlot.captured.sort shouldBe SortOption.CREATED_AT
+            }
+
+            it("sort=TREE 가 UseCase Request 의 SortOption 으로 전달된다") {
+                val requestSlot = slot<PageSearching.Request>()
+                every { useCase.perform(capture(requestSlot)) } returns
+                    PageResult(
+                        items = emptyList(),
+                        page = 0,
+                        size = 20,
+                        totalElements = 0L
+                    )
+
+                controller
+                    .`when`(
+                        get("/v1/pages")
+                            .withAuth()
+                            .param("sort", "TREE")
+                    ).then(status().isOk)
+
+                requestSlot.captured.sort shouldBe SortOption.TREE
             }
 
             it("지원하지 않는 sort 값이면 400 을 반환한다") {

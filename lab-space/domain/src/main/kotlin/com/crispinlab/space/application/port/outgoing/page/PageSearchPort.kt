@@ -23,7 +23,8 @@ interface PageSearchPort {
     enum class SortOption {
         CREATED_AT,
         UPDATED_AT,
-        RELEVANCE;
+        RELEVANCE,
+        TREE;
 
         companion object {
             fun String.asSortOption(): SortOption =
@@ -89,6 +90,7 @@ interface PageSearchPort {
         val spaceId: SpaceId,
         val parentPageId: PageId?,
         val title: String,
+        val displayOrder: Int,
         val updatedAt: Instant
     )
 }

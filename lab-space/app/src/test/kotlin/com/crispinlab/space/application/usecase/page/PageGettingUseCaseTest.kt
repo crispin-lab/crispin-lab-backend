@@ -120,6 +120,15 @@ class PageGettingUseCaseTest :
                 }
             }
 
+            it("Result.displayOrder 가 entity 의 값을 그대로 노출한다") {
+                val page = basicPage(displayOrder = 4)
+                every { pageRepository.findBy(page.id) } returns page
+
+                val result = useCase.perform(basicRequest(pageId = page.id.value.toString()))
+
+                result.displayOrder shouldBe 4
+            }
+
             it("ADMIN 은 다른 사용자의 DRAFT 페이지도 조회 가능하다") {
                 val page = basicPage(authorId = UserId(200L), visibility = Visibility.DRAFT)
                 every { pageRepository.findBy(page.id) } returns page

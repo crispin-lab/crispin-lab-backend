@@ -67,7 +67,8 @@ class PageRegisteringUseCase(
             title = title,
             content = PageContent(content),
             visibility = visibility,
-            currentVersion = 1
+            currentVersion = 1,
+            displayOrder = pageRepository.nextDisplayOrderIn(spaceId, parentPageId)
         )
 
     private fun Page.saveInitialRevisionAndLinks(): Page =

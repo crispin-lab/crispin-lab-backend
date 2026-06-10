@@ -35,6 +35,7 @@ class PageGettingControllerTest :
                         spaceId = SpaceId(10L),
                         parentPageId = PageId(2L),
                         authorId = UserId(100L),
+                        authorHandle = "test_user",
                         title = "오늘의 회고",
                         content = "본문",
                         visibility = "DRAFT",
@@ -63,6 +64,8 @@ class PageGettingControllerTest :
                         jsonPath("$.pageId").value("3"),
                         jsonPath("$.title").value("오늘의 회고"),
                         jsonPath("$.visibility").value("DRAFT"),
+                        jsonPath("$.authorId").value("100"),
+                        jsonPath("$.authorHandle").value("test_user"),
                         jsonPath("$.ancestors.length()").value(2),
                         jsonPath("$.ancestors[0].pageId").value("1"),
                         jsonPath("$.ancestors[0].title").value("개인 노트"),
@@ -75,6 +78,9 @@ class PageGettingControllerTest :
                             "spaceId".string("소속 스페이스 식별자")
                             "parentPageId".string("부모 페이지 식별자", optional = true)
                             "authorId".string("작성자 식별자")
+                            "authorHandle".string(
+                                "작성자 사용자 이름 (삭제된 사용자의 경우 빈 문자열)"
+                            )
                             "title".string("제목")
                             "content".string("본문")
                             "visibility".string("공개 범위")
@@ -119,6 +125,7 @@ class PageGettingControllerTest :
                         spaceId = SpaceId(10L),
                         parentPageId = null,
                         authorId = UserId(100L),
+                        authorHandle = "test_user",
                         title = "공개 페이지",
                         content = "본문",
                         visibility = "PUBLIC",

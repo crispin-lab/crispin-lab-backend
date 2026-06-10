@@ -15,6 +15,8 @@ import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.tag.TagId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
+import com.crispinlab.user.application.port.outgoing.user.UserHandleQuery
+import com.crispinlab.user.domain.user.Handle
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -28,16 +30,23 @@ class PageSearchingUseCaseTest :
     DescribeSpec({
         val pageSearchPort = mockk<PageSearchPort>()
         val spaceMemberRepository = mockk<SpaceMemberRepository>()
+        val userHandleQuery = mockk<UserHandleQuery>()
         val useCase =
             PageSearchingUseCase(
                 pageSearchPort = pageSearchPort,
                 spaceMemberRepository = spaceMemberRepository,
+                userHandleQuery = userHandleQuery,
                 transactionProvider = DummyTransactionProvider()
             )
 
         beforeEach {
-            clearMocks(pageSearchPort, spaceMemberRepository)
+            clearMocks(pageSearchPort, spaceMemberRepository, userHandleQuery)
             every { spaceMemberRepository.findSpaceIdsByUserId(any()) } returns emptySet()
+            every { userHandleQuery.handlesOf(any()) } returns
+                mapOf(
+                    UserId(100L) to Handle("test_user"),
+                    UserId(200L) to Handle("other_user")
+                )
         }
 
         describe("페이지 검색") {
@@ -48,6 +57,7 @@ class PageSearchingUseCaseTest :
                             id = PageId(2L),
                             spaceId = SpaceId(10L),
                             parentPageId = PageId(1L),
+                            authorId = UserId(100L),
                             title = "오늘의 회고",
                             displayOrder = 1,
                             updatedAt = DUMMY_INSTANT
@@ -56,6 +66,7 @@ class PageSearchingUseCaseTest :
                             id = PageId(1L),
                             spaceId = SpaceId(10L),
                             parentPageId = null,
+                            authorId = UserId(200L),
                             title = "어제의 회고",
                             displayOrder = 0,
                             updatedAt = DUMMY_INSTANT
@@ -90,6 +101,8 @@ class PageSearchingUseCaseTest :
                 result.items.map { it.pageId } shouldBe listOf(PageId(2L), PageId(1L))
                 result.items.map { it.spaceId } shouldBe listOf(SpaceId(10L), SpaceId(10L))
                 result.items.map { it.parentPageId } shouldBe listOf(PageId(1L), null)
+                result.items.map { it.authorId } shouldBe listOf(UserId(100L), UserId(200L))
+                result.items.map { it.authorHandle } shouldBe listOf("test_user", "other_user")
                 result.items.map { it.title } shouldBe listOf("오늘의 회고", "어제의 회고")
                 result.items.map { it.displayOrder } shouldBe listOf(1, 0)
                 result.totalElements shouldBe 2L
@@ -266,6 +279,98 @@ class PageSearchingUseCaseTest :
                         pageRequest = any()
                     )
                 }
+            }
+
+            it("동일 결과 페이지의 distinct authorIds 에 대해 handlesOf 를 정확히 1회 호출한다") {
+                val summaries: List<PageSummary> =
+                    listOf(
+                        PageSummary(
+                            id = PageId(1L),
+                            spaceId = SpaceId(10L),
+                            parentPageId = null,
+                            authorId = UserId(100L),
+                            title = "a",
+                            displayOrder = 0,
+                            updatedAt = DUMMY_INSTANT
+                        ),
+                        PageSummary(
+                            id = PageId(2L),
+                            spaceId = SpaceId(10L),
+                            parentPageId = null,
+                            authorId = UserId(100L),
+                            title = "b",
+                            displayOrder = 1,
+                            updatedAt = DUMMY_INSTANT
+                        ),
+                        PageSummary(
+                            id = PageId(3L),
+                            spaceId = SpaceId(10L),
+                            parentPageId = null,
+                            authorId = UserId(200L),
+                            title = "c",
+                            displayOrder = 2,
+                            updatedAt = DUMMY_INSTANT
+                        )
+                    )
+                every {
+                    pageSearchPort.search(
+                        keyword = any(),
+                        spaceId = any(),
+                        tagIds = any(),
+                        sort = any(),
+                        scope = any(),
+                        pageRequest = any()
+                    )
+                } returns
+                    PageResult(
+                        items = summaries,
+                        page = 0,
+                        size = 20,
+                        totalElements = 3L
+                    )
+
+                useCase.perform(basicRequest())
+
+                verify(exactly = 1) {
+                    userHandleQuery.handlesOf(setOf(UserId(100L), UserId(200L)))
+                }
+            }
+
+            it("handle 조회 결과에 없는 author 는 authorHandle 이 빈 문자열로 응답한다") {
+                val summaries: List<PageSummary> =
+                    listOf(
+                        PageSummary(
+                            id = PageId(1L),
+                            spaceId = SpaceId(10L),
+                            parentPageId = null,
+                            authorId = UserId(999L),
+                            title = "삭제된 사용자가 쓴 글",
+                            displayOrder = 0,
+                            updatedAt = DUMMY_INSTANT
+                        )
+                    )
+                every {
+                    pageSearchPort.search(
+                        keyword = any(),
+                        spaceId = any(),
+                        tagIds = any(),
+                        sort = any(),
+                        scope = any(),
+                        pageRequest = any()
+                    )
+                } returns
+                    PageResult(
+                        items = summaries,
+                        page = 0,
+                        size = 20,
+                        totalElements = 1L
+                    )
+                every { userHandleQuery.handlesOf(any()) } returns emptyMap()
+
+                val result = useCase.perform(basicRequest())
+
+                result.items.single().authorId shouldBe UserId(999L)
+                result.items.single().authorHandle shouldBe ""
             }
 
             it("ADMIN 은 Privileged scope 로 검색한다") {

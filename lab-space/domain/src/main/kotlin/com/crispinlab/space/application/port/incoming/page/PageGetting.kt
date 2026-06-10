@@ -23,6 +23,7 @@ interface PageGetting : UseCase<Request, Result> {
         val spaceId: SpaceId,
         val parentPageId: PageId?,
         val authorId: UserId,
+        val authorHandle: String,
         val title: String,
         val content: String,
         val visibility: String,

@@ -187,6 +187,7 @@ base 가 처음부터 public 이면 `PageRevisionRepository` 처럼 port 에 `de
 - 매핑 함수 이름은 `ResultRow.toEntity()` — `from`, `mapToPage` 등 흩뿌리지 말 것. 한 어댑터 안에서 일관.
 - enum 은 컬럼에 `name` 으로 저장하고 읽을 때 `asXxx()` 로 복원. 인덱스가 필요하면 별도 정수 컬럼 고려.
 - **DB 손상 enum 매핑은 `IllegalStateException` 으로 래핑** — `asVisibility()` 가 `IllegalArgumentException` 을 던지지만, 어댑터에서 그대로 흘리면 `GlobalExceptionHandler` 가 400 으로 매핑한다. DB 에 깨진 값이 들어 있는 건 외부 입력 오류가 아니라 운영 결함이므로 `decodeXxx` 헬퍼로 래핑해 500 으로 응답되게 한다 (`error-messages.md` 의 "외부 입력 / 내부 상태" 구분과 정합).
+- **batch projection 어댑터 (`Query`/`*HandleQuery` 류) 의 corrupt row 는 fail-fast 대신 skip + WARN** — 단건 매핑 (`findBy` → `toEntity`) 은 한 row 가 깨지면 그 한 요청이 실패해도 무해하지만, batch lookup 은 한 row 의 손상이 정상 N-1 row 의 응답까지 막아 가용성 사고로 증폭된다. 따라서 batch 어댑터의 `decodeXxx` 는 `Handle?` / null 반환 + `mapNotNull` 로 누락 + `LoggerFactory.getLogger(javaClass)` 의 `warn` 로그 한 줄로 운영 알림 (`logger 이름은 클래스 기반`, `logging.md` 룰 1 의 `application/domain` 금지 범위 밖 — 어댑터는 허용). 호출 측 (UseCase) 의 "lookup miss → 빈 문자열" sentinel 정책과 자연 결합되어 시그니처 변경 없이 일관 처리. WARN 메시지엔 식별자 (`userId.value` 등) 만 노출, 손상된 raw 값은 노출하지 않는다 (PII / 노이즈 회피). 예: `ExposedUserHandleQueryAdapter.decodeHandle`.
 - `updatedAt` 은 어댑터에서 갱신하지 않는다 — entity 메서드가 이미 갱신했음 (`entity.md` "`updatedAt` 갱신 누락" 참조).
 - 도메인 port 의 `save` 파라미터 이름은 `entity` 로 통일 — base 의 `save(entity: E)` 와 시그니처 정합. 다른 이름 (`page`, `space` 등) 을 쓰면 named-argument 경고가 뜬다.
 

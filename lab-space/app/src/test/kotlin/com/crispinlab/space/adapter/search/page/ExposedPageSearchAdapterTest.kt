@@ -68,6 +68,7 @@ class ExposedPageSearchAdapterTest :
                     }
 
                 result.items.map { it.id } shouldBe listOf(PageId(2L), PageId(1L))
+                result.items.map { it.authorId } shouldBe listOf(UserId(100L), UserId(100L))
                 result.totalElements shouldBe 2L
             }
 

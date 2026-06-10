@@ -9,7 +9,9 @@ import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.maps.shouldBeEmpty
 import io.kotest.matchers.shouldBe
+import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.update
 
 class ExposedUserHandleQueryAdapterTest :
     DescribeSpec({
@@ -107,6 +109,51 @@ class ExposedUserHandleQueryAdapterTest :
                     }
 
                 result shouldBe mapOf(UserId(20L) to Handle("only_one"))
+            }
+
+            it("일부 row 의 handle 이 손상되어 있으면 해당 row 만 누락하고 나머지를 반환한다") {
+                transaction(database) {
+                    repository.save(
+                        basicUser(
+                            id = UserId(30L),
+                            email = EmailAddress("ok@example.com"),
+                            handle = Handle("normal")
+                        )
+                    )
+                    repository.save(
+                        basicUser(
+                            id = UserId(31L),
+                            email = EmailAddress("broken@example.com"),
+                            handle = Handle("placeholder")
+                        )
+                    )
+                    Users.update({ Users.id eq 31L }) {
+                        it[handle] = "X!"
+                    }
+                }
+
+                val result =
+                    transaction(database) {
+                        handleQuery.handlesOf(listOf(UserId(30L), UserId(31L)))
+                    }
+
+                result shouldBe mapOf(UserId(30L) to Handle("normal"))
+            }
+
+            it("모든 row 의 handle 이 손상되어 있으면 빈 Map 을 반환한다") {
+                transaction(database) {
+                    repository.save(basicUser(id = UserId(40L), handle = Handle("placeholder")))
+                    Users.update({ Users.id eq 40L }) {
+                        it[handle] = "X!"
+                    }
+                }
+
+                val result =
+                    transaction(database) {
+                        handleQuery.handlesOf(listOf(UserId(40L)))
+                    }
+
+                result.shouldBeEmpty()
             }
         }
     })

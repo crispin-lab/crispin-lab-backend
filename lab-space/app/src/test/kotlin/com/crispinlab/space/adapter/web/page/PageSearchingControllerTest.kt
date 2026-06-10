@@ -10,6 +10,7 @@ import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
+import com.crispinlab.user.domain.user.UserId
 import com.crispinlab.user.testsupport.withAuth
 import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
@@ -41,6 +42,8 @@ class PageSearchingControllerTest :
                                     pageId = PageId(2L),
                                     spaceId = SpaceId(10L),
                                     parentPageId = PageId(1L),
+                                    authorId = UserId(100L),
+                                    authorHandle = "test_user",
                                     title = "오늘의 회고",
                                     displayOrder = 1,
                                     updatedAt = DUMMY_INSTANT
@@ -49,6 +52,8 @@ class PageSearchingControllerTest :
                                     pageId = PageId(1L),
                                     spaceId = SpaceId(10L),
                                     parentPageId = null,
+                                    authorId = UserId(200L),
+                                    authorHandle = "other_user",
                                     title = "어제의 회고",
                                     displayOrder = 0,
                                     updatedAt = DUMMY_INSTANT
@@ -74,10 +79,14 @@ class PageSearchingControllerTest :
                         jsonPath("$.items[0].pageId").value("2"),
                         jsonPath("$.items[0].spaceId").value("10"),
                         jsonPath("$.items[0].parentPageId").value("1"),
+                        jsonPath("$.items[0].authorId").value("100"),
+                        jsonPath("$.items[0].authorHandle").value("test_user"),
                         jsonPath("$.items[0].title").value("오늘의 회고"),
                         jsonPath("$.items[1].pageId").value("1"),
                         jsonPath("$.items[1].spaceId").value("10"),
                         jsonPath("$.items[1].parentPageId").value(nullValue()),
+                        jsonPath("$.items[1].authorId").value("200"),
+                        jsonPath("$.items[1].authorHandle").value("other_user"),
                         jsonPath("$.items[1].title").value("어제의 회고"),
                         jsonPath("$.page").value(0),
                         jsonPath("$.size").value(20),
@@ -97,6 +106,10 @@ class PageSearchingControllerTest :
                                 "pageId".string("페이지 식별자")
                                 "spaceId".string("소속 스페이스 식별자")
                                 "parentPageId".string("부모 페이지 식별자", optional = true)
+                                "authorId".string("작성자 식별자")
+                                "authorHandle".string(
+                                    "작성자 사용자 이름 (삭제된 사용자의 경우 빈 문자열)"
+                                )
                                 "title".string("제목")
                                 "displayOrder".number("같은 부모 내 표시 순서 (0 부터 시작, 작을수록 앞)")
                                 "updatedAt".datetime("최근 갱신 시각")

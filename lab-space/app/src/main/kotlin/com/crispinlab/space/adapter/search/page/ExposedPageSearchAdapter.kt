@@ -13,6 +13,7 @@ import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.tag.TagId
+import com.crispinlab.user.domain.user.UserId
 import org.jetbrains.exposed.v1.core.Expression
 import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.ResultRow
@@ -149,6 +150,7 @@ class ExposedPageSearchAdapter : PageSearchPort {
             id = PageId(this[Pages.id]),
             spaceId = SpaceId(this[Pages.spaceId]),
             parentPageId = this[Pages.parentPageId]?.let(::PageId),
+            authorId = UserId(this[Pages.authorId]),
             title = this[Pages.title],
             displayOrder = this[Pages.displayOrder],
             updatedAt = this[Pages.updatedAt]

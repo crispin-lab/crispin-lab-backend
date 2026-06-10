@@ -89,6 +89,7 @@ interface PageSearchPort {
         val id: PageId,
         val spaceId: SpaceId,
         val parentPageId: PageId?,
+        val authorId: UserId,
         val title: String,
         val displayOrder: Int,
         val updatedAt: Instant

@@ -12,6 +12,8 @@ import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.testsupport.Fixtures.basicPage
+import com.crispinlab.user.application.port.outgoing.user.UserHandleQuery
+import com.crispinlab.user.domain.user.Handle
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -20,24 +22,29 @@ import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 
 class PageGettingUseCaseTest :
     DescribeSpec({
         val pageRepository = mockk<PageRepository>()
         val pageAncestorPort = mockk<PageAncestorPort>()
         val spaceMemberRepository = mockk<SpaceMemberRepository>()
+        val userHandleQuery = mockk<UserHandleQuery>()
         val useCase =
             PageGettingUseCase(
                 pageRepository = pageRepository,
                 pageAncestorPort = pageAncestorPort,
                 spaceMemberRepository = spaceMemberRepository,
+                userHandleQuery = userHandleQuery,
                 transactionProvider = DummyTransactionProvider()
             )
 
         beforeEach {
-            clearMocks(pageRepository, pageAncestorPort, spaceMemberRepository)
+            clearMocks(pageRepository, pageAncestorPort, spaceMemberRepository, userHandleQuery)
             every { spaceMemberRepository.findSpaceIdsByUserId(any()) } returns emptySet()
             every { pageAncestorPort.findAncestorsOf(any()) } returns emptyList()
+            every { userHandleQuery.handlesOf(any()) } returns
+                mapOf(UserId(100L) to Handle("test_user"))
         }
 
         describe("페이지 단건 조회") {
@@ -50,7 +57,21 @@ class PageGettingUseCaseTest :
                 result.pageId shouldBe page.id
                 result.title shouldBe "오늘의 회고"
                 result.visibility shouldBe "DRAFT"
+                result.authorId shouldBe UserId(100L)
+                result.authorHandle shouldBe "test_user"
                 result.ancestors shouldBe emptyList()
+                verify(exactly = 1) { userHandleQuery.handlesOf(setOf(UserId(100L))) }
+            }
+
+            it("author 가 삭제된 사용자라 handle 조회가 비면 authorHandle 은 빈 문자열로 응답한다") {
+                val page = basicPage()
+                every { pageRepository.findBy(page.id) } returns page
+                every { userHandleQuery.handlesOf(any()) } returns emptyMap()
+
+                val result = useCase.perform(basicRequest(pageId = page.id.value.toString()))
+
+                result.authorId shouldBe UserId(100L)
+                result.authorHandle shouldBe ""
             }
 
             it("페이지가 없으면 NotFoundException") {

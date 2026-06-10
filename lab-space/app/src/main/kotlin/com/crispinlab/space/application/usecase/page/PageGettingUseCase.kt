@@ -12,6 +12,7 @@ import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRep
 import com.crispinlab.space.application.usecase.access.memberSpaceIdsOf
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageErrorCode
+import com.crispinlab.user.application.port.outgoing.user.UserHandleQuery
 import org.springframework.stereotype.Service
 
 @Service
@@ -19,17 +20,21 @@ class PageGettingUseCase(
     private val pageRepository: PageRepository,
     private val pageAncestorPort: PageAncestorPort,
     private val spaceMemberRepository: SpaceMemberRepository,
+    private val userHandleQuery: UserHandleQuery,
     private val transactionProvider: TransactionProvider
 ) : PageGetting {
     override fun perform(request: Request): Result =
         transactionProvider.transactional(readOnly = true) {
-            val scope = request.scopeOf()
-            val page = request.toEntity(scope)
-            val ancestors = page.ancestorsVisibleTo(scope)
-            page.toResult(ancestors)
+            request
+                .toScope()
+                .let { scope ->
+                    request
+                        .toEntity(scope)
+                        .toResult(scope)
+                }
         }
 
-    private fun Request.scopeOf(): VisibilityScope =
+    private fun Request.toScope(): VisibilityScope =
         VisibilityScope.of(viewer, spaceMemberRepository.memberSpaceIdsOf(viewer))
 
     private fun Request.toEntity(scope: VisibilityScope): Page =
@@ -49,12 +54,13 @@ class PageGettingUseCase(
                 )
             }
 
-    private fun Page.toResult(ancestors: List<Result.AncestorSummary>): Result =
+    private fun Page.toResult(scope: VisibilityScope): Result =
         Result(
             pageId = id,
             spaceId = spaceId,
             parentPageId = parentPageId,
             authorId = authorId,
+            authorHandle = userHandleQuery.handlesOf(setOf(authorId))[authorId]?.value ?: "",
             title = title,
             content = content.raw,
             visibility = visibility.name,
@@ -62,6 +68,6 @@ class PageGettingUseCase(
             displayOrder = displayOrder,
             createdAt = createdAt,
             updatedAt = updatedAt,
-            ancestors = ancestors
+            ancestors = ancestorsVisibleTo(scope)
         )
 }

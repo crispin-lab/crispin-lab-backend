@@ -14,6 +14,7 @@ import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.space.SpaceId.Companion.asSpaceId
 import com.crispinlab.space.domain.tag.TagId
 import com.crispinlab.space.domain.tag.TagId.Companion.asTagId
+import com.crispinlab.user.domain.user.UserId
 import java.time.Instant
 
 interface PageSearching : UseCase<Request, PageResult<Summary>> {
@@ -41,6 +42,8 @@ interface PageSearching : UseCase<Request, PageResult<Summary>> {
         val pageId: PageId,
         val spaceId: SpaceId,
         val parentPageId: PageId?,
+        val authorId: UserId,
+        val authorHandle: String,
         val title: String,
         val displayOrder: Int,
         val updatedAt: Instant

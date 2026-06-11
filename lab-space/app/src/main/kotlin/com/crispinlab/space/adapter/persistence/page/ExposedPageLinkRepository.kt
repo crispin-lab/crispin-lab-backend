@@ -58,29 +58,35 @@ class ExposedPageLinkRepository : PageLinkRepository {
             createdAt = this[PageLinks.createdAt]
         )
 
-    private fun ResultRow.decodeTarget(): Target {
-        val targetPageId: Long? = this[PageLinks.targetPageId]
-        val targetUrl: String? = this[PageLinks.targetUrl]
-        return when {
-            targetPageId != null && targetUrl != null -> {
-                throw IllegalStateException(
-                    "page_links row 의 target_page_id 와 target_url 이 모두 설정되어 있습니다."
-                )
-            }
+    private fun ResultRow.decodeTarget(): Target =
+        decodePageLinkTarget(
+            targetPageId = this[PageLinks.targetPageId],
+            targetUrl = this[PageLinks.targetUrl]
+        )
+}
 
-            targetPageId != null -> {
-                Target.Internal(PageId(targetPageId))
-            }
+internal fun decodePageLinkTarget(
+    targetPageId: Long?,
+    targetUrl: String?
+): PageLink.Target =
+    when {
+        targetPageId != null && targetUrl != null -> {
+            throw IllegalStateException(
+                "page_links row 의 target_page_id 와 target_url 이 모두 설정되어 있습니다."
+            )
+        }
 
-            targetUrl != null -> {
-                Target.External(URI.create(targetUrl))
-            }
+        targetPageId != null -> {
+            PageLink.Target.Internal(PageId(targetPageId))
+        }
 
-            else -> {
-                throw IllegalStateException(
-                    "page_links row 의 target_page_id / target_url 이 모두 비어 있습니다."
-                )
-            }
+        targetUrl != null -> {
+            PageLink.Target.External(URI.create(targetUrl))
+        }
+
+        else -> {
+            throw IllegalStateException(
+                "page_links row 의 target_page_id / target_url 이 모두 비어 있습니다."
+            )
         }
     }
-}

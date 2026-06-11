@@ -39,10 +39,14 @@ data class PageContent(
             }
 
             urlToken != null -> {
-                External(
-                    url = URI.create(urlToken),
-                    displayText = groups[GROUP_EXTERNAL_DISPLAY]?.value
-                )
+                runCatching { URI.create(urlToken) }
+                    .getOrNull()
+                    ?.let {
+                        External(
+                            url = it,
+                            displayText = groups[GROUP_EXTERNAL_DISPLAY]?.value
+                        )
+                    }
             }
 
             else -> {
@@ -63,7 +67,7 @@ data class PageContent(
             Regex(
                 """\[\[(?:pageId:(?<$GROUP_INTERNAL_PAGE_ID>\d+)(?:\|""" +
                     """(?<$GROUP_INTERNAL_DISPLAY>[^\[\]|]+))?|""" +
-                    """(?<$GROUP_EXTERNAL_URL>https?://[^\[\]|]+)""" +
+                    """(?<$GROUP_EXTERNAL_URL>https?://[^\s\[\]|]+)""" +
                     """(?:\|(?<$GROUP_EXTERNAL_DISPLAY>[^\[\]|]+))?)\]\]"""
             )
     }

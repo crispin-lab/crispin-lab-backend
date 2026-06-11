@@ -5,7 +5,7 @@
 
 DO $$
 DECLARE
-    pattern CONSTANT TEXT := '\[\[([^|\[\]]+)(?:\|([^\[\]]+))?\]\]';
+    pattern CONSTANT TEXT := '\[\[([^|\[\]]+)(?:\|([^\[\]|]+))?\]\]';
     page_row RECORD;
     parts TEXT[];
     matches TEXT[][];
@@ -78,13 +78,13 @@ BEGIN
         FROM page_links pl
         JOIN pages p ON p.id = pl.page_id
     LOOP
-        -- type 컬럼 값을 신뢰하지 않고 target 패턴으로 직접 분기.
-        -- 운영 데이터에 INTERNAL/EXTERNAL 외 type 이 끼어들었을 경우 silent fallback 대신 fail-fast.
+        -- target 패턴 우선 분기 (http(s) prefix 우선) — type 컬럼은 보조 검증 용도.
+        -- INTERNAL 만 title lookup, EXTERNAL 인데 target 이 http(s) 가 아니면 데이터 오염 방지 차원에서 DELETE + WARNING.
         IF link_row.target ~* '^https?://' THEN
             UPDATE page_links
             SET target_url = link_row.target
             WHERE id = link_row.link_id;
-        ELSIF link_row.type IN ('INTERNAL', 'EXTERNAL') THEN
+        ELSIF link_row.type = 'INTERNAL' THEN
             SELECT COUNT(*), MIN(id) INTO match_count, resolved_id
             FROM pages
             WHERE space_id = link_row.src_space_id
@@ -101,6 +101,11 @@ BEGIN
                     'page_links id=% backfill ambiguous title=% count=%',
                     link_row.link_id, link_row.target, match_count;
             END IF;
+        ELSIF link_row.type = 'EXTERNAL' THEN
+            DELETE FROM page_links WHERE id = link_row.link_id;
+            RAISE WARNING
+                'page_links id=% has non-http external target=%',
+                link_row.link_id, link_row.target;
         ELSE
             RAISE EXCEPTION
                 'page_links id=% has unknown type=%',

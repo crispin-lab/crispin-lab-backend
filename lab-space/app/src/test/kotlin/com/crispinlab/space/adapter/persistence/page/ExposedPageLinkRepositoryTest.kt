@@ -7,6 +7,7 @@ import com.crispinlab.space.domain.page.PageLink.Target
 import com.crispinlab.space.domain.page.PageLinkId
 import com.crispinlab.space.domain.page.PageRevisionId
 import com.crispinlab.space.testsupport.Fixtures.basicPageLink
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
@@ -84,6 +85,23 @@ class ExposedPageLinkRepositoryTest :
                     val found = repository.findByRevisionId(PageRevisionId(101L)).single()
                     found.target shouldBe
                         Target.External(URI.create("https://example.com/x"))
+                }
+            }
+
+            it(
+                "decodePageLinkTarget — target_page_id 와 target_url 이 모두 NULL 이면 IllegalStateException"
+            ) {
+                shouldThrow<IllegalStateException> {
+                    decodePageLinkTarget(targetPageId = null, targetUrl = null)
+                }
+            }
+
+            it("decodePageLinkTarget — 두 컬럼이 모두 설정되어 있으면 IllegalStateException") {
+                shouldThrow<IllegalStateException> {
+                    decodePageLinkTarget(
+                        targetPageId = 1L,
+                        targetUrl = "https://example.com"
+                    )
                 }
             }
 

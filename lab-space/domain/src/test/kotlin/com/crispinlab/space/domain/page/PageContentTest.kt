@@ -131,6 +131,18 @@ class PageContentTest :
                 content.extractLinks() shouldHaveSize 0
             }
 
+            it("공백이 포함된 URL 토큰은 정규식에서 거부되어 누락된다") {
+                val content: PageContent = PageContent("[[https://has space|예시]]")
+
+                content.extractLinks() shouldHaveSize 0
+            }
+
+            it("regex 가 통과시킨 malformed URL 은 URI.create 실패로 누락된다") {
+                val content: PageContent = PageContent("[[https://%ZZ|예시]]")
+
+                content.extractLinks() shouldHaveSize 0
+            }
+
             it("매우 긴 displayText 도 정상 추출한다") {
                 val longDisplay: String = "x".repeat(10_000)
                 val content: PageContent = PageContent("[[pageId:1|$longDisplay]]")

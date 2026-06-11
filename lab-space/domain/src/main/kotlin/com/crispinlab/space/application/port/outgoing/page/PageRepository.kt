@@ -13,6 +13,8 @@ interface PageRepository {
 
     fun findRoots(spaceId: SpaceId): List<Page>
 
+    fun findVisibilitiesByIds(ids: Collection<PageId>): Map<PageId, PageVisibilityRecord>
+
     fun nextDisplayOrderIn(
         spaceId: SpaceId,
         parentPageId: PageId?

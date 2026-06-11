@@ -7,6 +7,7 @@ import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import java.net.URI
 
 class PageTest :
     DescribeSpec({
@@ -77,15 +78,19 @@ class PageTest :
                 val result: Page.EditResult =
                     page.edit(
                         title = "제목",
-                        content = "내부 [[다른 페이지]] 와 외부 [[https://example.com]]"
+                        content =
+                            "내부 [[pageId:42|구조 설명]] 와 외부 [[https://example.com|예시]]"
                     )
 
                 result.wikiLinks shouldContainExactly
                     listOf(
-                        ExtractedWikiLink(target = "다른 페이지", type = PageLink.Type.INTERNAL),
-                        ExtractedWikiLink(
-                            target = "https://example.com",
-                            type = PageLink.Type.EXTERNAL
+                        ExtractedWikiLink.Internal(
+                            targetPageId = PageId(42L),
+                            displayText = "구조 설명"
+                        ),
+                        ExtractedWikiLink.External(
+                            url = URI.create("https://example.com"),
+                            displayText = "예시"
                         )
                     )
             }

@@ -1,37 +1,33 @@
 package com.crispinlab.space.domain.page
 
 import com.crispinlab.common.domain.Entity
+import java.net.URI
 import java.time.Instant
 
 data class PageLink(
     override val id: PageLinkId,
     val pageId: PageId,
     val revisionId: PageRevisionId,
-    val target: String,
-    val type: Type,
+    val target: Target,
     val createdAt: Instant
 ) : Entity<PageLinkId> {
-    init {
-        require(target.isNotBlank()) {
-            "링크 대상이 비어 있습니다."
-        }
-        require(target.length <= MAX_TARGET_LENGTH) {
-            "링크 대상은 ${MAX_TARGET_LENGTH}자를 넘을 수 없습니다."
-        }
-    }
+    sealed interface Target {
+        data class Internal(
+            val targetPageId: PageId
+        ) : Target
 
-    enum class Type {
-        INTERNAL,
-        EXTERNAL;
-
-        companion object {
-            fun String.asType(): Type =
-                entries.firstOrNull { it.name == uppercase() }
-                    ?: throw IllegalArgumentException("지원하지 않는 링크 타입입니다.")
+        data class External(
+            val url: URI
+        ) : Target {
+            init {
+                require(url.toString().length <= MAX_EXTERNAL_URL_LENGTH) {
+                    "외부 링크 URL 은 ${MAX_EXTERNAL_URL_LENGTH}자를 넘을 수 없습니다."
+                }
+            }
         }
     }
 
     companion object {
-        const val MAX_TARGET_LENGTH: Int = 500
+        const val MAX_EXTERNAL_URL_LENGTH: Int = 500
     }
 }

@@ -98,8 +98,7 @@ class PageRegisteringUseCase(
                     id = PageLinkId(idGenerator.next()),
                     pageId = id,
                     revisionId = revisionId,
-                    target = extracted.target,
-                    type = extracted.type,
+                    target = extracted.toTarget(),
                     createdAt = createdAt
                 )
             }.let {

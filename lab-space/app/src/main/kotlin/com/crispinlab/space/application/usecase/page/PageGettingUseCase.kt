@@ -10,8 +10,11 @@ import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.application.usecase.access.memberSpaceIdsOf
+import com.crispinlab.space.domain.page.ExtractedWikiLink
 import com.crispinlab.space.domain.page.Page
+import com.crispinlab.space.domain.page.PageContent
 import com.crispinlab.space.domain.page.PageErrorCode
+import com.crispinlab.space.domain.page.maskPageLinks
 import com.crispinlab.user.application.port.outgoing.user.UserHandleQuery
 import org.springframework.stereotype.Service
 
@@ -54,6 +57,17 @@ class PageGettingUseCase(
                 )
             }
 
+    private fun Page.maskedContent(scope: VisibilityScope): PageContent {
+        val ids =
+            content
+                .extractLinks()
+                .filterIsInstance<ExtractedWikiLink.Internal>()
+                .map { it.targetPageId }
+                .toSet()
+        if (ids.isEmpty()) return content
+        return content.maskPageLinks(scope, pageRepository.findVisibilitiesByIds(ids))
+    }
+
     private fun Page.toResult(scope: VisibilityScope): Result =
         Result(
             pageId = id,
@@ -62,7 +76,7 @@ class PageGettingUseCase(
             authorId = authorId,
             authorHandle = userHandleQuery.handlesOf(setOf(authorId))[authorId]?.value ?: "",
             title = title,
-            content = content.raw,
+            content = maskedContent(scope).raw,
             visibility = visibility.name,
             currentVersion = currentVersion,
             displayOrder = displayOrder,

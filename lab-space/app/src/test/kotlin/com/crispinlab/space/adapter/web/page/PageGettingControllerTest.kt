@@ -37,7 +37,7 @@ class PageGettingControllerTest :
                         authorId = UserId(100L),
                         authorHandle = "test_user",
                         title = "오늘의 회고",
-                        content = "본문",
+                        content = "관련 [[pageId:42|구조 설명]] 참고",
                         visibility = "DRAFT",
                         currentVersion = 1,
                         displayOrder = 2,
@@ -82,7 +82,12 @@ class PageGettingControllerTest :
                                 "작성자 사용자 이름 (삭제된 사용자의 경우 빈 문자열)"
                             )
                             "title".string("제목")
-                            "content".string("본문")
+                            "content".string(
+                                "본문. " +
+                                    "PageLink (`[[pageId:N|displayText]]`) 의 target 이 viewer 의 " +
+                                    "visibility scope 와 안 맞으면 매치 전체가 " +
+                                    "`비공개 페이지` 평문으로 마스킹된다."
+                            )
                             "visibility".string("공개 범위")
                             "currentVersion".number("현재 버전")
                             "displayOrder".number("같은 부모 내 표시 순서 (0 부터 시작, 작을수록 앞)")
@@ -148,6 +153,32 @@ class PageGettingControllerTest :
                         match { it.viewer == Viewer.Anonymous }
                     )
                 }
+            }
+
+            it("anonymous 응답은 비공개 target 매치가 마스킹된 content 로 받는다") {
+                every { useCase.perform(any()) } returns
+                    Result(
+                        pageId = PageId(1L),
+                        spaceId = SpaceId(10L),
+                        parentPageId = null,
+                        authorId = UserId(100L),
+                        authorHandle = "test_user",
+                        title = "공개 페이지",
+                        content = "관련 비공개 페이지 참고",
+                        visibility = "PUBLIC",
+                        currentVersion = 1,
+                        displayOrder = 0,
+                        createdAt = DUMMY_INSTANT,
+                        updatedAt = DUMMY_INSTANT,
+                        ancestors = emptyList()
+                    )
+
+                controller
+                    .`when`(get("/v1/pages/{pageId}", 1))
+                    .then(
+                        status().isOk,
+                        jsonPath("$.content").value("관련 비공개 페이지 참고")
+                    )
             }
         }
     })

@@ -2,6 +2,7 @@ package com.crispinlab.space.adapter.persistence.page
 
 import com.crispinlab.common.persistence.ExposedEntityRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
+import com.crispinlab.space.application.port.outgoing.page.PageVisibilityRecord
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageContent
 import com.crispinlab.space.domain.page.PageId
@@ -10,6 +11,7 @@ import com.crispinlab.user.domain.user.UserId
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.max
 import org.jetbrains.exposed.v1.core.statements.UpsertStatement
@@ -69,6 +71,24 @@ class ExposedPageRepository :
             .selectAll()
             .where { (Pages.parentPageId eq parentId.value) and notDeleted() }
             .map { it.toEntity() }
+
+    override fun findVisibilitiesByIds(ids: Collection<PageId>): Map<PageId, PageVisibilityRecord> {
+        if (ids.isEmpty()) return emptyMap()
+        val rawIds: List<Long> = ids.map { it.value }
+        return Pages
+            .select(Pages.id, Pages.visibility, Pages.spaceId, Pages.authorId)
+            .where { (Pages.id inList rawIds) and notDeleted() }
+            .associate { row ->
+                val pageId = PageId(row[Pages.id])
+                pageId to
+                    PageVisibilityRecord(
+                        pageId = pageId,
+                        visibility = decodeVisibility(row[Pages.visibility]),
+                        spaceId = SpaceId(row[Pages.spaceId]),
+                        authorId = UserId(row[Pages.authorId])
+                    )
+            }
+    }
 
     override fun findRoots(spaceId: SpaceId): List<Page> =
         Pages

@@ -93,8 +93,7 @@ object Fixtures {
         id: PageLinkId = PageLinkId(1L),
         pageId: PageId = PageId(10L),
         revisionId: PageRevisionId = PageRevisionId(100L),
-        target: String = "다른 페이지",
-        type: PageLink.Type = PageLink.Type.INTERNAL,
+        target: PageLink.Target = PageLink.Target.Internal(PageId(20L)),
         createdAt: Instant = DUMMY_INSTANT
     ): PageLink =
         PageLink(
@@ -102,7 +101,6 @@ object Fixtures {
             pageId = pageId,
             revisionId = revisionId,
             target = target,
-            type = type,
             createdAt = createdAt
         )
 

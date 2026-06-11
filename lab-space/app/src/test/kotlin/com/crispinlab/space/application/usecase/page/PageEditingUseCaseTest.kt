@@ -11,6 +11,7 @@ import com.crispinlab.space.application.port.outgoing.page.PageRevisionRepositor
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.Page
+import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.PageLink
 import com.crispinlab.space.domain.page.PageRevision
 import com.crispinlab.space.domain.page.Visibility
@@ -83,7 +84,7 @@ class PageEditingUseCaseTest :
                         basicRequest(
                             pageId = page.id.value.toString(),
                             title = "새 제목",
-                            content = "본문 [[wiki1]] [[wiki2]]"
+                            content = "본문 [[pageId:11|wiki1]] [[pageId:12|wiki2]]"
                         )
                     )
 
@@ -92,7 +93,11 @@ class PageEditingUseCaseTest :
                 savedPage.captured.currentVersion shouldBe 2
                 savedRevision.captured.version shouldBe 2
                 savedLinks.captured shouldHaveSize 2
-                savedLinks.captured.map { it.target } shouldContainExactly listOf("wiki1", "wiki2")
+                savedLinks.captured.map { it.target } shouldContainExactly
+                    listOf(
+                        PageLink.Target.Internal(PageId(11L)),
+                        PageLink.Target.Internal(PageId(12L))
+                    )
             }
 
             it("위키링크 없는 본문은 saveAll 이 빈 리스트로 호출된다") {

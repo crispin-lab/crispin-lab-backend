@@ -6,8 +6,10 @@ import com.crispinlab.space.application.port.incoming.page.PageGetting.Request
 import com.crispinlab.space.application.port.outgoing.page.PageAncestorPort
 import com.crispinlab.space.application.port.outgoing.page.PageAncestorPort.Ancestor
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
+import com.crispinlab.space.application.port.outgoing.page.PageVisibilityRecord
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.domain.access.Viewer
+import com.crispinlab.space.domain.page.PageContent
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.space.SpaceId
@@ -43,6 +45,7 @@ class PageGettingUseCaseTest :
             clearMocks(pageRepository, pageAncestorPort, spaceMemberRepository, userHandleQuery)
             every { spaceMemberRepository.findSpaceIdsByUserId(any()) } returns emptySet()
             every { pageAncestorPort.findAncestorsOf(any()) } returns emptyList()
+            every { pageRepository.findVisibilitiesByIds(any()) } returns emptyMap()
             every { userHandleQuery.handlesOf(any()) } returns
                 mapOf(UserId(100L) to Handle("test_user"))
         }
@@ -162,6 +165,66 @@ class PageGettingUseCaseTest :
                     )
 
                 result.pageId shouldBe page.id
+            }
+        }
+
+        describe("content 의 PageLink displayText 마스킹") {
+            it("anonymous 는 PRIVATE target 의 매치를 마스킹된 텍스트로 본다") {
+                val page =
+                    basicPage(
+                        visibility = Visibility.PUBLIC,
+                        content = PageContent("관련 [[pageId:42|문서]] 참고")
+                    )
+                every { pageRepository.findBy(page.id) } returns page
+                every { pageRepository.findVisibilitiesByIds(setOf(PageId(42L))) } returns
+                    mapOf(
+                        PageId(42L) to
+                            PageVisibilityRecord(
+                                pageId = PageId(42L),
+                                visibility = Visibility.INTERNAL,
+                                spaceId = SpaceId(10L),
+                                authorId = UserId(200L)
+                            )
+                    )
+
+                val result =
+                    useCase.perform(basicRequest(viewer = Viewer.Anonymous))
+
+                result.content shouldBe "관련 비공개 페이지 참고"
+            }
+
+            it("target 이 PUBLIC 이면 anonymous 에게도 그대로 노출된다") {
+                val page =
+                    basicPage(
+                        visibility = Visibility.PUBLIC,
+                        content = PageContent("관련 [[pageId:42|문서]] 참고")
+                    )
+                every { pageRepository.findBy(page.id) } returns page
+                every { pageRepository.findVisibilitiesByIds(setOf(PageId(42L))) } returns
+                    mapOf(
+                        PageId(42L) to
+                            PageVisibilityRecord(
+                                pageId = PageId(42L),
+                                visibility = Visibility.PUBLIC,
+                                spaceId = SpaceId(10L),
+                                authorId = UserId(200L)
+                            )
+                    )
+
+                val result =
+                    useCase.perform(basicRequest(viewer = Viewer.Anonymous))
+
+                result.content shouldBe "관련 [[pageId:42|문서]] 참고"
+            }
+
+            it("content 에 PageLink 가 없으면 visibility lookup 자체를 건너뛴다") {
+                val page = basicPage(content = PageContent("그냥 평문"))
+                every { pageRepository.findBy(page.id) } returns page
+
+                val result = useCase.perform(basicRequest())
+
+                result.content shouldBe "그냥 평문"
+                verify(exactly = 0) { pageRepository.findVisibilitiesByIds(any()) }
             }
         }
 

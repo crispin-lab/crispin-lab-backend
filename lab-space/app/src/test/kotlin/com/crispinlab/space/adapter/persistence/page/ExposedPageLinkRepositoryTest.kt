@@ -3,6 +3,7 @@ package com.crispinlab.space.adapter.persistence.page
 import com.crispinlab.common.persistence.PostgresTestContext
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.PageLink
+import com.crispinlab.space.domain.page.PageLink.Target
 import com.crispinlab.space.domain.page.PageLinkId
 import com.crispinlab.space.domain.page.PageRevisionId
 import com.crispinlab.space.testsupport.Fixtures.basicPageLink
@@ -10,6 +11,8 @@ import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.shouldBe
+import java.net.URI
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 class ExposedPageLinkRepositoryTest :
@@ -32,26 +35,20 @@ class ExposedPageLinkRepositoryTest :
                 }
             }
 
-            it("saveAll 후 findByRevisionId 로 같은 revision 의 링크만 반환된다") {
+            it("Internal target 을 saveAll 후 findByRevisionId 로 복원한다") {
                 val links: List<PageLink> =
                     listOf(
                         basicPageLink(
                             id = PageLinkId(1L),
                             pageId = PageId(10L),
                             revisionId = PageRevisionId(100L),
-                            target = "foo"
+                            target = Target.Internal(PageId(20L))
                         ),
                         basicPageLink(
                             id = PageLinkId(2L),
                             pageId = PageId(10L),
                             revisionId = PageRevisionId(100L),
-                            target = "bar"
-                        ),
-                        basicPageLink(
-                            id = PageLinkId(3L),
-                            pageId = PageId(10L),
-                            revisionId = PageRevisionId(200L),
-                            target = "baz"
+                            target = Target.Internal(PageId(21L))
                         )
                     )
                 transaction(database) {
@@ -59,9 +56,34 @@ class ExposedPageLinkRepositoryTest :
                 }
 
                 transaction(database) {
-                    val rev100 = repository.findByRevisionId(PageRevisionId(100L))
-                    rev100 shouldHaveSize 2
-                    rev100.map { it.target } shouldContainExactlyInAnyOrder listOf("foo", "bar")
+                    val found = repository.findByRevisionId(PageRevisionId(100L))
+                    found shouldHaveSize 2
+                    found.map { it.target } shouldContainExactlyInAnyOrder
+                        listOf(
+                            Target.Internal(PageId(20L)),
+                            Target.Internal(PageId(21L))
+                        )
+                }
+            }
+
+            it("External target 을 saveAll 후 url 그대로 복원한다") {
+                val links: List<PageLink> =
+                    listOf(
+                        basicPageLink(
+                            id = PageLinkId(3L),
+                            pageId = PageId(11L),
+                            revisionId = PageRevisionId(101L),
+                            target = Target.External(URI.create("https://example.com/x"))
+                        )
+                    )
+                transaction(database) {
+                    repository.saveAll(links)
+                }
+
+                transaction(database) {
+                    val found = repository.findByRevisionId(PageRevisionId(101L)).single()
+                    found.target shouldBe
+                        Target.External(URI.create("https://example.com/x"))
                 }
             }
 

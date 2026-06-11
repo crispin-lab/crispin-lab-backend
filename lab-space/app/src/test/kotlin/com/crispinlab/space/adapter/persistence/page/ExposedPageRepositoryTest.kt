@@ -10,6 +10,7 @@ import com.crispinlab.space.testsupport.Fixtures.basicPage
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.maps.shouldBeEmpty
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
@@ -357,6 +358,74 @@ class ExposedPageRepositoryTest :
                     found.authorId shouldBe UserId(900L)
                     found.createdAt shouldBe DUMMY_INSTANT
                     found.title shouldBe "수정 시도"
+                }
+            }
+
+            it("findVisibilitiesByIds 는 다중 id 를 한 번에 매핑한다") {
+                transaction(database) {
+                    repository.save(
+                        basicPage(
+                            id = PageId(300L),
+                            spaceId = SpaceId(300L),
+                            authorId = UserId(900L),
+                            visibility = Visibility.PUBLIC
+                        )
+                    )
+                    repository.save(
+                        basicPage(
+                            id = PageId(301L),
+                            spaceId = SpaceId(301L),
+                            authorId = UserId(901L),
+                            visibility = Visibility.INTERNAL
+                        )
+                    )
+                }
+
+                transaction(database) {
+                    val records =
+                        repository.findVisibilitiesByIds(listOf(PageId(300L), PageId(301L)))
+
+                    records.size shouldBe 2
+                    records[PageId(300L)]?.visibility shouldBe Visibility.PUBLIC
+                    records[PageId(300L)]?.spaceId shouldBe SpaceId(300L)
+                    records[PageId(300L)]?.authorId shouldBe UserId(900L)
+                    records[PageId(301L)]?.visibility shouldBe Visibility.INTERNAL
+                }
+            }
+
+            it("findVisibilitiesByIds 는 빈 입력에 빈 map 을 반환한다") {
+                transaction(database) {
+                    repository.findVisibilitiesByIds(emptyList()).shouldBeEmpty()
+                }
+            }
+
+            it("findVisibilitiesByIds 는 soft deleted 페이지를 제외한다") {
+                transaction(database) {
+                    repository.save(
+                        basicPage(id = PageId(310L), visibility = Visibility.PUBLIC)
+                    )
+                    repository.delete(PageId(310L))
+                }
+
+                transaction(database) {
+                    repository.findVisibilitiesByIds(listOf(PageId(310L))).shouldBeEmpty()
+                }
+            }
+
+            it("findVisibilitiesByIds 는 alive 와 soft deleted 가 섞인 입력에서 alive 만 반환한다") {
+                transaction(database) {
+                    repository.save(basicPage(id = PageId(320L), visibility = Visibility.PUBLIC))
+                    repository.save(basicPage(id = PageId(321L), visibility = Visibility.INTERNAL))
+                    repository.delete(PageId(321L))
+                }
+
+                transaction(database) {
+                    val records =
+                        repository.findVisibilitiesByIds(
+                            listOf(PageId(320L), PageId(321L))
+                        )
+                    records.keys shouldBe setOf(PageId(320L))
+                    records[PageId(320L)]?.visibility shouldBe Visibility.PUBLIC
                 }
             }
         }

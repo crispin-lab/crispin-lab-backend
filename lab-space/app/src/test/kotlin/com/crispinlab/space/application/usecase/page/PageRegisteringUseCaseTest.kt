@@ -14,6 +14,7 @@ import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.PageLink
+import com.crispinlab.space.domain.page.PageLink.Target
 import com.crispinlab.space.domain.page.PageRevision
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.spacemember.SpaceMemberRole
@@ -83,7 +84,12 @@ class PageRegisteringUseCaseTest :
                 every { pageLinkRepository.saveAll(capture(savedLinks)) } answers
                     { savedLinks.captured }
 
-                val result = useCase.perform(basicRequest(content = "본문 [[foo]] 와 [[bar|라벨]]"))
+                val result =
+                    useCase.perform(
+                        basicRequest(
+                            content = "본문 [[pageId:7|라벨]] 와 [[pageId:8|두번째]]"
+                        )
+                    )
 
                 result.pageId shouldBe PageId(1L)
                 savedPage.captured.title shouldBe "테스트"
@@ -91,7 +97,11 @@ class PageRegisteringUseCaseTest :
                 savedRevision.captured.version shouldBe 1
                 savedRevision.captured.pageId shouldBe savedPage.captured.id
                 savedLinks.captured shouldHaveSize 2
-                savedLinks.captured.map { it.target } shouldContainExactly listOf("foo", "bar")
+                savedLinks.captured.map { it.target } shouldContainExactly
+                    listOf(
+                        Target.Internal(PageId(7L)),
+                        Target.Internal(PageId(8L))
+                    )
             }
 
             it("본문에 위키링크가 없으면 saveAll 이 빈 리스트로 호출된다") {

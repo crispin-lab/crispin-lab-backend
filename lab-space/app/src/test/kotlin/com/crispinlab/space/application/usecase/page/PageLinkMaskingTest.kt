@@ -17,7 +17,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.kotest.matchers.string.shouldContain
+import io.kotest.matchers.string.shouldNotContain
 
 class PageLinkMaskingTest :
     DescribeSpec({
@@ -319,7 +319,7 @@ class PageLinkMaskingTest :
             }
 
             it(
-                "attrs 가 ObjectNode 가 아닌 corrupt pageLink 는 마스킹 시도 없이 통과 (extractor 의 ids drop 과 정합)"
+                "attrs 가 ObjectNode 가 아닌 corrupt pageLink 도 default-deny 로 마스킹된다"
             ) {
                 val corruptPageLink = """{"type":"pageLink","attrs":[1,2,3]}"""
                 val content =
@@ -352,7 +352,9 @@ class PageLinkMaskingTest :
                     mapper = mapper,
                     targetPageId = 42L
                 ) shouldBe MASKED_DISPLAY_TEXT
-                masked.raw shouldContain "\"attrs\":[1,2,3]"
+                masked.raw shouldNotContain "[1,2,3]"
+                val maskedCount: Int = masked.raw.split(MASKED_DISPLAY_TEXT).size - 1
+                maskedCount shouldBe 2
             }
         }
     }) {

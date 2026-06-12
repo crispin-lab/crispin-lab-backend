@@ -225,7 +225,7 @@ class PageEditingUseCaseTest :
                 savedPage.captured.visibility shouldBe Visibility.INTERNAL
             }
 
-            it("같은 공개 범위 + 같은 본문이면 page 저장과 revision 저장이 모두 skip 된다") {
+            it("같은 공개 범위 + 같은 본문이면 page / revision / link 저장이 모두 skip 된다") {
                 val page =
                     basicPage(
                         visibility = Visibility.INTERNAL,
@@ -247,6 +247,7 @@ class PageEditingUseCaseTest :
                 page.currentVersion shouldBe 3
                 verify(exactly = 0) { pageRepository.save(any()) }
                 verify(exactly = 0) { pageRevisionRepository.save(any()) }
+                verify(exactly = 0) { pageLinkRepository.saveAll(any()) }
             }
 
             it("본문 변경 없이 공개 범위만 바뀌면 새 리비전을 만들지 않는다") {

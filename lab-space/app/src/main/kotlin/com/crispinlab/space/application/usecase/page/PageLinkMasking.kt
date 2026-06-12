@@ -30,7 +30,7 @@ private fun ObjectNode.maskIfDeniedBy(
     scope: VisibilityScope,
     visibilities: Map<PageId, PageVisibilityRecord>
 ) {
-    val attrs: ObjectNode = this["attrs"] as? ObjectNode ?: return
+    val attrs: ObjectNode = (this["attrs"] as? ObjectNode) ?: putObject("attrs")
     val allowed: Boolean =
         attrsPageId()
             ?.let { visibilities[it] }

@@ -3,6 +3,7 @@ package com.crispinlab.space.adapter.search.page
 import com.crispinlab.common.pagination.PageRequest
 import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.adapter.persistence.page.Pages
+import com.crispinlab.space.adapter.persistence.page.decodeVisibility
 import com.crispinlab.space.adapter.persistence.tag.PageTags
 import com.crispinlab.space.adapter.persistence.toPageResult
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort
@@ -152,6 +153,7 @@ class ExposedPageSearchAdapter : PageSearchPort {
             parentPageId = this[Pages.parentPageId]?.let(::PageId),
             authorId = UserId(this[Pages.authorId]),
             title = this[Pages.title],
+            visibility = decodeVisibility(this[Pages.visibility]),
             displayOrder = this[Pages.displayOrder],
             updatedAt = this[Pages.updatedAt]
         )

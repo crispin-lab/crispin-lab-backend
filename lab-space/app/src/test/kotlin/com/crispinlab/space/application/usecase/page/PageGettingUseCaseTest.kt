@@ -68,7 +68,7 @@ class PageGettingUseCaseTest :
 
                 result.pageId shouldBe page.id
                 result.title shouldBe "오늘의 회고"
-                result.visibility shouldBe "DRAFT"
+                result.visibility shouldBe Visibility.DRAFT
                 result.authorId shouldBe UserId(100L)
                 result.authorHandle shouldBe "test_user"
                 result.ancestors shouldBe emptyList()

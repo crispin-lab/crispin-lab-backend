@@ -12,6 +12,7 @@ import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.Visibi
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.PageId
+import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.tag.TagId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
@@ -59,6 +60,7 @@ class PageSearchingUseCaseTest :
                             parentPageId = PageId(1L),
                             authorId = UserId(100L),
                             title = "오늘의 회고",
+                            visibility = Visibility.PUBLIC,
                             displayOrder = 1,
                             updatedAt = DUMMY_INSTANT
                         ),
@@ -68,6 +70,7 @@ class PageSearchingUseCaseTest :
                             parentPageId = null,
                             authorId = UserId(200L),
                             title = "어제의 회고",
+                            visibility = Visibility.INTERNAL,
                             displayOrder = 0,
                             updatedAt = DUMMY_INSTANT
                         )
@@ -104,6 +107,8 @@ class PageSearchingUseCaseTest :
                 result.items.map { it.authorId } shouldBe listOf(UserId(100L), UserId(200L))
                 result.items.map { it.authorHandle } shouldBe listOf("test_user", "other_user")
                 result.items.map { it.title } shouldBe listOf("오늘의 회고", "어제의 회고")
+                result.items.map { it.visibility } shouldBe
+                    listOf(Visibility.PUBLIC, Visibility.INTERNAL)
                 result.items.map { it.displayOrder } shouldBe listOf(1, 0)
                 result.totalElements shouldBe 2L
                 verify {
@@ -290,6 +295,7 @@ class PageSearchingUseCaseTest :
                             parentPageId = null,
                             authorId = UserId(100L),
                             title = "a",
+                            visibility = Visibility.PUBLIC,
                             displayOrder = 0,
                             updatedAt = DUMMY_INSTANT
                         ),
@@ -299,6 +305,7 @@ class PageSearchingUseCaseTest :
                             parentPageId = null,
                             authorId = UserId(100L),
                             title = "b",
+                            visibility = Visibility.PUBLIC,
                             displayOrder = 1,
                             updatedAt = DUMMY_INSTANT
                         ),
@@ -308,6 +315,7 @@ class PageSearchingUseCaseTest :
                             parentPageId = null,
                             authorId = UserId(200L),
                             title = "c",
+                            visibility = Visibility.PUBLIC,
                             displayOrder = 2,
                             updatedAt = DUMMY_INSTANT
                         )
@@ -345,6 +353,7 @@ class PageSearchingUseCaseTest :
                             parentPageId = null,
                             authorId = UserId(999L),
                             title = "삭제된 사용자가 쓴 글",
+                            visibility = Visibility.PUBLIC,
                             displayOrder = 0,
                             updatedAt = DUMMY_INSTANT
                         )

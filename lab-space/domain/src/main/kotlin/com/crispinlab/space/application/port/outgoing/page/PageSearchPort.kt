@@ -91,6 +91,7 @@ interface PageSearchPort {
         val parentPageId: PageId?,
         val authorId: UserId,
         val title: String,
+        val visibility: Visibility,
         val displayOrder: Int,
         val updatedAt: Instant
     )

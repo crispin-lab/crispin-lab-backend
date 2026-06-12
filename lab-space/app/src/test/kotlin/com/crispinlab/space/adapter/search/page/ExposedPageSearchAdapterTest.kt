@@ -710,6 +710,52 @@ class ExposedPageSearchAdapterTest :
                     listOf(PageId(11L), PageId(10L), PageId(14L), PageId(12L), PageId(13L))
             }
 
+            it("Summary 에 visibility 가 노출된다 (PUBLIC / INTERNAL / 본인 DRAFT 각각이 그대로 매핑)") {
+                transaction(database) {
+                    pageRepository.save(
+                        publicPage(id = PageId(1L), title = "공개")
+                    )
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(2L),
+                            title = "멤버 내부",
+                            visibility = Visibility.INTERNAL
+                        )
+                    )
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(3L),
+                            authorId = UserId(100L),
+                            title = "본인 초안",
+                            visibility = Visibility.DRAFT
+                        )
+                    )
+                }
+
+                val result =
+                    transaction(database) {
+                        adapter.search(
+                            keyword = null,
+                            spaceId = null,
+                            tagIds = emptyList(),
+                            sort = SortOption.UPDATED_AT,
+                            scope =
+                                VisibilityScope.Authenticated(
+                                    viewerId = UserId(100L),
+                                    memberOfSpaceIds = setOf(SpaceId(10L))
+                                ),
+                            pageRequest = PageRequest.firstPage()
+                        )
+                    }
+
+                result.items.associate { it.id to it.visibility } shouldBe
+                    mapOf(
+                        PageId(1L) to Visibility.PUBLIC,
+                        PageId(2L) to Visibility.INTERNAL,
+                        PageId(3L) to Visibility.DRAFT
+                    )
+            }
+
             it("Summary 에 displayOrder 가 노출된다") {
                 transaction(database) {
                     pageRepository.save(

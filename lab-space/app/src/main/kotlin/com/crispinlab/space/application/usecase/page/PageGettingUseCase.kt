@@ -73,7 +73,7 @@ class PageGettingUseCase(
             authorHandle = userHandleQuery.handlesOf(setOf(authorId))[authorId]?.value ?: "",
             title = title,
             content = maskedContent(scope).raw,
-            visibility = visibility.name,
+            visibility = visibility,
             currentVersion = currentVersion,
             displayOrder = displayOrder,
             createdAt = createdAt,

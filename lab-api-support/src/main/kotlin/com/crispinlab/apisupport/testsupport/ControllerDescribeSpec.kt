@@ -44,6 +44,7 @@ import org.springframework.restdocs.request.ParameterDescriptor
 import org.springframework.restdocs.request.QueryParametersSnippet
 import org.springframework.restdocs.request.RequestDocumentation.parameterWithName
 import org.springframework.restdocs.request.RequestDocumentation.queryParameters
+import org.springframework.restdocs.snippet.Attributes
 import org.springframework.restdocs.snippet.Snippet
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.RequestBuilder
@@ -324,14 +325,16 @@ abstract class ControllerDescribeSpec(
 
         fun String.string(
             description: String,
-            optional: Boolean = false
+            optional: Boolean = false,
+            enum: List<String>? = null
         ) {
             BasicField(
                 path = "$pathPrefix$this",
                 type = STRING,
                 optional = optional,
                 description = description,
-                indent = indent
+                indent = indent,
+                enumValues = enum
             ).let { add(it) }
         }
 
@@ -406,13 +409,21 @@ abstract class ControllerDescribeSpec(
             override val description: String,
             override val optional: Boolean = false,
             override val indent: Int = 0,
-            val children: List<Field> = emptyList()
+            val children: List<Field> = emptyList(),
+            val enumValues: List<String>? = null
         ) : Field {
             override fun fieldDescriptors(): List<FieldDescriptor> =
                 listOf(
                     fieldWithPath(path)
-                        .type(type)
-                        .description(decoratedDescription)
+                        .let { descriptor ->
+                            if (enumValues != null) {
+                                descriptor.type(ENUM_TYPE).attributes(
+                                    Attributes.key(ENUM_VALUES_KEY).value(enumValues)
+                                )
+                            } else {
+                                descriptor.type(type)
+                            }
+                        }.description(decoratedDescription)
                         .also {
                             if (optional) {
                                 it.optional()
@@ -420,6 +431,11 @@ abstract class ControllerDescribeSpec(
                         }
                 ) +
                     children.flatMap { it.fieldDescriptors() }
+
+            companion object {
+                private const val ENUM_TYPE: String = "enum"
+                private const val ENUM_VALUES_KEY: String = "enumValues"
+            }
         }
 
         private data class SubsectionField(

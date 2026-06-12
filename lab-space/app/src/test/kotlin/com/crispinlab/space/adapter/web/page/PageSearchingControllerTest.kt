@@ -7,6 +7,7 @@ import com.crispinlab.space.application.port.incoming.page.PageSearching.Summary
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.SortOption
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.PageId
+import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
@@ -45,6 +46,7 @@ class PageSearchingControllerTest :
                                     authorId = UserId(100L),
                                     authorHandle = "test_user",
                                     title = "오늘의 회고",
+                                    visibility = Visibility.PUBLIC,
                                     displayOrder = 1,
                                     updatedAt = DUMMY_INSTANT
                                 ),
@@ -55,6 +57,7 @@ class PageSearchingControllerTest :
                                     authorId = UserId(200L),
                                     authorHandle = "other_user",
                                     title = "어제의 회고",
+                                    visibility = Visibility.INTERNAL,
                                     displayOrder = 0,
                                     updatedAt = DUMMY_INSTANT
                                 )
@@ -82,12 +85,14 @@ class PageSearchingControllerTest :
                         jsonPath("$.items[0].authorId").value("100"),
                         jsonPath("$.items[0].authorHandle").value("test_user"),
                         jsonPath("$.items[0].title").value("오늘의 회고"),
+                        jsonPath("$.items[0].visibility").value("PUBLIC"),
                         jsonPath("$.items[1].pageId").value("1"),
                         jsonPath("$.items[1].spaceId").value("10"),
                         jsonPath("$.items[1].parentPageId").value(nullValue()),
                         jsonPath("$.items[1].authorId").value("200"),
                         jsonPath("$.items[1].authorHandle").value("other_user"),
                         jsonPath("$.items[1].title").value("어제의 회고"),
+                        jsonPath("$.items[1].visibility").value("INTERNAL"),
                         jsonPath("$.page").value(0),
                         jsonPath("$.size").value(20),
                         jsonPath("$.totalElements").value(2)
@@ -111,6 +116,10 @@ class PageSearchingControllerTest :
                                     "작성자 사용자 이름 (삭제된 사용자의 경우 빈 문자열)"
                                 )
                                 "title".string("제목")
+                                "visibility".string(
+                                    description = "페이지 공개 범위",
+                                    enum = listOf("PUBLIC", "INTERNAL", "DRAFT")
+                                )
                                 "displayOrder".number("같은 부모 내 표시 순서 (0 부터 시작, 작을수록 앞)")
                                 "updatedAt".datetime("최근 갱신 시각")
                             }

@@ -10,6 +10,7 @@ import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.SortOp
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.SortOption.Companion.asSortOption
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.PageId
+import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.space.SpaceId.Companion.asSpaceId
 import com.crispinlab.space.domain.tag.TagId
@@ -45,6 +46,7 @@ interface PageSearching : UseCase<Request, PageResult<Summary>> {
         val authorId: UserId,
         val authorHandle: String,
         val title: String,
+        val visibility: Visibility,
         val displayOrder: Int,
         val updatedAt: Instant
     )

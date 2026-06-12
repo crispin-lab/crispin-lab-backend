@@ -6,6 +6,7 @@ import com.crispinlab.space.application.port.incoming.page.PageGetting.Result
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.PageId.Companion.asPageId
+import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.user.domain.user.UserId
 import java.time.Instant
@@ -26,7 +27,7 @@ interface PageGetting : UseCase<Request, Result> {
         val authorHandle: String,
         val title: String,
         val content: String,
-        val visibility: String,
+        val visibility: Visibility,
         val currentVersion: Int,
         val displayOrder: Int,
         val createdAt: Instant,

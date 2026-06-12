@@ -62,7 +62,6 @@ class Page(
         validateTitle(title)
         val newContent: PageContent = PageContent(content)
         val newVersion: Int = currentVersion + 1
-        val newWikiLinks: List<ExtractedWikiLink> = newContent.extractLinks()
         val occurredAt: Instant = now()
 
         this.title = title
@@ -74,7 +73,6 @@ class Page(
             version = newVersion,
             title = title,
             content = newContent,
-            wikiLinks = newWikiLinks,
             occurredAt = occurredAt
         )
     }
@@ -115,7 +113,6 @@ class Page(
         val version: Int,
         val title: String,
         val content: PageContent,
-        val wikiLinks: List<ExtractedWikiLink>,
         val occurredAt: Instant
     )
 

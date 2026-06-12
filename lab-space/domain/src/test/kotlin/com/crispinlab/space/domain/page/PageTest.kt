@@ -4,10 +4,8 @@ import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.Fixtures.basicPage
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
-import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import java.net.URI
 
 class PageTest :
     DescribeSpec({
@@ -70,29 +68,6 @@ class PageTest :
                 page.edit("t3", "c3")
 
                 page.currentVersion shouldBe 4
-            }
-
-            it("본문에서 위키 링크를 추출해 EditResult 에 담는다") {
-                val page: Page = basicPage()
-
-                val result: Page.EditResult =
-                    page.edit(
-                        title = "제목",
-                        content =
-                            "내부 [[pageId:42|구조 설명]] 와 외부 [[https://example.com|예시]]"
-                    )
-
-                result.wikiLinks shouldContainExactly
-                    listOf(
-                        ExtractedWikiLink.Internal(
-                            targetPageId = PageId(42L),
-                            displayText = "구조 설명"
-                        ),
-                        ExtractedWikiLink.External(
-                            url = URI.create("https://example.com"),
-                            displayText = "예시"
-                        )
-                    )
             }
 
             it("새 title 이 비어 있으면 실패한다") {

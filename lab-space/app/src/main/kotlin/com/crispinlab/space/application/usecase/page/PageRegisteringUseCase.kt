@@ -21,6 +21,7 @@ import com.crispinlab.space.domain.page.PageLinkId
 import com.crispinlab.space.domain.page.PageRevision
 import com.crispinlab.space.domain.page.PageRevisionId
 import com.crispinlab.space.domain.space.SpaceErrorCode
+import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.stereotype.Service
 
 @Service
@@ -31,7 +32,8 @@ class PageRegisteringUseCase(
     private val spaceRepository: SpaceRepository,
     private val spaceMemberRepository: SpaceMemberRepository,
     private val idGenerator: IdGenerator,
-    private val transactionProvider: TransactionProvider
+    private val transactionProvider: TransactionProvider,
+    private val objectMapper: ObjectMapper
 ) : PageRegistering {
     override fun perform(request: Request): Result =
         transactionProvider.transactional {
@@ -92,13 +94,13 @@ class PageRegisteringUseCase(
 
     private fun Page.saveInitialLinksWith(revisionId: PageRevisionId) {
         content
-            .extractLinks()
+            .extractPageLinks(objectMapper)
             .map { extracted ->
                 PageLink(
                     id = PageLinkId(idGenerator.next()),
                     pageId = id,
                     revisionId = revisionId,
-                    target = extracted.toTarget(),
+                    target = extracted.targetPageId,
                     createdAt = createdAt
                 )
             }.let {

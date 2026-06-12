@@ -10,12 +10,11 @@ import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.application.usecase.access.memberSpaceIdsOf
-import com.crispinlab.space.domain.page.ExtractedWikiLink
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageContent
 import com.crispinlab.space.domain.page.PageErrorCode
-import com.crispinlab.space.domain.page.maskPageLinks
 import com.crispinlab.user.application.port.outgoing.user.UserHandleQuery
+import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.stereotype.Service
 
 @Service
@@ -24,7 +23,8 @@ class PageGettingUseCase(
     private val pageAncestorPort: PageAncestorPort,
     private val spaceMemberRepository: SpaceMemberRepository,
     private val userHandleQuery: UserHandleQuery,
-    private val transactionProvider: TransactionProvider
+    private val transactionProvider: TransactionProvider,
+    private val objectMapper: ObjectMapper
 ) : PageGetting {
     override fun perform(request: Request): Result =
         transactionProvider.transactional(readOnly = true) {
@@ -57,16 +57,12 @@ class PageGettingUseCase(
                 )
             }
 
-    private fun Page.maskedContent(scope: VisibilityScope): PageContent {
-        val ids =
-            content
-                .extractLinks()
-                .filterIsInstance<ExtractedWikiLink.Internal>()
-                .map { it.targetPageId }
-                .toSet()
-        if (ids.isEmpty()) return content
-        return content.maskPageLinks(scope, pageRepository.findVisibilitiesByIds(ids))
-    }
+    private fun Page.maskedContent(scope: VisibilityScope): PageContent =
+        content.maskPageLinksBy(
+            mapper = objectMapper,
+            scope = scope,
+            visibilityLookup = pageRepository::findVisibilitiesByIds
+        )
 
     private fun Page.toResult(scope: VisibilityScope): Result =
         Result(

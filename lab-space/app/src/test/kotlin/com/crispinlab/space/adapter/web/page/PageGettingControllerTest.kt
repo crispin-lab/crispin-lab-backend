@@ -8,6 +8,7 @@ import com.crispinlab.space.application.usecase.page.PageLinkMaskingPolicy.MASKE
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.PageErrorCode
 import com.crispinlab.space.domain.page.PageId
+import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
@@ -53,7 +54,7 @@ class PageGettingControllerTest :
                                     text(" 참고")
                                 )
                             ),
-                        visibility = "DRAFT",
+                        visibility = Visibility.DRAFT,
                         currentVersion = 1,
                         displayOrder = 2,
                         createdAt = DUMMY_INSTANT,
@@ -104,7 +105,10 @@ class PageGettingControllerTest :
                                     "attrs.displayText 가 `$MASKED_DISPLAY_TEXT` 로 마스킹된다 " +
                                     "(pageId 는 보존)."
                             )
-                            "visibility".string("공개 범위")
+                            "visibility".string(
+                                description = "페이지 공개 범위",
+                                enum = Visibility.entries.map { it.name }
+                            )
                             "currentVersion".number("현재 버전")
                             "displayOrder".number("같은 부모 내 표시 순서 (0 부터 시작, 작을수록 앞)")
                             "createdAt".datetime("생성 시각")
@@ -149,7 +153,7 @@ class PageGettingControllerTest :
                         authorHandle = "test_user",
                         title = "공개 페이지",
                         content = "본문",
-                        visibility = "PUBLIC",
+                        visibility = Visibility.PUBLIC,
                         currentVersion = 1,
                         displayOrder = 0,
                         createdAt = DUMMY_INSTANT,
@@ -192,7 +196,7 @@ class PageGettingControllerTest :
                         authorHandle = "test_user",
                         title = "공개 페이지",
                         content = maskedTipTap,
-                        visibility = "PUBLIC",
+                        visibility = Visibility.PUBLIC,
                         currentVersion = 1,
                         displayOrder = 0,
                         createdAt = DUMMY_INSTANT,

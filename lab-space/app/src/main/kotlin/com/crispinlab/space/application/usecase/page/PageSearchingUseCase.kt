@@ -57,6 +57,7 @@ class PageSearchingUseCase(
             authorId = authorId,
             authorHandle = handles[authorId]?.value ?: "",
             title = title,
+            visibility = visibility,
             displayOrder = displayOrder,
             updatedAt = updatedAt
         )

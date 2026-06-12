@@ -118,7 +118,7 @@ class PageSearchingControllerTest :
                                 "title".string("제목")
                                 "visibility".string(
                                     description = "페이지 공개 범위",
-                                    enum = listOf("PUBLIC", "INTERNAL", "DRAFT")
+                                    enum = Visibility.entries.map { it.name }
                                 )
                                 "displayOrder".number("같은 부모 내 표시 순서 (0 부터 시작, 작을수록 앞)")
                                 "updatedAt".datetime("최근 갱신 시각")

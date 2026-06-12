@@ -107,7 +107,7 @@ class PageGettingControllerTest :
                             )
                             "visibility".string(
                                 description = "페이지 공개 범위",
-                                enum = listOf("PUBLIC", "INTERNAL", "DRAFT")
+                                enum = Visibility.entries.map { it.name }
                             )
                             "currentVersion".number("현재 버전")
                             "displayOrder".number("같은 부모 내 표시 순서 (0 부터 시작, 작을수록 앞)")

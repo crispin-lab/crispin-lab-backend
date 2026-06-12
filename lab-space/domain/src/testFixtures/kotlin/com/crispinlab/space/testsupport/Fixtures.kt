@@ -93,7 +93,7 @@ object Fixtures {
         id: PageLinkId = PageLinkId(1L),
         pageId: PageId = PageId(10L),
         revisionId: PageRevisionId = PageRevisionId(100L),
-        target: PageLink.Target = PageLink.Target.Internal(PageId(20L)),
+        target: PageId = PageId(20L),
         createdAt: Instant = DUMMY_INSTANT
     ): PageLink =
         PageLink(

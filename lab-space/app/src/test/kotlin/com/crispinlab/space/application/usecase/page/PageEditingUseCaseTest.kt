@@ -18,7 +18,12 @@ import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.spacemember.SpaceMemberRole
 import com.crispinlab.space.testsupport.Fixtures.basicPage
 import com.crispinlab.space.testsupport.Fixtures.basicSpaceMember
+import com.crispinlab.space.testsupport.TipTapJsonFixtures.doc
+import com.crispinlab.space.testsupport.TipTapJsonFixtures.pageLink
+import com.crispinlab.space.testsupport.TipTapJsonFixtures.paragraph
+import com.crispinlab.space.testsupport.TipTapJsonFixtures.text
 import com.crispinlab.user.domain.user.UserId
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldBeEmpty
@@ -46,7 +51,8 @@ class PageEditingUseCaseTest :
                 pageLinkRepository = pageLinkRepository,
                 spaceMemberRepository = spaceMemberRepository,
                 idGenerator = idGenerator,
-                transactionProvider = DummyTransactionProvider()
+                transactionProvider = DummyTransactionProvider(),
+                objectMapper = ObjectMapper()
             )
 
         beforeEach {
@@ -84,7 +90,21 @@ class PageEditingUseCaseTest :
                         basicRequest(
                             pageId = page.id.value.toString(),
                             title = "새 제목",
-                            content = "본문 [[pageId:11|wiki1]] [[pageId:12|wiki2]]"
+                            content =
+                                doc(
+                                    paragraph(
+                                        text("본문 "),
+                                        pageLink(
+                                            pageId = 11L,
+                                            displayText = "wiki1"
+                                        ),
+                                        text(" "),
+                                        pageLink(
+                                            pageId = 12L,
+                                            displayText = "wiki2"
+                                        )
+                                    )
+                                )
                         )
                     )
 
@@ -94,13 +114,10 @@ class PageEditingUseCaseTest :
                 savedRevision.captured.version shouldBe 2
                 savedLinks.captured shouldHaveSize 2
                 savedLinks.captured.map { it.target } shouldContainExactly
-                    listOf(
-                        PageLink.Target.Internal(PageId(11L)),
-                        PageLink.Target.Internal(PageId(12L))
-                    )
+                    listOf(PageId(11L), PageId(12L))
             }
 
-            it("위키링크 없는 본문은 saveAll 이 빈 리스트로 호출된다") {
+            it("pageLink 없는 본문은 saveAll 이 빈 리스트로 호출된다") {
                 val page = basicPage()
                 every { pageRepository.findBy(page.id) } returns page
                 every { idGenerator.next() } returnsMany listOf(101L)
@@ -108,7 +125,12 @@ class PageEditingUseCaseTest :
                 every { pageLinkRepository.saveAll(capture(savedLinks)) } answers
                     { savedLinks.captured }
 
-                useCase.perform(basicRequest(pageId = page.id.value.toString(), content = "단순 본문"))
+                useCase.perform(
+                    basicRequest(
+                        pageId = page.id.value.toString(),
+                        content = doc(paragraph(text("단순 본문")))
+                    )
+                )
 
                 savedLinks.captured.shouldBeEmpty()
             }
@@ -203,7 +225,7 @@ class PageEditingUseCaseTest :
                 savedPage.captured.visibility shouldBe Visibility.INTERNAL
             }
 
-            it("같은 공개 범위를 다시 보내면 updatedAt 이 보존된다") {
+            it("같은 공개 범위 + 같은 본문이면 page / revision / link 저장이 모두 skip 된다") {
                 val page =
                     basicPage(
                         visibility = Visibility.INTERNAL,
@@ -211,8 +233,6 @@ class PageEditingUseCaseTest :
                     )
                 val before: Instant = page.updatedAt
                 every { pageRepository.findBy(page.id) } returns page
-                val savedPage = slot<Page>()
-                every { pageRepository.save(capture(savedPage)) } answers { savedPage.captured }
 
                 useCase.perform(
                     basicRequest(
@@ -223,9 +243,11 @@ class PageEditingUseCaseTest :
                     )
                 )
 
-                savedPage.captured.updatedAt shouldBe before
-                savedPage.captured.currentVersion shouldBe 3
+                page.updatedAt shouldBe before
+                page.currentVersion shouldBe 3
+                verify(exactly = 0) { pageRepository.save(any()) }
                 verify(exactly = 0) { pageRevisionRepository.save(any()) }
+                verify(exactly = 0) { pageLinkRepository.saveAll(any()) }
             }
 
             it("본문 변경 없이 공개 범위만 바뀌면 새 리비전을 만들지 않는다") {

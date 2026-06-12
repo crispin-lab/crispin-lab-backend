@@ -17,6 +17,7 @@ import com.crispinlab.space.domain.page.PageLink
 import com.crispinlab.space.domain.page.PageLinkId
 import com.crispinlab.space.domain.page.PageRevision
 import com.crispinlab.space.domain.page.PageRevisionId
+import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.stereotype.Service
 
 @Service
@@ -26,7 +27,8 @@ class PageEditingUseCase(
     private val pageLinkRepository: PageLinkRepository,
     private val spaceMemberRepository: SpaceMemberRepository,
     private val idGenerator: IdGenerator,
-    private val transactionProvider: TransactionProvider
+    private val transactionProvider: TransactionProvider,
+    private val objectMapper: ObjectMapper
 ) : PageEditing {
     override fun perform(request: Request): Result =
         transactionProvider.transactional {
@@ -47,20 +49,23 @@ class PageEditingUseCase(
 
     private fun Page.applyEditWith(request: Request): Page =
         apply {
-            request.visibility
-                ?.takeIf { it != visibility }
-                ?.also { changeVisibility(it) }
+            val visibilityChanged: Boolean =
+                request.visibility
+                    ?.takeIf { it != visibility }
+                    ?.also { changeVisibility(it) } != null
             val editResult: Page.EditResult? =
-                takeIf { it.hasContentChange(request) }
+                takeIf { it.needsNewRevision(request) }
                     ?.edit(
                         title = request.title,
                         content = request.content
                     )
-            pageRepository.save(this)
+            if (visibilityChanged || editResult != null) {
+                pageRepository.save(this)
+            }
             editResult?.let { saveRevisionAndLinksWith(it) }
         }
 
-    private fun Page.hasContentChange(request: Request): Boolean =
+    private fun Page.needsNewRevision(request: Request): Boolean =
         title != request.title || content.raw != request.content
 
     private fun Page.saveRevisionAndLinksWith(editResult: Page.EditResult) {
@@ -85,13 +90,14 @@ class PageEditingUseCase(
         editResult: Page.EditResult,
         revisionId: PageRevisionId
     ) {
-        editResult.wikiLinks
+        editResult.content
+            .extractPageLinks(objectMapper)
             .map { extracted ->
                 PageLink(
                     id = PageLinkId(idGenerator.next()),
                     pageId = id,
                     revisionId = revisionId,
-                    target = extracted.toTarget(),
+                    target = extracted.targetPageId,
                     createdAt = editResult.occurredAt
                 )
             }.let {

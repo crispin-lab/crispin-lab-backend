@@ -14,14 +14,18 @@ import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.PageLink
-import com.crispinlab.space.domain.page.PageLink.Target
 import com.crispinlab.space.domain.page.PageRevision
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.spacemember.SpaceMemberRole
 import com.crispinlab.space.testsupport.Fixtures.basicPage
 import com.crispinlab.space.testsupport.Fixtures.basicSpace
 import com.crispinlab.space.testsupport.Fixtures.basicSpaceMember
+import com.crispinlab.space.testsupport.TipTapJsonFixtures.doc
+import com.crispinlab.space.testsupport.TipTapJsonFixtures.pageLink
+import com.crispinlab.space.testsupport.TipTapJsonFixtures.paragraph
+import com.crispinlab.space.testsupport.TipTapJsonFixtures.text
 import com.crispinlab.user.domain.user.UserId
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldBeEmpty
@@ -50,7 +54,8 @@ class PageRegisteringUseCaseTest :
                 spaceRepository = spaceRepository,
                 spaceMemberRepository = spaceMemberRepository,
                 idGenerator = idGenerator,
-                transactionProvider = DummyTransactionProvider()
+                transactionProvider = DummyTransactionProvider(),
+                objectMapper = ObjectMapper()
             )
 
         beforeEach {
@@ -87,7 +92,21 @@ class PageRegisteringUseCaseTest :
                 val result =
                     useCase.perform(
                         basicRequest(
-                            content = "본문 [[pageId:7|라벨]] 와 [[pageId:8|두번째]]"
+                            content =
+                                doc(
+                                    paragraph(
+                                        text("본문 "),
+                                        pageLink(
+                                            pageId = 7L,
+                                            displayText = "라벨"
+                                        ),
+                                        text(" 와 "),
+                                        pageLink(
+                                            pageId = 8L,
+                                            displayText = "두번째"
+                                        )
+                                    )
+                                )
                         )
                     )
 
@@ -98,19 +117,16 @@ class PageRegisteringUseCaseTest :
                 savedRevision.captured.pageId shouldBe savedPage.captured.id
                 savedLinks.captured shouldHaveSize 2
                 savedLinks.captured.map { it.target } shouldContainExactly
-                    listOf(
-                        Target.Internal(PageId(7L)),
-                        Target.Internal(PageId(8L))
-                    )
+                    listOf(PageId(7L), PageId(8L))
             }
 
-            it("본문에 위키링크가 없으면 saveAll 이 빈 리스트로 호출된다") {
+            it("본문에 pageLink 가 없으면 saveAll 이 빈 리스트로 호출된다") {
                 every { idGenerator.next() } returnsMany listOf(10L, 20L)
                 val savedLinks = slot<List<PageLink>>()
                 every { pageLinkRepository.saveAll(capture(savedLinks)) } answers
                     { savedLinks.captured }
 
-                useCase.perform(basicRequest(content = "단순한 본문"))
+                useCase.perform(basicRequest(content = doc(paragraph(text("단순한 본문")))))
 
                 savedLinks.captured.shouldBeEmpty()
             }

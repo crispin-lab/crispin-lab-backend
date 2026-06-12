@@ -8,15 +8,22 @@ import com.crispinlab.space.application.port.outgoing.page.PageAncestorPort.Ance
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.page.PageVisibilityRecord
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
+import com.crispinlab.space.application.usecase.page.PageLinkMaskingPolicy.MASKED_DISPLAY_TEXT
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.PageContent
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.testsupport.Fixtures.basicPage
+import com.crispinlab.space.testsupport.TipTapJsonFixtures.doc
+import com.crispinlab.space.testsupport.TipTapJsonFixtures.pageLink
+import com.crispinlab.space.testsupport.TipTapJsonFixtures.paragraph
+import com.crispinlab.space.testsupport.TipTapJsonFixtures.text
 import com.crispinlab.user.application.port.outgoing.user.UserHandleQuery
 import com.crispinlab.user.domain.user.Handle
 import com.crispinlab.user.domain.user.UserId
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldHaveSize
@@ -32,13 +39,15 @@ class PageGettingUseCaseTest :
         val pageAncestorPort = mockk<PageAncestorPort>()
         val spaceMemberRepository = mockk<SpaceMemberRepository>()
         val userHandleQuery = mockk<UserHandleQuery>()
+        val objectMapper = ObjectMapper()
         val useCase =
             PageGettingUseCase(
                 pageRepository = pageRepository,
                 pageAncestorPort = pageAncestorPort,
                 spaceMemberRepository = spaceMemberRepository,
                 userHandleQuery = userHandleQuery,
-                transactionProvider = DummyTransactionProvider()
+                transactionProvider = DummyTransactionProvider(),
+                objectMapper = objectMapper
             )
 
         beforeEach {
@@ -169,11 +178,23 @@ class PageGettingUseCaseTest :
         }
 
         describe("content 의 PageLink displayText 마스킹") {
+            val tipTapWithLink: String =
+                doc(
+                    paragraph(
+                        text("관련 "),
+                        pageLink(
+                            pageId = 42L,
+                            displayText = "문서"
+                        ),
+                        text(" 참고")
+                    )
+                )
+
             it("anonymous 는 PRIVATE target 의 매치를 마스킹된 텍스트로 본다") {
                 val page =
                     basicPage(
                         visibility = Visibility.PUBLIC,
-                        content = PageContent("관련 [[pageId:42|문서]] 참고")
+                        content = PageContent(tipTapWithLink)
                     )
                 every { pageRepository.findBy(page.id) } returns page
                 every { pageRepository.findVisibilitiesByIds(setOf(PageId(42L))) } returns
@@ -190,14 +211,18 @@ class PageGettingUseCaseTest :
                 val result =
                     useCase.perform(basicRequest(viewer = Viewer.Anonymous))
 
-                result.content shouldBe "관련 비공개 페이지 참고"
+                displayTextOf(
+                    mapper = objectMapper,
+                    json = result.content,
+                    targetPageId = 42L
+                ) shouldBe MASKED_DISPLAY_TEXT
             }
 
             it("target 이 PUBLIC 이면 anonymous 에게도 그대로 노출된다") {
                 val page =
                     basicPage(
                         visibility = Visibility.PUBLIC,
-                        content = PageContent("관련 [[pageId:42|문서]] 참고")
+                        content = PageContent(tipTapWithLink)
                     )
                 every { pageRepository.findBy(page.id) } returns page
                 every { pageRepository.findVisibilitiesByIds(setOf(PageId(42L))) } returns
@@ -214,16 +239,21 @@ class PageGettingUseCaseTest :
                 val result =
                     useCase.perform(basicRequest(viewer = Viewer.Anonymous))
 
-                result.content shouldBe "관련 [[pageId:42|문서]] 참고"
+                displayTextOf(
+                    mapper = objectMapper,
+                    json = result.content,
+                    targetPageId = 42L
+                ) shouldBe "문서"
             }
 
             it("content 에 PageLink 가 없으면 visibility lookup 자체를 건너뛴다") {
-                val page = basicPage(content = PageContent("그냥 평문"))
+                val plainDoc: String = doc(paragraph(text("그냥 평문")))
+                val page = basicPage(content = PageContent(plainDoc))
                 every { pageRepository.findBy(page.id) } returns page
 
                 val result = useCase.perform(basicRequest())
 
-                result.content shouldBe "그냥 평문"
+                result.content shouldBe plainDoc
                 verify(exactly = 0) { pageRepository.findVisibilitiesByIds(any()) }
             }
         }
@@ -317,5 +347,33 @@ class PageGettingUseCaseTest :
                 authorId = UserId(100L),
                 visibility = Visibility.PUBLIC
             )
+
+        fun displayTextOf(
+            mapper: ObjectMapper,
+            json: String,
+            targetPageId: Long
+        ): String? =
+            findPageLinkNode(mapper.readTree(json), targetPageId)
+                ?.get("attrs")
+                ?.get("displayText")
+                ?.takeIf { it.isTextual }
+                ?.asText()
+
+        private fun findPageLinkNode(
+            node: JsonNode,
+            targetPageId: Long
+        ): JsonNode? {
+            if (node.isObject &&
+                node["type"]?.asText() == "pageLink" &&
+                node["attrs"]?.get("pageId")?.asText() == targetPageId.toString()
+            ) {
+                return node
+            }
+            for (child in node.elements()) {
+                val found = findPageLinkNode(child, targetPageId)
+                if (found != null) return found
+            }
+            return null
+        }
     }
 }

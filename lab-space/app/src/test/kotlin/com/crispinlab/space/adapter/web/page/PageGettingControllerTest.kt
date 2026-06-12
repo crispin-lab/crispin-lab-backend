@@ -4,12 +4,17 @@ import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder
 import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.space.application.port.incoming.page.PageGetting
 import com.crispinlab.space.application.port.incoming.page.PageGetting.Result
+import com.crispinlab.space.application.usecase.page.PageLinkMaskingPolicy.MASKED_DISPLAY_TEXT
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.PageErrorCode
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
+import com.crispinlab.space.testsupport.TipTapJsonFixtures.doc
+import com.crispinlab.space.testsupport.TipTapJsonFixtures.pageLink
+import com.crispinlab.space.testsupport.TipTapJsonFixtures.paragraph
+import com.crispinlab.space.testsupport.TipTapJsonFixtures.text
 import com.crispinlab.user.domain.user.UserId
 import com.crispinlab.user.testsupport.withAuth
 import io.mockk.clearMocks
@@ -37,7 +42,17 @@ class PageGettingControllerTest :
                         authorId = UserId(100L),
                         authorHandle = "test_user",
                         title = "오늘의 회고",
-                        content = "관련 [[pageId:42|구조 설명]] 참고",
+                        content =
+                            doc(
+                                paragraph(
+                                    text("관련 "),
+                                    pageLink(
+                                        pageId = 42L,
+                                        displayText = "구조 설명"
+                                    ),
+                                    text(" 참고")
+                                )
+                            ),
                         visibility = "DRAFT",
                         currentVersion = 1,
                         displayOrder = 2,
@@ -83,10 +98,11 @@ class PageGettingControllerTest :
                             )
                             "title".string("제목")
                             "content".string(
-                                "본문. " +
-                                    "PageLink (`[[pageId:N|displayText]]`) 의 target 이 viewer 의 " +
-                                    "visibility scope 와 안 맞으면 매치 전체가 " +
-                                    "`비공개 페이지` 평문으로 마스킹된다."
+                                "본문 (TipTap JSON 문자열). " +
+                                    "`{type:'pageLink', attrs:{pageId, displayText}}` 노드의 " +
+                                    "target 이 viewer 의 visibility scope 와 안 맞으면 " +
+                                    "attrs.displayText 가 `$MASKED_DISPLAY_TEXT` 로 마스킹된다 " +
+                                    "(pageId 는 보존)."
                             )
                             "visibility".string("공개 범위")
                             "currentVersion".number("현재 버전")
@@ -156,6 +172,17 @@ class PageGettingControllerTest :
             }
 
             it("anonymous 응답은 비공개 target 매치가 마스킹된 content 로 받는다") {
+                val maskedTipTap: String =
+                    doc(
+                        paragraph(
+                            text("관련 "),
+                            pageLink(
+                                pageId = 42L,
+                                displayText = MASKED_DISPLAY_TEXT
+                            ),
+                            text(" 참고")
+                        )
+                    )
                 every { useCase.perform(any()) } returns
                     Result(
                         pageId = PageId(1L),
@@ -164,7 +191,7 @@ class PageGettingControllerTest :
                         authorId = UserId(100L),
                         authorHandle = "test_user",
                         title = "공개 페이지",
-                        content = "관련 비공개 페이지 참고",
+                        content = maskedTipTap,
                         visibility = "PUBLIC",
                         currentVersion = 1,
                         displayOrder = 0,
@@ -177,7 +204,7 @@ class PageGettingControllerTest :
                     .`when`(get("/v1/pages/{pageId}", 1))
                     .then(
                         status().isOk,
-                        jsonPath("$.content").value("관련 비공개 페이지 참고")
+                        jsonPath("$.content").value(maskedTipTap)
                     )
             }
         }

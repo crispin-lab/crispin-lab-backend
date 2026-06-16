@@ -47,7 +47,7 @@ class SpaceEditingControllerTest :
                         jsonPath("$.description").value("새 설명"),
                         jsonPath("$.updatedAt").exists()
                     ).document(
-                        authHeaderRequired(),
+                        authHeader(required = true),
                         requestFields {
                             "name".string("변경할 이름", optional = true)
                             "description".string("변경할 설명", optional = true)

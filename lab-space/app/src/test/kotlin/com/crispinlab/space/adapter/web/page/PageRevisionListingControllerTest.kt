@@ -72,6 +72,7 @@ class PageRevisionListingControllerTest :
                         jsonPath("$.totalElements").value(2),
                         jsonPath("$.hasNext").value(false)
                     ).document(
+                        authHeader(required = false),
                         pagingParameters(),
                         responseFields {
                             "items".array("리비전 목록") {

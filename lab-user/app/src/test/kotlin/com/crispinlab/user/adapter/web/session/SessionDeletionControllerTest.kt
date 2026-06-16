@@ -32,7 +32,7 @@ class SessionDeletionControllerTest :
                     .`when`(
                         delete("/v1/sessions/me").withAuth()
                     ).then(status().isNoContent)
-                    .document(authHeaderRequired())
+                    .document(authHeader(required = true))
 
                 verify(exactly = 1) { useCase.perform(any()) }
             }

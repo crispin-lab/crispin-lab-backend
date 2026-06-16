@@ -40,7 +40,7 @@ class PageTagAttachingControllerTest :
                             .body(mapOf("tagId" to "200"))
                     ).then(status().isNoContent)
                     .document(
-                        authHeaderRequired(),
+                        authHeader(required = true),
                         requestFields {
                             "tagId".string("매핑할 태그 식별자")
                         },

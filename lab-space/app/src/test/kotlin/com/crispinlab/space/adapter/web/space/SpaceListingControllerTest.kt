@@ -71,7 +71,7 @@ class SpaceListingControllerTest :
                         jsonPath("$.totalPages").value(1),
                         jsonPath("$.hasNext").value(false)
                     ).document(
-                        authHeaderRequired(),
+                        authHeader(required = false),
                         pagingParameters(),
                         responseFields {
                             "items".array("스페이스 목록") {

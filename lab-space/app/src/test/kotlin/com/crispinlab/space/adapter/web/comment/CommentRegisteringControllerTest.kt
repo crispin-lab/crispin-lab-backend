@@ -43,7 +43,7 @@ class CommentRegisteringControllerTest :
                         status().isCreated,
                         jsonPath("$.commentId").value("42")
                     ).document(
-                        authHeaderRequired(),
+                        authHeader(required = true),
                         requestFields {
                             "body".string("댓글 본문")
                         },

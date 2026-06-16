@@ -36,7 +36,7 @@ class PageTagDetachingControllerTest :
                     .`when`(
                         delete("/v1/pages/{pageId}/tags/{tagId}", 10, 200).withAuth()
                     ).then(status().isNoContent)
-                    .document(authHeaderRequired())
+                    .document(authHeader(required = true))
 
                 verify(exactly = 1) {
                     useCase.perform(

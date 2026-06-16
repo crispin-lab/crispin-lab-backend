@@ -67,7 +67,7 @@ class TagListingControllerTest :
                         jsonPath("$.totalElements").value(2),
                         jsonPath("$.hasNext").value(false)
                     ).document(
-                        authHeaderRequired(),
+                        authHeader(required = true),
                         pagingParameters(),
                         responseFields {
                             "items".array("태그 목록") {

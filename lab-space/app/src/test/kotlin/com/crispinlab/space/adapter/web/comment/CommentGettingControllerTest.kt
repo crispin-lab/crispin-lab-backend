@@ -54,7 +54,7 @@ class CommentGettingControllerTest :
                         jsonPath("$.commentId").value("7"),
                         jsonPath("$.body").value("안녕하세요")
                     ).document(
-                        authHeaderRequired(),
+                        authHeader(required = true),
                         responseFields {
                             "commentId".string("댓글 식별자")
                             "pageId".string("소속 페이지 식별자")

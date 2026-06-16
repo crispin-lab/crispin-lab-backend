@@ -51,7 +51,7 @@ class PageEditingControllerTest :
                         jsonPath("$.title").value("새 제목"),
                         jsonPath("$.version").value(2)
                     ).document(
-                        authHeaderRequired(),
+                        authHeader(required = true),
                         requestFields {
                             "title".string("새 제목")
                             "content".string("새 본문")

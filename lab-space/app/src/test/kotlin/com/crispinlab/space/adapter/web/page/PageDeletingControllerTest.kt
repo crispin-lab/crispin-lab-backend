@@ -28,7 +28,7 @@ class PageDeletingControllerTest :
                     .`when`(
                         delete("/v1/pages/{pageId}", 1).withAuth()
                     ).then(status().isNoContent)
-                    .document(authHeaderRequired())
+                    .document(authHeader(required = true))
             }
 
             it("Authorization 토큰이 없으면 401 을 반환한다") {

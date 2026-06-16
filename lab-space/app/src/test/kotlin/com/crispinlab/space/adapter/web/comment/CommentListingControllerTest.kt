@@ -67,7 +67,7 @@ class CommentListingControllerTest :
                         jsonPath("$.totalElements").value(2),
                         jsonPath("$.hasNext").value(false)
                     ).document(
-                        authHeaderRequired(),
+                        authHeader(required = true),
                         pagingParameters(),
                         responseFields {
                             "items".array("댓글 목록") {

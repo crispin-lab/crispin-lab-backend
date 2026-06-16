@@ -131,8 +131,8 @@ class PageGettingControllerTest :
                         get("/v1/pages/{pageId}", 999).withAuth()
                     ).then(
                         status().isNotFound,
-                        jsonPath("$.code").value("PAGE_NOT_FOUND"),
-                        jsonPath("$.message").value("페이지를 찾을 수 없습니다.")
+                        jsonPath("$.code").value(PageErrorCode.PAGE_NOT_FOUND.code),
+                        jsonPath("$.message").value(PageErrorCode.PAGE_NOT_FOUND.defaultMessage)
                     )
             }
 

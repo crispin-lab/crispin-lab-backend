@@ -118,6 +118,15 @@ class PageGettingUseCaseTest :
                 }
             }
 
+            it("비로그인 상태에서 DRAFT 페이지는 NotFoundException 으로 응답한다") {
+                val page = basicPage(visibility = Visibility.DRAFT)
+                every { pageRepository.findBy(page.id) } returns page
+
+                shouldThrow<NotFoundException> {
+                    useCase.perform(basicRequest(viewer = Viewer.Anonymous))
+                }
+            }
+
             it("멤버가 아닌 USER 가 INTERNAL 페이지를 보면 NotFoundException 으로 응답한다") {
                 val page =
                     basicPage(spaceId = SpaceId(10L), visibility = Visibility.INTERNAL)

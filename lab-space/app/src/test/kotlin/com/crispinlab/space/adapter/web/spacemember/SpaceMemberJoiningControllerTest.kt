@@ -51,7 +51,7 @@ class SpaceMemberJoiningControllerTest :
                         jsonPath("$.spaceMemberId").value("42"),
                         jsonPath("$.role").value("MEMBER")
                     ).document(
-                        authHeaderRequired(),
+                        authHeader(required = true),
                         responseFields {
                             "spaceMemberId".string("멤버 식별자")
                             "spaceId".string("스페이스 식별자")

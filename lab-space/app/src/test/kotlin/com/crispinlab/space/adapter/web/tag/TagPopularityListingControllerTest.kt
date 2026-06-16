@@ -57,6 +57,7 @@ class TagPopularityListingControllerTest :
                         jsonPath("$.totalElements").value(2),
                         jsonPath("$.hasNext").value(false)
                     ).document(
+                        authHeader(required = false),
                         pagingParameters(),
                         responseFields {
                             "items".array("인기 태그 목록 (사용 빈도 내림차순)") {

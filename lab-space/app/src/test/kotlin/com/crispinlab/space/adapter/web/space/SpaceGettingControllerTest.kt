@@ -46,7 +46,7 @@ class SpaceGettingControllerTest :
                         jsonPath("$.spaceId").value("1"),
                         jsonPath("$.name").value("팀 위키")
                     ).document(
-                        authHeaderRequired(),
+                        authHeader(required = false),
                         responseFields {
                             "spaceId".string("스페이스 식별자")
                             "name".string("이름")

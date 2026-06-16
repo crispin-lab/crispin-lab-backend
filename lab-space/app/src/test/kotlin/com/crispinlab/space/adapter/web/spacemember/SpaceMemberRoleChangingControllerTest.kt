@@ -52,7 +52,7 @@ class SpaceMemberRoleChangingControllerTest :
                         status().isOk,
                         jsonPath("$.role").value("OWNER")
                     ).document(
-                        authHeaderRequired(),
+                        authHeader(required = true),
                         requestFields {
                             "role".string("새 역할")
                         },

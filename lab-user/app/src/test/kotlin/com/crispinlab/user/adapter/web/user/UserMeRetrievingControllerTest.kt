@@ -47,7 +47,7 @@ class UserMeRetrievingControllerTest :
                         jsonPath("$.email").value("alice@example.com"),
                         jsonPath("$.isAdmin").value(false)
                     ).document(
-                        authHeaderRequired(),
+                        authHeader(required = true),
                         responseFields {
                             "userId".string("사용자 식별자")
                             "handle".string("사용자 이름")

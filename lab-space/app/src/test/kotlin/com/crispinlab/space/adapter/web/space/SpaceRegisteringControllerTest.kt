@@ -50,7 +50,7 @@ class SpaceRegisteringControllerTest :
                         status().isCreated,
                         jsonPath("$.spaceId").value("42")
                     ).document(
-                        authHeaderRequired(),
+                        authHeader(required = true),
                         requestFields {
                             "name".string("스페이스 이름")
                             "description".string("스페이스 설명")

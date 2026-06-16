@@ -62,6 +62,7 @@ class SpaceMemberListingControllerTest :
                         jsonPath("$.items[0].role").value("OWNER"),
                         jsonPath("$.totalElements").value(2)
                     ).document(
+                        authHeader(required = false),
                         pagingParameters(),
                         responseFields {
                             "items".array("멤버 목록") {

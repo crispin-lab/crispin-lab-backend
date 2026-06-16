@@ -209,11 +209,13 @@ abstract class ControllerDescribeSpec(
             )
         )
 
-    fun authHeaderRequired(optional: Boolean = false): Snippet =
+    fun authHeader(required: Boolean): Snippet =
         requestHeaders(
             headerWithName(AUTHORIZATION)
                 .description("세션 토큰 (`Bearer {token}`)")
-                .let { if (optional) it.optional() else it }
+                .apply {
+                    if (!required) optional()
+                }
         )
 
     class FieldBuilder(

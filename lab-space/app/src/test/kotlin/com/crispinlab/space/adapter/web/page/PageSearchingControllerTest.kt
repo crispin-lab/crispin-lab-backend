@@ -97,7 +97,7 @@ class PageSearchingControllerTest :
                         jsonPath("$.size").value(20),
                         jsonPath("$.totalElements").value(2)
                     ).document(
-                        authHeaderRequired(),
+                        authHeader(required = false),
                         queryParameters(
                             "query" isParameterFor "검색 키워드 (제목·본문, 대소문자 무시)" isOptional true,
                             "space" isParameterFor "스페이스 ID 필터" isOptional true,

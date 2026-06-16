@@ -43,7 +43,7 @@ class TagRegisteringControllerTest :
                         status().isCreated,
                         jsonPath("$.tagId").value("42")
                     ).document(
-                        authHeaderRequired(),
+                        authHeader(required = true),
                         requestFields {
                             "spaceId".string("스페이스 식별자")
                             "name".string("태그 이름")

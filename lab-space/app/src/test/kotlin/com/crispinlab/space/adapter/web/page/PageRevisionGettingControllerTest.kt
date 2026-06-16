@@ -53,6 +53,7 @@ class PageRevisionGettingControllerTest :
                         jsonPath("$.title").value("두 번째"),
                         jsonPath("$.content").value("본문 v2")
                     ).document(
+                        authHeader(required = false),
                         responseFields {
                             "revisionId".string("리비전 식별자")
                             "pageId".string("소속 페이지 식별자")

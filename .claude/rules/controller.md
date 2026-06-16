@@ -213,7 +213,7 @@ class SpaceRegisteringControllerTest :
                     status().isCreated,
                     jsonPath("$.spaceId").value("42")
                 ).document(
-                    authHeaderRequired(),
+                    authHeader(required = true),
                     requestFields {
                         "name".string("스페이스 이름")
                         "description".string("스페이스 설명")
@@ -231,7 +231,8 @@ class SpaceRegisteringControllerTest :
 
 - **standalone MockMvc** — `@WebMvcTest` 슬라이스나 `@SpringBootTest` 컨텍스트 없이 `MockMvcBuilders.standaloneSetup` 으로 controller 인스턴스를 직접 띄운다. spec 부팅이 가볍고, `argumentResolvers`/`controllerAdvices` 가 명시적으로 wiring 된다.
 - **OpenAPI 메타데이터는 자동** — `tag` 는 `ControllerDescribeSpec` 생성자에서 받은 값(`"Space"` 등) 이 모든 endpoint 에 자동 적용. `description` 은 `describe(...)` 의 문자열이 자동으로 들어가, `"스페이스 생성"`/`"스페이스 단건 조회"` 같은 한국어 그룹핑이 Swagger UI 에 그대로 노출된다. `summary` 를 따로 명시할 필요 없음.
-- **DSL 만으로 OpenAPI 산출** — `requestFields {}` / `responseFields {}` / `pagingParameters()` / `authHeaderRequired()` 같은 헬퍼만 `document(...)` 에 넘기면 `openapi3.json` 에 path parameter·header·request body·response body 가 자동으로 박힌다.
+- **DSL 만으로 OpenAPI 산출** — `requestFields {}` / `responseFields {}` / `pagingParameters()` / `authHeader(required = true|false)` 같은 헬퍼만 `document(...)` 에 넘기면 `openapi3.json` 에 path parameter·header·request body·response body 가 자동으로 박힌다.
+- **옵셔널 인증 endpoint 의 OpenAPI 표기** — controller 가 `auth: Auth?` 로 받는 endpoint 는 `.document(...)` 에 `authHeader(required = false)` 를 넘겨 OpenAPI 의 Authorization 헤더가 `required: false` 로 노출되게 한다. `auth: Auth` 면 `authHeader(required = true)`. 호출 자체를 누락하면 OpenAPI 에 헤더 정의가 빠져 클라이언트 코드젠이 헤더 필요성을 인지하지 못한다.
 - **인증 stub** — production `AuthArgumentResolver` 는 SessionService + UserRepository 를 의존해서 controller test 마다 wiring 하면 무거워진다. `lab-user/app` 의 testFixtures 가 `StubAuthArgumentResolver` 를 제공해 `Authorization: Bearer userId:role` 포맷의 토큰을 직접 파싱한다 — production 과 동일 헤더 shape, 가벼움. domain 의 `<Domain>AppControllerDescribeSpec` 베이스가 `argumentResolvers = listOf(StubAuthArgumentResolver())` 로 등록. `withAuth(userId, role)` 확장이 헤더를 세팅한다. 토큰 형식 / Redis 세션 / DB user 검증의 회귀는 `AuthArgumentResolverTest` (lab-user/app) 가 책임.
 - **mock 라이프사이클** — spec 단위 mock 을 사용할 때는 반드시 `beforeEach { clearMocks(useCase) }` — invocation 누적이 다른 case 의 `verify(exactly = N)` 를 흔든다.
 - **path variable 분리** — `get("/v1/spaces/{spaceId}", 1)` 처럼 URI 템플릿 + vararg 로 호출. `get("/v1/spaces/1")` 처럼 hardcoded 하면 산출된 `paths` 키가 `/v1/spaces/1` 로 굳어진다.
@@ -273,7 +274,7 @@ val useCase: SpaceRegistering = successfulUseCase<SpaceRegistering, Request, Res
 
 ```kotlin
 .document(
-    authHeaderRequired(),
+    authHeader(required = true),
     requestFields { ... },
     responseFields { ... },
     requestSchema = "PageRegisterRequest",

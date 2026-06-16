@@ -36,7 +36,7 @@ class CommentDeletingControllerTest :
                     .`when`(
                         delete("/v1/pages/{pageId}/comments/{commentId}", 10, 7).withAuth()
                     ).then(status().isNoContent)
-                    .document(authHeaderRequired())
+                    .document(authHeader(required = true))
 
                 verify(exactly = 1) {
                     useCase.perform(

@@ -51,7 +51,7 @@ class CommentEditingControllerTest :
                         jsonPath("$.commentId").value("7"),
                         jsonPath("$.body").value("수정된 댓글")
                     ).document(
-                        authHeaderRequired(),
+                        authHeader(required = true),
                         requestFields {
                             "body".string("수정된 본문")
                         },

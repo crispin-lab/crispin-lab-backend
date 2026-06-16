@@ -88,7 +88,7 @@ class PageGettingControllerTest :
                         jsonPath("$.ancestors[1].pageId").value("2"),
                         jsonPath("$.ancestors[1].title").value("아이디어")
                     ).document(
-                        authHeaderRequired(),
+                        authHeader(required = false),
                         responseFields {
                             "pageId".string("페이지 식별자")
                             "spaceId".string("소속 스페이스 식별자")

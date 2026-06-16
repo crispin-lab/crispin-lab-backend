@@ -54,7 +54,7 @@ class PageRegisteringControllerTest :
                         status().isCreated,
                         jsonPath("$.pageId").value("42")
                     ).document(
-                        authHeaderRequired(),
+                        authHeader(required = true),
                         requestFields {
                             "spaceId".string("소속 스페이스 식별자")
                             "parentPageId".string("부모 페이지 식별자", optional = true)

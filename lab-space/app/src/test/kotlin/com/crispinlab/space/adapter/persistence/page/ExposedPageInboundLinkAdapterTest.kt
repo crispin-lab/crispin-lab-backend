@@ -78,7 +78,7 @@ class ExposedPageInboundLinkAdapterTest :
                         )
                     }
 
-                result.items.map { it.id } shouldBe listOf(PageId(11L))
+                result.items.map { it.pageId } shouldBe listOf(PageId(11L))
                 result.totalElements shouldBe 1L
             }
 
@@ -156,7 +156,7 @@ class ExposedPageInboundLinkAdapterTest :
                         )
                     }
 
-                result.items.map { it.id }.toSet() shouldBe
+                result.items.map { it.pageId }.toSet() shouldBe
                     setOf(PageId(11L), PageId(12L), PageId(14L))
                 result.totalElements shouldBe 3L
             }
@@ -197,7 +197,7 @@ class ExposedPageInboundLinkAdapterTest :
                         )
                     }
 
-                result.items.map { it.id }.toSet() shouldBe setOf(PageId(11L), PageId(12L))
+                result.items.map { it.pageId }.toSet() shouldBe setOf(PageId(11L), PageId(12L))
                 result.totalElements shouldBe 2L
             }
 
@@ -286,7 +286,7 @@ class ExposedPageInboundLinkAdapterTest :
                         )
                     }
 
-                result.items.map { it.id } shouldBe listOf(PageId(11L))
+                result.items.map { it.pageId } shouldBe listOf(PageId(11L))
                 result.totalElements shouldBe 1L
             }
 
@@ -339,7 +339,7 @@ class ExposedPageInboundLinkAdapterTest :
                         )
                     }
 
-                result.items.map { it.id } shouldBe
+                result.items.map { it.pageId } shouldBe
                     listOf(PageId(12L), PageId(13L), PageId(11L))
             }
 
@@ -420,7 +420,7 @@ class ExposedPageInboundLinkAdapterTest :
                     }
 
                 result.items shouldHaveSize 1
-                result.items.map { it.id } shouldBe listOf(PageId(11L))
+                result.items.map { it.pageId } shouldBe listOf(PageId(11L))
                 result.totalElements shouldBe 1L
             }
         }

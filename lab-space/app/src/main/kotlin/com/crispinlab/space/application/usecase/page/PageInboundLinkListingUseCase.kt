@@ -6,8 +6,8 @@ import com.crispinlab.space.application.port.incoming.page.PageInboundLinkListin
 import com.crispinlab.space.application.port.incoming.page.PageInboundLinkListing.Request
 import com.crispinlab.space.application.port.incoming.page.PageInboundLinkListing.Summary
 import com.crispinlab.space.application.port.outgoing.page.PageInboundLinkPort
+import com.crispinlab.space.application.port.outgoing.page.PageInboundLinkPort.InboundLinkSummary
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
-import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.PageSummary
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.application.usecase.access.findReadablePage
@@ -39,16 +39,16 @@ class PageInboundLinkListingUseCase(
     private fun Request.toScope(): VisibilityScope =
         VisibilityScope.of(viewer, spaceMemberRepository.memberSpaceIdsOf(viewer))
 
-    private fun PageResult<PageSummary>.toSummaries(): PageResult<Summary> {
+    private fun PageResult<InboundLinkSummary>.toSummaries(): PageResult<Summary> {
         val authorIds = items.map { it.authorId }.toSet()
         val handles =
             if (authorIds.isEmpty()) emptyMap() else userHandleQuery.handlesOf(authorIds)
         return map { it.toSummary(handles) }
     }
 
-    private fun PageSummary.toSummary(handles: Map<UserId, Handle>): Summary =
+    private fun InboundLinkSummary.toSummary(handles: Map<UserId, Handle>): Summary =
         Summary(
-            pageId = id,
+            pageId = pageId,
             spaceId = spaceId,
             parentPageId = parentPageId,
             authorId = authorId,

@@ -7,8 +7,8 @@ import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.common.transaction.DummyTransactionProvider
 import com.crispinlab.space.application.port.incoming.page.PageInboundLinkListing.Request
 import com.crispinlab.space.application.port.outgoing.page.PageInboundLinkPort
+import com.crispinlab.space.application.port.outgoing.page.PageInboundLinkPort.InboundLinkSummary
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
-import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.PageSummary
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.domain.access.Viewer
@@ -199,9 +199,9 @@ class PageInboundLinkListingUseCaseTest :
             title: String = "이전 페이지",
             visibility: Visibility = Visibility.PUBLIC,
             displayOrder: Int = 0
-        ): PageSummary =
-            PageSummary(
-                id = id,
+        ): InboundLinkSummary =
+            InboundLinkSummary(
+                pageId = id,
                 spaceId = spaceId,
                 parentPageId = parentPageId,
                 authorId = authorId,

@@ -4,7 +4,7 @@ import com.crispinlab.common.pagination.PageRequest
 import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.adapter.persistence.toPageResult
 import com.crispinlab.space.application.port.outgoing.page.PageInboundLinkPort
-import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.PageSummary
+import com.crispinlab.space.application.port.outgoing.page.PageInboundLinkPort.InboundLinkSummary
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.space.SpaceId
@@ -26,7 +26,7 @@ class ExposedPageInboundLinkAdapter : PageInboundLinkPort {
         targetPageId: PageId,
         scope: VisibilityScope,
         pageRequest: PageRequest
-    ): PageResult<PageSummary> =
+    ): PageResult<InboundLinkSummary> =
         Pages
             .selectAll()
             .where {
@@ -54,9 +54,9 @@ class ExposedPageInboundLinkAdapter : PageInboundLinkPort {
                 }
         )
 
-    private fun ResultRow.toSummary(): PageSummary =
-        PageSummary(
-            id = PageId(this[Pages.id]),
+    private fun ResultRow.toSummary(): InboundLinkSummary =
+        InboundLinkSummary(
+            pageId = PageId(this[Pages.id]),
             spaceId = SpaceId(this[Pages.spaceId]),
             parentPageId = this[Pages.parentPageId]?.let(::PageId),
             authorId = UserId(this[Pages.authorId]),

@@ -14,10 +14,19 @@ internal fun findReadablePage(
     spaceMemberRepository: SpaceMemberRepository,
     viewer: Viewer,
     pageId: PageId
-): Page {
-    val scope = VisibilityScope.of(viewer, spaceMemberRepository.memberSpaceIdsOf(viewer))
-    return pageRepository
+): Page =
+    findReadablePage(
+        pageRepository,
+        VisibilityScope.of(viewer, spaceMemberRepository.memberSpaceIdsOf(viewer)),
+        pageId
+    )
+
+internal fun findReadablePage(
+    pageRepository: PageRepository,
+    scope: VisibilityScope,
+    pageId: PageId
+): Page =
+    pageRepository
         .findBy(pageId)
         ?.takeIf { scope.allows(it.visibility, it.spaceId, it.authorId) }
         ?: throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
-}

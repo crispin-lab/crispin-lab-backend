@@ -4,6 +4,7 @@ import com.crispinlab.common.pagination.PageRequest
 import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.adapter.persistence.page.Pages
 import com.crispinlab.space.adapter.persistence.page.decodeVisibility
+import com.crispinlab.space.adapter.persistence.page.toPagesCondition
 import com.crispinlab.space.adapter.persistence.tag.PageTags
 import com.crispinlab.space.adapter.persistence.toPageResult
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort
@@ -11,7 +12,6 @@ import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.PageSu
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.SortOption
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
 import com.crispinlab.space.domain.page.PageId
-import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.tag.TagId
 import com.crispinlab.user.domain.user.UserId
@@ -51,7 +51,7 @@ class ExposedPageSearchAdapter : PageSearchPort {
                 matched
             }
 
-        return baseQuery(keyword, spaceId, tagPageIds, scope.toCondition())
+        return baseQuery(keyword, spaceId, tagPageIds, scope.toPagesCondition())
             .toPageResult(pageRequest, *sort.toOrderColumns()) { it.toSummary() }
     }
 
@@ -88,32 +88,6 @@ class ExposedPageSearchAdapter : PageSearchPort {
                     Pages.displayOrder to SortOrder.ASC,
                     Pages.id to SortOrder.ASC
                 )
-            }
-        }
-
-    private fun VisibilityScope.toCondition(): Op<Boolean> =
-        when (this) {
-            is VisibilityScope.Anonymous -> {
-                Pages.visibility eq Visibility.PUBLIC.name
-            }
-
-            is VisibilityScope.Authenticated -> {
-                val publicClause = Pages.visibility eq Visibility.PUBLIC.name
-                val draftClause =
-                    (Pages.visibility eq Visibility.DRAFT.name) and
-                        (Pages.authorId eq viewerId.value)
-                if (memberOfSpaceIds.isEmpty()) {
-                    publicClause or draftClause
-                } else {
-                    val internalClause =
-                        (Pages.visibility eq Visibility.INTERNAL.name) and
-                            (Pages.spaceId inList memberOfSpaceIds.map { it.value })
-                    publicClause or internalClause or draftClause
-                }
-            }
-
-            is VisibilityScope.Privileged -> {
-                Op.TRUE
             }
         }
 

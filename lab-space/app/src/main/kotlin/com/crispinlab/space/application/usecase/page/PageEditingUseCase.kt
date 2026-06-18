@@ -71,11 +71,6 @@ class PageEditingUseCase(
             editResult?.let { saveRevisionAndLinksWith(it) }
         }
 
-    /**
-     * cascade 검증은 *visibility 변경 시점에만* 트리거된다 (호출 측 `?.takeIf { it != visibility }` 가드).
-     * 부모 space 가 좁아진 뒤 남아 있는 위반 상태 page 의 title/content edit 은 정책상 허용 — read-time
-     * 마스킹이 노출을 차단하고, recovery edit 을 막지 않는다.
-     */
     private fun requireVisibilityWithinSpaceCeiling(
         visibility: Visibility,
         spaceId: SpaceId

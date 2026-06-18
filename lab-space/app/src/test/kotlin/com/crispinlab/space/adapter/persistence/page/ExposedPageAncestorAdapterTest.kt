@@ -181,7 +181,12 @@ class ExposedPageAncestorAdapterTest :
                 }
             }
 
-            it("target 의 space 가 soft delete 되어 있으면 anchor 가 빈 결과를 만든다") {
+            // 어댑터의 cross-space 차단 (`p.space_id = target/ac.space_id`) 으로 chain 안 모든 page 는
+            // 같은 space 에 속한다. 따라서 그 space 의 soft-delete 는 anchor + recursive 양쪽의 spaces
+            // JOIN 을 동시에 차단 — "chain 중간 page 의 space 만 deleted" 같은 부분 차단 시나리오는
+            // 본 어댑터 정책 위에서 표현 불가능. 다른 space 의 page 가 chain 에 끼는 케이스는 cross-space
+            // 차단 자체로 끊기며, 그 회귀는 위의 "다른 스페이스의 페이지를 부모로 가리키는 row" 테스트가 본다.
+            it("target 의 space 가 soft delete 되어 있으면 anchor + recursive 양쪽 spaces JOIN 이 같이 차단된다") {
                 seedSpaces(database, 50L to SpaceVisibility.PUBLIC)
                 transaction(database) {
                     repository.save(
@@ -207,45 +212,6 @@ class ExposedPageAncestorAdapterTest :
 
                 transaction(database) {
                     adapter.findAncestorsOf(PageId(2L)).shouldBeEmpty()
-                }
-            }
-
-            it(
-                "chain 안의 page 들이 모두 같은 space 라 space soft-delete 시 recursive JOIN 도 끊긴다 (anchor + recursive 양쪽 spaces JOIN 차단)"
-            ) {
-                seedSpaces(database, 51L to SpaceVisibility.PUBLIC)
-                transaction(database) {
-                    repository.save(
-                        basicPage(id = PageId(1L), spaceId = SpaceId(51L), title = "root")
-                    )
-                    repository.save(
-                        basicPage(
-                            id = PageId(2L),
-                            spaceId = SpaceId(51L),
-                            parentPageId = PageId(1L),
-                            title = "mid"
-                        )
-                    )
-                    repository.save(
-                        basicPage(
-                            id = PageId(3L),
-                            spaceId = SpaceId(51L),
-                            parentPageId = PageId(2L),
-                            title = "leaf"
-                        )
-                    )
-                }
-
-                transaction(database) {
-                    TransactionManager
-                        .current()
-                        .exec(
-                            "UPDATE spaces SET deleted_at = NOW() WHERE id = 51"
-                        )
-                }
-
-                transaction(database) {
-                    adapter.findAncestorsOf(PageId(3L)).shouldBeEmpty()
                 }
             }
 

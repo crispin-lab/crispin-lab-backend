@@ -77,18 +77,32 @@ class Page(
         )
     }
 
-    /**
-     * 부모 페이지를 옮긴다. 자기 자신을 부모로 두는 케이스만 막는다.
-     * 자손 페이지 밑으로의 순환 이동 검증은 repository 조회가 필요하므로 UseCase 책임이다.
-     */
-    fun move(parentPageId: PageId?) {
+    fun move(
+        parentPageId: PageId?,
+        displayOrder: Int
+    ) {
         check(!isDeleted) {
             "삭제된 페이지는 이동할 수 없습니다."
         }
         require(parentPageId != id) {
             "자기 자신을 부모로 설정할 수 없습니다."
         }
+        require(displayOrder >= 0) {
+            "표시 순서는 0 이상이어야 합니다."
+        }
         this.parentPageId = parentPageId
+        this.displayOrder = displayOrder
+        this.updatedAt = now()
+    }
+
+    fun reorder(displayOrder: Int) {
+        check(!isDeleted) {
+            "삭제된 페이지는 순서를 변경할 수 없습니다."
+        }
+        require(displayOrder >= 0) {
+            "표시 순서는 0 이상이어야 합니다."
+        }
+        this.displayOrder = displayOrder
         this.updatedAt = now()
     }
 

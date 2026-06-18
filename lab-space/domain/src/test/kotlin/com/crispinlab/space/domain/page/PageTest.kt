@@ -80,29 +80,69 @@ class PageTest :
         }
 
         describe("부모 이동") {
-            it("parentPageId 와 updatedAt 이 갱신된다") {
+            it("parentPageId·displayOrder·updatedAt 이 갱신된다") {
                 val page: Page = basicPage()
                 val newParent = PageId(999L)
 
-                page.move(parentPageId = newParent)
+                page.move(parentPageId = newParent, displayOrder = 5)
 
                 page.parentPageId shouldBe newParent
+                page.displayOrder shouldBe 5
                 page.updatedAt shouldNotBe DUMMY_INSTANT
             }
 
             it("루트로 이동(null) 도 정상 처리한다") {
-                val page: Page = basicPage().also { it.move(parentPageId = PageId(999L)) }
+                val page: Page =
+                    basicPage().also {
+                        it.move(parentPageId = PageId(999L), displayOrder = 0)
+                    }
 
-                page.move(parentPageId = null)
+                page.move(parentPageId = null, displayOrder = 3)
 
                 page.parentPageId shouldBe null
+                page.displayOrder shouldBe 3
             }
 
             it("자기 자신으로 이동 시 실패한다") {
                 val page: Page = basicPage()
 
                 shouldThrow<IllegalArgumentException> {
-                    page.move(parentPageId = page.id)
+                    page.move(parentPageId = page.id, displayOrder = 0)
+                }
+            }
+
+            it("displayOrder 가 음수면 실패한다") {
+                val page: Page = basicPage()
+
+                shouldThrow<IllegalArgumentException> {
+                    page.move(parentPageId = PageId(999L), displayOrder = -1)
+                }
+            }
+        }
+
+        describe("순서 변경") {
+            it("displayOrder·updatedAt 이 갱신된다") {
+                val page: Page = basicPage()
+
+                page.reorder(displayOrder = 7)
+
+                page.displayOrder shouldBe 7
+                page.updatedAt shouldNotBe DUMMY_INSTANT
+            }
+
+            it("displayOrder 가 0 이어도 정상 처리한다") {
+                val page: Page = basicPage(displayOrder = 5)
+
+                page.reorder(displayOrder = 0)
+
+                page.displayOrder shouldBe 0
+            }
+
+            it("displayOrder 가 음수면 실패한다") {
+                val page: Page = basicPage()
+
+                shouldThrow<IllegalArgumentException> {
+                    page.reorder(displayOrder = -1)
                 }
             }
         }
@@ -131,7 +171,15 @@ class PageTest :
                 val page: Page = basicPage(deletedAt = DUMMY_INSTANT)
 
                 shouldThrow<IllegalStateException> {
-                    page.move(parentPageId = PageId(999L))
+                    page.move(parentPageId = PageId(999L), displayOrder = 0)
+                }
+            }
+
+            it("reorder() 가 실패한다") {
+                val page: Page = basicPage(deletedAt = DUMMY_INSTANT)
+
+                shouldThrow<IllegalStateException> {
+                    page.reorder(displayOrder = 3)
                 }
             }
 

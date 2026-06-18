@@ -60,7 +60,7 @@ class PageRegisteringControllerTest :
                             "parentPageId".string("부모 페이지 식별자", optional = true)
                             "title".string("제목")
                             "content".string("본문 (위키링크 [[...]] 추출 대상)")
-                            "visibility".string("공개 범위 (DRAFT / INTERNAL / PUBLIC)")
+                            "visibility".string("공개 범위 (DRAFT / INTERNAL / MEMBER / PUBLIC)")
                         },
                         responseFields {
                             "pageId".string("생성된 페이지 식별자")

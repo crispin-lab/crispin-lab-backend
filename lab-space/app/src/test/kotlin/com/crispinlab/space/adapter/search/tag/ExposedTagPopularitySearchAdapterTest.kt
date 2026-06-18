@@ -89,14 +89,19 @@ class ExposedTagPopularitySearchAdapterTest :
                         basicPage(id = PageId(2L), visibility = Visibility.INTERNAL)
                     )
                     pageRepository.save(
-                        basicPage(id = PageId(3L), visibility = Visibility.DRAFT)
+                        basicPage(id = PageId(3L), visibility = Visibility.MEMBER)
+                    )
+                    pageRepository.save(
+                        basicPage(id = PageId(4L), visibility = Visibility.DRAFT)
                     )
                     insertTag(tagId = 1L, name = "public-tag")
                     insertTag(tagId = 2L, name = "internal-tag")
-                    insertTag(tagId = 3L, name = "draft-tag")
+                    insertTag(tagId = 3L, name = "member-tag")
+                    insertTag(tagId = 4L, name = "draft-tag")
                     attachPageTag(pageId = 1L, tagId = 1L)
                     attachPageTag(pageId = 2L, tagId = 2L)
                     attachPageTag(pageId = 3L, tagId = 3L)
+                    attachPageTag(pageId = 4L, tagId = 4L)
                 }
 
                 val result =
@@ -111,7 +116,10 @@ class ExposedTagPopularitySearchAdapterTest :
                 result.totalElements shouldBe 1L
             }
 
-            it("Authenticated 는 PUBLIC + 본인 DRAFT + 멤버 스페이스의 INTERNAL 을 집계한다") {
+            it(
+                "Authenticated 는 PUBLIC + 멤버 space MEMBER + 본인 INTERNAL/DRAFT 를 집계하고 " +
+                    "타인 INTERNAL/DRAFT 와 비멤버 space MEMBER 는 제외한다"
+            ) {
                 val viewerId = UserId(100L)
                 val otherId = UserId(200L)
                 transaction(database) {
@@ -120,40 +128,60 @@ class ExposedTagPopularitySearchAdapterTest :
                         basicPage(
                             id = PageId(2L),
                             spaceId = SpaceId(10L),
-                            visibility = Visibility.INTERNAL
+                            authorId = otherId,
+                            visibility = Visibility.MEMBER
                         )
                     )
                     pageRepository.save(
                         basicPage(
                             id = PageId(3L),
                             spaceId = SpaceId(20L),
-                            visibility = Visibility.INTERNAL
+                            authorId = otherId,
+                            visibility = Visibility.MEMBER
                         )
                     )
                     pageRepository.save(
                         basicPage(
                             id = PageId(4L),
                             authorId = viewerId,
-                            visibility = Visibility.DRAFT
+                            visibility = Visibility.INTERNAL
                         )
                     )
                     pageRepository.save(
                         basicPage(
                             id = PageId(5L),
                             authorId = otherId,
+                            visibility = Visibility.INTERNAL
+                        )
+                    )
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(6L),
+                            authorId = viewerId,
+                            visibility = Visibility.DRAFT
+                        )
+                    )
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(7L),
+                            authorId = otherId,
                             visibility = Visibility.DRAFT
                         )
                     )
                     insertTag(tagId = 1L, name = "public-tag")
-                    insertTag(tagId = 2L, name = "member-internal")
-                    insertTag(tagId = 3L, spaceId = 20L, name = "non-member-internal")
-                    insertTag(tagId = 4L, name = "my-draft")
-                    insertTag(tagId = 5L, name = "other-draft")
+                    insertTag(tagId = 2L, name = "member-tag")
+                    insertTag(tagId = 3L, spaceId = 20L, name = "non-member-tag")
+                    insertTag(tagId = 4L, name = "my-internal")
+                    insertTag(tagId = 5L, name = "other-internal")
+                    insertTag(tagId = 6L, name = "my-draft")
+                    insertTag(tagId = 7L, name = "other-draft")
                     attachPageTag(pageId = 1L, tagId = 1L)
                     attachPageTag(pageId = 2L, tagId = 2L)
                     attachPageTag(pageId = 3L, tagId = 3L)
                     attachPageTag(pageId = 4L, tagId = 4L)
                     attachPageTag(pageId = 5L, tagId = 5L)
+                    attachPageTag(pageId = 6L, tagId = 6L)
+                    attachPageTag(pageId = 7L, tagId = 7L)
                 }
 
                 val result =
@@ -169,8 +197,8 @@ class ExposedTagPopularitySearchAdapterTest :
                     }
 
                 result.items.map { it.name } shouldBe
-                    listOf("member-internal", "my-draft", "public-tag")
-                result.totalElements shouldBe 3L
+                    listOf("member-tag", "my-draft", "my-internal", "public-tag")
+                result.totalElements shouldBe 4L
             }
 
             it("Privileged 는 모든 visibility 의 페이지 태그를 집계한다") {
@@ -180,14 +208,19 @@ class ExposedTagPopularitySearchAdapterTest :
                         basicPage(id = PageId(2L), visibility = Visibility.INTERNAL)
                     )
                     pageRepository.save(
-                        basicPage(id = PageId(3L), visibility = Visibility.DRAFT)
+                        basicPage(id = PageId(3L), visibility = Visibility.MEMBER)
+                    )
+                    pageRepository.save(
+                        basicPage(id = PageId(4L), visibility = Visibility.DRAFT)
                     )
                     insertTag(tagId = 1L, name = "a")
                     insertTag(tagId = 2L, name = "b")
                     insertTag(tagId = 3L, name = "c")
+                    insertTag(tagId = 4L, name = "d")
                     attachPageTag(pageId = 1L, tagId = 1L)
                     attachPageTag(pageId = 2L, tagId = 2L)
                     attachPageTag(pageId = 3L, tagId = 3L)
+                    attachPageTag(pageId = 4L, tagId = 4L)
                 }
 
                 val result =
@@ -198,8 +231,8 @@ class ExposedTagPopularitySearchAdapterTest :
                         )
                     }
 
-                result.items.map { it.name } shouldBe listOf("a", "b", "c")
-                result.totalElements shouldBe 3L
+                result.items.map { it.name } shouldBe listOf("a", "b", "c", "d")
+                result.totalElements shouldBe 4L
             }
 
             it("soft-deleted 페이지의 태그는 집계에서 제외된다") {
@@ -274,14 +307,16 @@ class ExposedTagPopularitySearchAdapterTest :
                         basicPage(
                             id = PageId(2L),
                             spaceId = SpaceId(10L),
-                            visibility = Visibility.INTERNAL
+                            authorId = otherId,
+                            visibility = Visibility.MEMBER
                         )
                     )
                     pageRepository.save(
                         basicPage(
                             id = PageId(3L),
                             spaceId = SpaceId(20L),
-                            visibility = Visibility.INTERNAL
+                            authorId = otherId,
+                            visibility = Visibility.MEMBER
                         )
                     )
                     pageRepository.save(

@@ -59,7 +59,8 @@ interface PageSearchPort {
             ): Boolean =
                 when (visibility) {
                     Visibility.PUBLIC -> true
-                    Visibility.INTERNAL -> spaceId in memberOfSpaceIds
+                    Visibility.MEMBER -> spaceId in memberOfSpaceIds
+                    Visibility.INTERNAL -> authorId == viewerId
                     Visibility.DRAFT -> authorId == viewerId
                 }
         }

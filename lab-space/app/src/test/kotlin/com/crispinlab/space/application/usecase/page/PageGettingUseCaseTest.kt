@@ -127,9 +127,57 @@ class PageGettingUseCaseTest :
                 }
             }
 
-            it("멤버가 아닌 USER 가 INTERNAL 페이지를 보면 NotFoundException 으로 응답한다") {
+            it("타인 작성자의 INTERNAL 페이지는 멤버여도 NotFoundException 으로 응답한다") {
                 val page =
-                    basicPage(spaceId = SpaceId(10L), visibility = Visibility.INTERNAL)
+                    basicPage(
+                        spaceId = SpaceId(10L),
+                        authorId = UserId(200L),
+                        visibility = Visibility.INTERNAL
+                    )
+                every { pageRepository.findBy(page.id) } returns page
+                every {
+                    spaceMemberRepository.findSpaceIdsByUserId(UserId(100L))
+                } returns setOf(SpaceId(10L))
+
+                shouldThrow<NotFoundException> {
+                    useCase.perform(basicRequest())
+                }
+            }
+
+            it("본인 작성자의 INTERNAL 페이지는 멤버십 없이도 조회 가능하다") {
+                val page =
+                    basicPage(
+                        spaceId = SpaceId(10L),
+                        authorId = UserId(100L),
+                        visibility = Visibility.INTERNAL
+                    )
+                every { pageRepository.findBy(page.id) } returns page
+                every {
+                    spaceMemberRepository.findSpaceIdsByUserId(UserId(100L))
+                } returns emptySet()
+
+                val result = useCase.perform(basicRequest())
+
+                result.pageId shouldBe page.id
+            }
+
+            it("비로그인 상태에서 MEMBER 페이지는 NotFoundException 으로 응답한다") {
+                val page =
+                    basicPage(spaceId = SpaceId(10L), visibility = Visibility.MEMBER)
+                every { pageRepository.findBy(page.id) } returns page
+
+                shouldThrow<NotFoundException> {
+                    useCase.perform(basicRequest(viewer = Viewer.Anonymous))
+                }
+            }
+
+            it("멤버가 아닌 USER 가 MEMBER 페이지를 보면 NotFoundException 으로 응답한다") {
+                val page =
+                    basicPage(
+                        spaceId = SpaceId(10L),
+                        authorId = UserId(200L),
+                        visibility = Visibility.MEMBER
+                    )
                 every { pageRepository.findBy(page.id) } returns page
                 every {
                     spaceMemberRepository.findSpaceIdsByUserId(UserId(100L))
@@ -140,9 +188,13 @@ class PageGettingUseCaseTest :
                 }
             }
 
-            it("멤버인 USER 는 INTERNAL 페이지를 조회 가능하다") {
+            it("멤버인 USER 는 MEMBER 페이지를 조회 가능하다") {
                 val page =
-                    basicPage(spaceId = SpaceId(10L), visibility = Visibility.INTERNAL)
+                    basicPage(
+                        spaceId = SpaceId(10L),
+                        authorId = UserId(200L),
+                        visibility = Visibility.MEMBER
+                    )
                 every { pageRepository.findBy(page.id) } returns page
                 every {
                     spaceMemberRepository.findSpaceIdsByUserId(UserId(100L))

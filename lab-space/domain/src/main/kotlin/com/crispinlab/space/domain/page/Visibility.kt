@@ -3,6 +3,7 @@ package com.crispinlab.space.domain.page
 enum class Visibility {
     DRAFT,
     INTERNAL,
+    MEMBER,
     PUBLIC;
 
     companion object {

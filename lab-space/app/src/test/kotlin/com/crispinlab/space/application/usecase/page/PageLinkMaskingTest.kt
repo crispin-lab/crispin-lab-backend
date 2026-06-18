@@ -116,11 +116,63 @@ class PageLinkMaskingTest :
                 ) shouldBe "문서"
             }
 
-            it("member 는 자기 space 의 INTERNAL target 을 그대로 본다") {
+            it("member 는 자기 space 의 MEMBER target 을 그대로 본다") {
                 val content =
                     singleLinkDoc(
                         pageId = 42L,
                         displayText = "팀 자료"
+                    )
+                val visibilities =
+                    mapOf(
+                        PageId(42L) to
+                            record(
+                                pageId = PageId(42L),
+                                visibility = Visibility.MEMBER,
+                                spaceId = space,
+                                authorId = otherAuthor
+                            )
+                    )
+
+                val masked =
+                    content.maskPageLinksBy(mapper, authorScope) { visibilities }
+
+                masked.displayTextOf(
+                    mapper = mapper,
+                    targetPageId = 42L
+                ) shouldBe "팀 자료"
+            }
+
+            it("member 는 자기 멤버 아닌 space 의 MEMBER target 은 마스킹된다") {
+                val content =
+                    singleLinkDoc(
+                        pageId = 42L,
+                        displayText = "다른 팀"
+                    )
+                val visibilities =
+                    mapOf(
+                        PageId(42L) to
+                            record(
+                                pageId = PageId(42L),
+                                visibility = Visibility.MEMBER,
+                                spaceId = otherSpace,
+                                authorId = otherAuthor
+                            )
+                    )
+
+                val masked =
+                    content.maskPageLinksBy(mapper, authorScope) { visibilities }
+
+                masked.displayTextOf(
+                    mapper = mapper,
+                    targetPageId = 42L
+                ) shouldBe MASKED_DISPLAY_TEXT
+            }
+
+            it("타인 작성자의 INTERNAL target 은 멤버여도 마스킹된다") {
+                val content =
+                    singleLinkDoc(
+                        pageId = 42L,
+                        displayText = "타인의 비공개"
                     )
                 val visibilities =
                     mapOf(
@@ -139,14 +191,14 @@ class PageLinkMaskingTest :
                 masked.displayTextOf(
                     mapper = mapper,
                     targetPageId = 42L
-                ) shouldBe "팀 자료"
+                ) shouldBe MASKED_DISPLAY_TEXT
             }
 
-            it("member 는 자기 멤버 아닌 space 의 INTERNAL target 은 마스킹된다") {
+            it("본인 작성자의 INTERNAL target 은 멤버십 없이도 그대로 본다") {
                 val content =
                     singleLinkDoc(
                         pageId = 42L,
-                        displayText = "다른 팀"
+                        displayText = "내 비공개"
                     )
                 val visibilities =
                     mapOf(
@@ -155,7 +207,7 @@ class PageLinkMaskingTest :
                                 pageId = PageId(42L),
                                 visibility = Visibility.INTERNAL,
                                 spaceId = otherSpace,
-                                authorId = otherAuthor
+                                authorId = author
                             )
                     )
 
@@ -165,7 +217,7 @@ class PageLinkMaskingTest :
                 masked.displayTextOf(
                     mapper = mapper,
                     targetPageId = 42L
-                ) shouldBe MASKED_DISPLAY_TEXT
+                ) shouldBe "내 비공개"
             }
 
             it("다른 사용자의 DRAFT target 은 member 에게 마스킹된다") {

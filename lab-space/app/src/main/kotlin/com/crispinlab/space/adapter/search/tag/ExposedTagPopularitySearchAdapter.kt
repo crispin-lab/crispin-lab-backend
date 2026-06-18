@@ -94,9 +94,13 @@ class ExposedTagPopularitySearchAdapter : TagPopularitySearchPort {
                 if (memberOfSpaceIds.isNotEmpty()) {
                     val placeholders = memberOfSpaceIds.joinToString(", ") { "?" }
                     clauses += "(pages.visibility = ? AND pages.space_id IN ($placeholders))"
-                    args += VarCharColumnType() to Visibility.INTERNAL.name
+                    args += VarCharColumnType() to Visibility.MEMBER.name
                     memberOfSpaceIds.forEach { args += LongColumnType() to it.value }
                 }
+
+                clauses += "(pages.visibility = ? AND pages.author_id = ?)"
+                args += VarCharColumnType() to Visibility.INTERNAL.name
+                args += LongColumnType() to viewerId.value
 
                 clauses += "(pages.visibility = ? AND pages.author_id = ?)"
                 args += VarCharColumnType() to Visibility.DRAFT.name

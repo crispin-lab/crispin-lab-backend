@@ -56,7 +56,7 @@ class PageEditingControllerTest :
                             "title".string("새 제목")
                             "content".string("새 본문")
                             "visibility".string(
-                                "변경할 공개 범위 (DRAFT / INTERNAL / PUBLIC). 생략 시 기존 값 유지.",
+                                "변경할 공개 범위 (DRAFT / INTERNAL / MEMBER / PUBLIC). 생략 시 기존 값 유지.",
                                 optional = true
                             )
                         },

@@ -228,27 +228,33 @@ class PageMovingUseCaseTest :
                 verify(exactly = 0) { pageRepository.nextDisplayOrderIn(any(), any()) }
             }
 
-            it("작성자가 아니면 NotFoundException (IDOR 통합)") {
+            it("작성자가 아니면 NotFoundException(PAGE_NOT_FOUND) — IDOR 통합") {
                 val page = basicPage(authorId = UserId(200L), parentPageId = null)
                 every { pageRepository.findBy(page.id) } returns page
 
-                shouldThrow<NotFoundException> {
-                    useCase.perform(
-                        basicRequest(
-                            pageId = page.id.value.toString(),
-                            parentPageId = "999",
-                            userId = UserId(100L)
+                val exception =
+                    shouldThrow<NotFoundException> {
+                        useCase.perform(
+                            basicRequest(
+                                pageId = page.id.value.toString(),
+                                parentPageId = null,
+                                userId = UserId(100L)
+                            )
                         )
-                    )
-                }
+                    }
+
+                exception.errorCode shouldBe PageErrorCode.PAGE_NOT_FOUND
                 verify(exactly = 0) { pageRepository.save(any()) }
             }
 
-            it("ADMIN 은 작성자가 아니어도 이동 가능하다") {
+            it("ADMIN 은 작성자가 아니고 멤버십이 없어도 이동 가능하다") {
                 val page = basicPage(authorId = UserId(200L), parentPageId = null)
                 val newParent = basicPage(id = PageId(999L), spaceId = page.spaceId)
                 every { pageRepository.findBy(page.id) } returns page
                 every { pageRepository.findBy(newParent.id) } returns newParent
+                every {
+                    spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
+                } returns null
                 every {
                     pageRepository.nextDisplayOrderIn(page.spaceId, newParent.id)
                 } returns 4

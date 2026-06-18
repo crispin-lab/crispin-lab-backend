@@ -13,5 +13,11 @@ interface PageReordering : UseCase<Request, Unit> {
         val viewer: Viewer.Member
     ) {
         val pageId: PageId = pageId.asPageId()
+
+        init {
+            require(displayOrder >= 0) {
+                "표시 순서는 0 이상이어야 합니다."
+            }
+        }
     }
 }

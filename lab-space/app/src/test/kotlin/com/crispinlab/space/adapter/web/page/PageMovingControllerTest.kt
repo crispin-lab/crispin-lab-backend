@@ -41,6 +41,7 @@ class PageMovingControllerTest :
                         },
                         requestSchema = "PageMoveRequest"
                     )
+                verify(exactly = 1) { useCase.perform(any()) }
             }
 
             it("parentPageId 를 생략하면 루트로 이동된다") {
@@ -52,6 +53,9 @@ class PageMovingControllerTest :
                             .withAuth()
                             .body(emptyMap<String, Any>())
                     ).then(status().isNoContent)
+                verify(exactly = 1) {
+                    useCase.perform(match { it.parentPageId == null })
+                }
             }
 
             it("Authorization 토큰이 없으면 401 을 반환한다") {

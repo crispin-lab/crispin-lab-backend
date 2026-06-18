@@ -38,6 +38,9 @@ class PageReorderingControllerTest :
                         },
                         requestSchema = "PageReorderRequest"
                     )
+                verify(exactly = 1) {
+                    useCase.perform(match { it.displayOrder == 5 })
+                }
             }
 
             it("Authorization 토큰이 없으면 401 을 반환한다") {

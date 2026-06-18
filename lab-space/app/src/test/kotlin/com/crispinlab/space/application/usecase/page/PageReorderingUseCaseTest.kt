@@ -73,9 +73,12 @@ class PageReorderingUseCaseTest :
                 verify(exactly = 0) { pageRepository.save(any()) }
             }
 
-            it("ADMIN 은 작성자가 아니어도 순서를 변경할 수 있다") {
+            it("ADMIN 은 작성자가 아니고 멤버십이 없어도 순서를 변경할 수 있다") {
                 val page = basicPage(authorId = UserId(200L), displayOrder = 0)
                 every { pageRepository.findBy(page.id) } returns page
+                every {
+                    spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
+                } returns null
                 val savedPage = slot<Page>()
                 every { pageRepository.save(capture(savedPage)) } answers { savedPage.captured }
 
@@ -118,18 +121,11 @@ class PageReorderingUseCaseTest :
                 verify(exactly = 0) { pageRepository.save(any()) }
             }
 
-            it("displayOrder 가 음수면 IllegalArgumentException (entity invariant)") {
-                val page = basicPage()
-                every { pageRepository.findBy(page.id) } returns page
-
+            it("displayOrder 가 음수면 Request 생성 시점에 IllegalArgumentException (fail-fast)") {
                 shouldThrow<IllegalArgumentException> {
-                    useCase.perform(
-                        basicRequest(
-                            pageId = page.id.value.toString(),
-                            displayOrder = -1
-                        )
-                    )
+                    basicRequest(displayOrder = -1)
                 }
+                verify(exactly = 0) { pageRepository.findBy(any()) }
                 verify(exactly = 0) { pageRepository.save(any()) }
             }
         }

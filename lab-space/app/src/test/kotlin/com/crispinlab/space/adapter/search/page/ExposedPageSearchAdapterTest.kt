@@ -226,7 +226,7 @@ class ExposedPageSearchAdapterTest :
                 underscoreResult.items.map { it.id } shouldBe listOf(PageId(3L))
             }
 
-            it("발행되지 않은(DRAFT) 페이지는 검색 결과에서 제외된다") {
+            it("Anonymous 검색에서 비-PUBLIC (DRAFT / INTERNAL / MEMBER) 페이지는 모두 제외된다") {
                 transaction(database) {
                     pageRepository.save(
                         publicPage(id = PageId(1L), title = "공개된 회고")
@@ -234,8 +234,22 @@ class ExposedPageSearchAdapterTest :
                     pageRepository.save(
                         basicPage(
                             id = PageId(2L),
-                            title = "비공개 회고",
+                            title = "초안 회고",
                             visibility = Visibility.DRAFT
+                        )
+                    )
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(3L),
+                            title = "비공개 회고",
+                            visibility = Visibility.INTERNAL
+                        )
+                    )
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(4L),
+                            title = "멤버 공개 회고",
+                            visibility = Visibility.MEMBER
                         )
                     )
                 }
@@ -618,19 +632,31 @@ class ExposedPageSearchAdapterTest :
                 result.totalElements shouldBe 1L
             }
 
-            it("Authenticated scope 는 PUBLIC + 멤버 INTERNAL + 본인 DRAFT 를 노출하고 비멤버 INTERNAL 은 제외한다") {
+            it(
+                "Authenticated scope 는 PUBLIC + 멤버 space 의 MEMBER + 본인 작성 INTERNAL/DRAFT 를 " +
+                    "노출하고 타인 작성 INTERNAL/DRAFT 와 비멤버 space 의 MEMBER 는 제외한다"
+            ) {
                 transaction(database) {
                     pageRepository.save(publicPage(id = PageId(1L), title = "공개"))
                     pageRepository.save(
                         basicPage(
                             id = PageId(2L),
-                            title = "멤버 내부",
-                            visibility = Visibility.INTERNAL
+                            authorId = UserId(200L),
+                            title = "멤버 space 의 멤버 공개",
+                            visibility = Visibility.MEMBER
                         )
                     )
                     pageRepository.save(
                         basicPage(
                             id = PageId(3L),
+                            authorId = UserId(100L),
+                            title = "본인 비공개",
+                            visibility = Visibility.INTERNAL
+                        )
+                    )
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(4L),
                             authorId = UserId(100L),
                             title = "본인 초안",
                             visibility = Visibility.DRAFT
@@ -638,7 +664,15 @@ class ExposedPageSearchAdapterTest :
                     )
                     pageRepository.save(
                         basicPage(
-                            id = PageId(4L),
+                            id = PageId(5L),
+                            authorId = UserId(200L),
+                            title = "타인 비공개",
+                            visibility = Visibility.INTERNAL
+                        )
+                    )
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(6L),
                             authorId = UserId(200L),
                             title = "타인 초안",
                             visibility = Visibility.DRAFT
@@ -646,10 +680,11 @@ class ExposedPageSearchAdapterTest :
                     )
                     pageRepository.save(
                         basicPage(
-                            id = PageId(5L),
+                            id = PageId(7L),
                             spaceId = SpaceId(99L),
-                            title = "비멤버 내부",
-                            visibility = Visibility.INTERNAL
+                            authorId = UserId(200L),
+                            title = "비멤버 space 의 멤버 공개",
+                            visibility = Visibility.MEMBER
                         )
                     )
                 }
@@ -665,6 +700,56 @@ class ExposedPageSearchAdapterTest :
                                 VisibilityScope.Authenticated(
                                     viewerId = UserId(100L),
                                     memberOfSpaceIds = setOf(SpaceId(10L))
+                                ),
+                            pageRequest = PageRequest.firstPage()
+                        )
+                    }
+
+                result.items.map { it.id }.toSet() shouldBe
+                    setOf(PageId(1L), PageId(2L), PageId(3L), PageId(4L))
+                result.totalElements shouldBe 4L
+            }
+
+            it("Authenticated scope 는 멤버십이 비어 있어도 본인 작성 INTERNAL/DRAFT 와 PUBLIC 을 노출한다") {
+                transaction(database) {
+                    pageRepository.save(publicPage(id = PageId(1L), title = "공개"))
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(2L),
+                            authorId = UserId(100L),
+                            title = "본인 비공개",
+                            visibility = Visibility.INTERNAL
+                        )
+                    )
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(3L),
+                            authorId = UserId(100L),
+                            title = "본인 초안",
+                            visibility = Visibility.DRAFT
+                        )
+                    )
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(4L),
+                            authorId = UserId(200L),
+                            title = "타인 멤버 공개",
+                            visibility = Visibility.MEMBER
+                        )
+                    )
+                }
+
+                val result =
+                    transaction(database) {
+                        adapter.search(
+                            keyword = null,
+                            spaceId = null,
+                            tagIds = emptyList(),
+                            sort = SortOption.UPDATED_AT,
+                            scope =
+                                VisibilityScope.Authenticated(
+                                    viewerId = UserId(100L),
+                                    memberOfSpaceIds = emptySet()
                                 ),
                             pageRequest = PageRequest.firstPage()
                         )
@@ -710,7 +795,10 @@ class ExposedPageSearchAdapterTest :
                     listOf(PageId(11L), PageId(10L), PageId(14L), PageId(12L), PageId(13L))
             }
 
-            it("Summary 에 visibility 가 노출된다 (PUBLIC / INTERNAL / 본인 DRAFT 각각이 그대로 매핑)") {
+            it(
+                "Summary 에 visibility 가 노출된다 " +
+                    "(PUBLIC / 멤버 space MEMBER / 본인 INTERNAL / 본인 DRAFT 각각이 그대로 매핑)"
+            ) {
                 transaction(database) {
                     pageRepository.save(
                         publicPage(id = PageId(1L), title = "공개")
@@ -718,13 +806,22 @@ class ExposedPageSearchAdapterTest :
                     pageRepository.save(
                         basicPage(
                             id = PageId(2L),
-                            title = "멤버 내부",
-                            visibility = Visibility.INTERNAL
+                            authorId = UserId(200L),
+                            title = "멤버 공개",
+                            visibility = Visibility.MEMBER
                         )
                     )
                     pageRepository.save(
                         basicPage(
                             id = PageId(3L),
+                            authorId = UserId(100L),
+                            title = "본인 비공개",
+                            visibility = Visibility.INTERNAL
+                        )
+                    )
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(4L),
                             authorId = UserId(100L),
                             title = "본인 초안",
                             visibility = Visibility.DRAFT
@@ -751,8 +848,9 @@ class ExposedPageSearchAdapterTest :
                 result.items.associate { it.id to it.visibility } shouldBe
                     mapOf(
                         PageId(1L) to Visibility.PUBLIC,
-                        PageId(2L) to Visibility.INTERNAL,
-                        PageId(3L) to Visibility.DRAFT
+                        PageId(2L) to Visibility.MEMBER,
+                        PageId(3L) to Visibility.INTERNAL,
+                        PageId(4L) to Visibility.DRAFT
                     )
             }
 
@@ -782,11 +880,23 @@ class ExposedPageSearchAdapterTest :
                 transaction(database) {
                     pageRepository.save(publicPage(id = PageId(1L)))
                     pageRepository.save(
-                        basicPage(id = PageId(2L), visibility = Visibility.INTERNAL)
+                        basicPage(
+                            id = PageId(2L),
+                            authorId = UserId(200L),
+                            visibility = Visibility.INTERNAL
+                        )
                     )
                     pageRepository.save(
                         basicPage(
                             id = PageId(3L),
+                            spaceId = SpaceId(99L),
+                            authorId = UserId(200L),
+                            visibility = Visibility.MEMBER
+                        )
+                    )
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(4L),
                             authorId = UserId(200L),
                             visibility = Visibility.DRAFT
                         )
@@ -806,8 +916,8 @@ class ExposedPageSearchAdapterTest :
                     }
 
                 result.items.map { it.id }.toSet() shouldBe
-                    setOf(PageId(1L), PageId(2L), PageId(3L))
-                result.totalElements shouldBe 3L
+                    setOf(PageId(1L), PageId(2L), PageId(3L), PageId(4L))
+                result.totalElements shouldBe 4L
             }
         }
     }) {

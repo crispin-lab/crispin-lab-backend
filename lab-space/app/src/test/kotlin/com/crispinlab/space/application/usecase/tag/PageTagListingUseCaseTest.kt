@@ -138,9 +138,30 @@ class PageTagListingUseCaseTest :
                 verify(exactly = 1) { tagRepository.findTagsByPageId(any(), any()) }
             }
 
-            it("INTERNAL 페이지는 Space 멤버가 아니면 NotFoundException") {
+            it("타인 작성자의 INTERNAL 페이지는 멤버여도 NotFoundException") {
                 every { pageRepository.findBy(any()) } returns
-                    basicPage(spaceId = SpaceId(10L), visibility = Visibility.INTERNAL)
+                    basicPage(
+                        spaceId = SpaceId(10L),
+                        authorId = UserId(200L),
+                        visibility = Visibility.INTERNAL
+                    )
+                every {
+                    spaceMemberRepository.findSpaceIdsByUserId(any())
+                } returns setOf(SpaceId(10L))
+
+                shouldThrow<NotFoundException> {
+                    useCase.perform(basicRequest())
+                }
+                verify(exactly = 0) { tagRepository.findTagsByPageId(any(), any()) }
+            }
+
+            it("MEMBER 페이지는 Space 멤버가 아니면 NotFoundException") {
+                every { pageRepository.findBy(any()) } returns
+                    basicPage(
+                        spaceId = SpaceId(10L),
+                        authorId = UserId(200L),
+                        visibility = Visibility.MEMBER
+                    )
                 every {
                     spaceMemberRepository.findSpaceIdsByUserId(any())
                 } returns emptySet()
@@ -151,9 +172,13 @@ class PageTagListingUseCaseTest :
                 verify(exactly = 0) { tagRepository.findTagsByPageId(any(), any()) }
             }
 
-            it("INTERNAL 페이지는 Space 멤버면 조회할 수 있다") {
+            it("MEMBER 페이지는 Space 멤버면 조회할 수 있다") {
                 every { pageRepository.findBy(any()) } returns
-                    basicPage(spaceId = SpaceId(10L), visibility = Visibility.INTERNAL)
+                    basicPage(
+                        spaceId = SpaceId(10L),
+                        authorId = UserId(200L),
+                        visibility = Visibility.MEMBER
+                    )
                 every {
                     spaceMemberRepository.findSpaceIdsByUserId(any())
                 } returns setOf(SpaceId(10L))

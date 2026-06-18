@@ -19,13 +19,16 @@ internal fun VisibilityScope.toPagesCondition(): Op<Boolean> =
             val draftClause =
                 (Pages.visibility eq Visibility.DRAFT.name) and
                     (Pages.authorId eq viewerId.value)
+            val internalClause =
+                (Pages.visibility eq Visibility.INTERNAL.name) and
+                    (Pages.authorId eq viewerId.value)
             if (memberOfSpaceIds.isEmpty()) {
-                publicClause or draftClause
-            } else {
-                val internalClause =
-                    (Pages.visibility eq Visibility.INTERNAL.name) and
-                        (Pages.spaceId inList memberOfSpaceIds.map { it.value })
                 publicClause or internalClause or draftClause
+            } else {
+                val memberClause =
+                    (Pages.visibility eq Visibility.MEMBER.name) and
+                        (Pages.spaceId inList memberOfSpaceIds.map { it.value })
+                publicClause or memberClause or internalClause or draftClause
             }
         }
 

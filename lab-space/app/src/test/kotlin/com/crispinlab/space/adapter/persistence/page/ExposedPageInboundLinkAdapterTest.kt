@@ -82,7 +82,10 @@ class ExposedPageInboundLinkAdapterTest :
                 result.totalElements shouldBe 1L
             }
 
-            it("Authenticated 는 PUBLIC + 자기 멤버 INTERNAL + 자기 DRAFT 만 받는다") {
+            it(
+                "Authenticated 는 PUBLIC + 멤버 space MEMBER + 자기 INTERNAL/DRAFT 만 받고 " +
+                    "타인 INTERNAL/DRAFT 와 비멤버 space MEMBER 는 제외한다"
+            ) {
                 transaction(database) {
                     seedSource(
                         pageRepository,
@@ -101,8 +104,9 @@ class ExposedPageInboundLinkAdapterTest :
                         linkRepository,
                         sourcePageId = 12L,
                         sourceRevisionId = 102L,
-                        sourceVisibility = Visibility.INTERNAL,
+                        sourceVisibility = Visibility.MEMBER,
                         sourceSpaceId = 10L,
+                        sourceAuthorId = 200L,
                         targetPageId = 50L,
                         linkId = 1002L
                     )
@@ -112,8 +116,9 @@ class ExposedPageInboundLinkAdapterTest :
                         linkRepository,
                         sourcePageId = 13L,
                         sourceRevisionId = 103L,
-                        sourceVisibility = Visibility.INTERNAL,
+                        sourceVisibility = Visibility.MEMBER,
                         sourceSpaceId = 99L,
+                        sourceAuthorId = 200L,
                         targetPageId = 50L,
                         linkId = 1003L
                     )
@@ -123,7 +128,7 @@ class ExposedPageInboundLinkAdapterTest :
                         linkRepository,
                         sourcePageId = 14L,
                         sourceRevisionId = 104L,
-                        sourceVisibility = Visibility.DRAFT,
+                        sourceVisibility = Visibility.INTERNAL,
                         sourceSpaceId = 10L,
                         sourceAuthorId = 100L,
                         targetPageId = 50L,
@@ -135,11 +140,35 @@ class ExposedPageInboundLinkAdapterTest :
                         linkRepository,
                         sourcePageId = 15L,
                         sourceRevisionId = 105L,
-                        sourceVisibility = Visibility.DRAFT,
+                        sourceVisibility = Visibility.INTERNAL,
                         sourceSpaceId = 10L,
                         sourceAuthorId = 999L,
                         targetPageId = 50L,
                         linkId = 1005L
+                    )
+                    seedSource(
+                        pageRepository,
+                        revisionRepository,
+                        linkRepository,
+                        sourcePageId = 16L,
+                        sourceRevisionId = 106L,
+                        sourceVisibility = Visibility.DRAFT,
+                        sourceSpaceId = 10L,
+                        sourceAuthorId = 100L,
+                        targetPageId = 50L,
+                        linkId = 1006L
+                    )
+                    seedSource(
+                        pageRepository,
+                        revisionRepository,
+                        linkRepository,
+                        sourcePageId = 17L,
+                        sourceRevisionId = 107L,
+                        sourceVisibility = Visibility.DRAFT,
+                        sourceSpaceId = 10L,
+                        sourceAuthorId = 999L,
+                        targetPageId = 50L,
+                        linkId = 1007L
                     )
                 }
 
@@ -157,8 +186,8 @@ class ExposedPageInboundLinkAdapterTest :
                     }
 
                 result.items.map { it.pageId }.toSet() shouldBe
-                    setOf(PageId(11L), PageId(12L), PageId(14L))
-                result.totalElements shouldBe 3L
+                    setOf(PageId(11L), PageId(12L), PageId(14L), PageId(16L))
+                result.totalElements shouldBe 4L
             }
 
             it("Privileged 는 모든 source 를 받는다") {

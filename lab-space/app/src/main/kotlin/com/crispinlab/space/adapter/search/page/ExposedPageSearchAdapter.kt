@@ -5,6 +5,7 @@ import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.adapter.persistence.page.Pages
 import com.crispinlab.space.adapter.persistence.page.decodeVisibility
 import com.crispinlab.space.adapter.persistence.page.toPagesCondition
+import com.crispinlab.space.adapter.persistence.space.Spaces
 import com.crispinlab.space.adapter.persistence.tag.PageTags
 import com.crispinlab.space.adapter.persistence.toPageResult
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort
@@ -16,6 +17,7 @@ import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.tag.TagId
 import com.crispinlab.user.domain.user.UserId
 import org.jetbrains.exposed.v1.core.Expression
+import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
@@ -24,6 +26,7 @@ import org.jetbrains.exposed.v1.core.compoundAnd
 import org.jetbrains.exposed.v1.core.countDistinct
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.like
 import org.jetbrains.exposed.v1.core.lowerCase
 import org.jetbrains.exposed.v1.core.or
@@ -57,10 +60,17 @@ class ExposedPageSearchAdapter : PageSearchPort {
 
     private fun matchedPageIdsByTag(tagIds: Collection<TagId>): List<Long> {
         val distinctTagIds = tagIds.map { it.value }.distinct()
-        return (PageTags innerJoin Pages)
-            .select(PageTags.pageId)
+        return PageTags
+            .innerJoin(Pages)
+            .join(
+                otherTable = Spaces,
+                joinType = JoinType.INNER,
+                additionalConstraint = { Pages.spaceId eq Spaces.id }
+            ).select(PageTags.pageId)
             .where {
-                (PageTags.tagId inList distinctTagIds) and Pages.notDeleted()
+                (PageTags.tagId inList distinctTagIds) and
+                    Pages.notDeleted() and
+                    Spaces.deletedAt.isNull()
             }.groupBy(PageTags.pageId)
             .having { PageTags.tagId.countDistinct() eq distinctTagIds.size.toLong() }
             .map { it[PageTags.pageId] }
@@ -100,6 +110,7 @@ class ExposedPageSearchAdapter : PageSearchPort {
         val conditions =
             buildList<Op<Boolean>> {
                 add(Pages.notDeleted())
+                add(Spaces.deletedAt.isNull())
                 add(visibilityCondition)
                 keyword?.let {
                     val pattern = "%${it.lowercase().escapeLike()}%"
@@ -112,7 +123,13 @@ class ExposedPageSearchAdapter : PageSearchPort {
                 tagPageIds?.let { add(Pages.id inList it) }
             }
         val combined = conditions.compoundAnd()
-        return Pages.selectAll().where { combined }
+        return Pages
+            .join(
+                otherTable = Spaces,
+                joinType = JoinType.INNER,
+                additionalConstraint = { Pages.spaceId eq Spaces.id }
+            ).selectAll()
+            .where { combined }
     }
 
     private fun String.escapeLike(): String =

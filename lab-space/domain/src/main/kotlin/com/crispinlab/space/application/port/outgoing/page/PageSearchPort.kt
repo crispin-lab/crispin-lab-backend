@@ -6,6 +6,7 @@ import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.space.SpaceId
+import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.domain.tag.TagId
 import com.crispinlab.user.domain.user.UserId
 import java.time.Instant
@@ -35,17 +36,19 @@ interface PageSearchPort {
 
     sealed interface VisibilityScope {
         fun allows(
-            visibility: Visibility,
+            pageVisibility: Visibility,
+            spaceVisibility: SpaceVisibility,
             spaceId: SpaceId,
             authorId: UserId
         ): Boolean
 
         data object Anonymous : VisibilityScope {
             override fun allows(
-                visibility: Visibility,
+                pageVisibility: Visibility,
+                spaceVisibility: SpaceVisibility,
                 spaceId: SpaceId,
                 authorId: UserId
-            ): Boolean = visibility == Visibility.PUBLIC
+            ): Boolean = effectiveOf(pageVisibility, spaceVisibility) == Visibility.PUBLIC
         }
 
         data class Authenticated(
@@ -53,11 +56,12 @@ interface PageSearchPort {
             val memberOfSpaceIds: Set<SpaceId>
         ) : VisibilityScope {
             override fun allows(
-                visibility: Visibility,
+                pageVisibility: Visibility,
+                spaceVisibility: SpaceVisibility,
                 spaceId: SpaceId,
                 authorId: UserId
             ): Boolean =
-                when (visibility) {
+                when (effectiveOf(pageVisibility, spaceVisibility)) {
                     Visibility.PUBLIC -> true
                     Visibility.MEMBER -> spaceId in memberOfSpaceIds
                     Visibility.INTERNAL -> authorId == viewerId
@@ -67,7 +71,8 @@ interface PageSearchPort {
 
         data object Privileged : VisibilityScope {
             override fun allows(
-                visibility: Visibility,
+                pageVisibility: Visibility,
+                spaceVisibility: SpaceVisibility,
                 spaceId: SpaceId,
                 authorId: UserId
             ): Boolean = true
@@ -83,6 +88,17 @@ interface PageSearchPort {
                     viewer is Viewer.Member -> Authenticated(viewer.userId, memberOfSpaceIds)
                     else -> Anonymous
                 }
+
+            internal fun effectiveOf(
+                pageVisibility: Visibility,
+                spaceVisibility: SpaceVisibility
+            ): Visibility =
+                Visibility.entries[
+                    minOf(
+                        pageVisibility.ordinal,
+                        spaceVisibility.ceiling().ordinal
+                    )
+                ]
         }
     }
 

@@ -7,11 +7,13 @@ import com.crispinlab.common.transaction.DummyTransactionProvider
 import com.crispinlab.space.application.port.incoming.comment.CommentRegistering.Request
 import com.crispinlab.space.application.port.outgoing.comment.CommentRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
+import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.comment.Comment
 import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.domain.page.Visibility
+import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.domain.spacemember.SpaceMemberRole
 import com.crispinlab.space.testsupport.Fixtures.basicPage
 import com.crispinlab.space.testsupport.Fixtures.basicSpaceMember
@@ -29,20 +31,29 @@ class CommentRegisteringUseCaseTest :
     DescribeSpec({
         val commentRepository = mockk<CommentRepository>()
         val pageRepository = mockk<PageRepository>()
+        val spaceRepository = mockk<SpaceRepository>()
         val spaceMemberRepository = mockk<SpaceMemberRepository>()
         val idGenerator = mockk<IdGenerator>()
         val useCase =
             CommentRegisteringUseCase(
                 commentRepository = commentRepository,
                 pageRepository = pageRepository,
+                spaceRepository = spaceRepository,
                 spaceMemberRepository = spaceMemberRepository,
                 idGenerator = idGenerator,
                 transactionProvider = DummyTransactionProvider()
             )
 
         beforeEach {
-            clearMocks(commentRepository, pageRepository, spaceMemberRepository, idGenerator)
+            clearMocks(
+                commentRepository,
+                pageRepository,
+                spaceRepository,
+                spaceMemberRepository,
+                idGenerator
+            )
             every { pageRepository.findBy(any()) } returns basicPage()
+            every { spaceRepository.findVisibility(any()) } returns SpaceVisibility.PUBLIC
             every { spaceMemberRepository.findSpaceIdsByUserId(any()) } returns emptySet()
             every {
                 spaceMemberRepository.findBySpaceIdAndUserId(any(), any())

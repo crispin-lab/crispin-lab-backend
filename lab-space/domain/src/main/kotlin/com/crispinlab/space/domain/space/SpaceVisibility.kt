@@ -1,9 +1,17 @@
 package com.crispinlab.space.domain.space
 
+import com.crispinlab.space.domain.page.Visibility
+
 enum class SpaceVisibility {
     INTERNAL,
     PUBLIC
     ;
+
+    fun ceiling(): Visibility =
+        when (this) {
+            PUBLIC -> Visibility.PUBLIC
+            INTERNAL -> Visibility.INTERNAL
+        }
 
     companion object {
         fun String.asSpaceVisibility(): SpaceVisibility =

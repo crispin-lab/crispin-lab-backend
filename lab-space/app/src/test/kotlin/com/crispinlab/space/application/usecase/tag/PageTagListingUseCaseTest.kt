@@ -7,12 +7,14 @@ import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.common.transaction.DummyTransactionProvider
 import com.crispinlab.space.application.port.incoming.tag.PageTagListing.Request
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
+import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.application.port.outgoing.tag.TagRepository
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.space.SpaceId
+import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.domain.tag.Tag
 import com.crispinlab.space.domain.tag.TagId
 import com.crispinlab.space.testsupport.Fixtures.basicPage
@@ -31,18 +33,21 @@ class PageTagListingUseCaseTest :
     DescribeSpec({
         val tagRepository = mockk<TagRepository>()
         val pageRepository = mockk<PageRepository>()
+        val spaceRepository = mockk<SpaceRepository>()
         val spaceMemberRepository = mockk<SpaceMemberRepository>()
         val useCase =
             PageTagListingUseCase(
                 tagRepository = tagRepository,
                 pageRepository = pageRepository,
+                spaceRepository = spaceRepository,
                 spaceMemberRepository = spaceMemberRepository,
                 transactionProvider = DummyTransactionProvider()
             )
 
         beforeEach {
-            clearMocks(tagRepository, pageRepository, spaceMemberRepository)
+            clearMocks(tagRepository, pageRepository, spaceRepository, spaceMemberRepository)
             every { pageRepository.findBy(any()) } returns basicPage()
+            every { spaceRepository.findVisibility(any()) } returns SpaceVisibility.PUBLIC
             every { spaceMemberRepository.findSpaceIdsByUserId(any()) } returns emptySet()
         }
 

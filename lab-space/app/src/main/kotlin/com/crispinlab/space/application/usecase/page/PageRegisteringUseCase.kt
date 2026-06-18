@@ -1,5 +1,6 @@
 package com.crispinlab.space.application.usecase.page
 
+import com.crispinlab.common.exception.ConflictException
 import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.common.id.IdGenerator
 import com.crispinlab.common.transaction.TransactionProvider
@@ -48,9 +49,13 @@ class PageRegisteringUseCase(
         }
 
     private fun Request.validate() {
-        spaceRepository.findBy(spaceId)
-            ?: throw NotFoundException(SpaceErrorCode.SPACE_NOT_FOUND)
+        val spaceVisibility =
+            spaceRepository.findVisibility(spaceId)
+                ?: throw NotFoundException(SpaceErrorCode.SPACE_NOT_FOUND)
         spaceMemberRepository.requireWritePermission(viewer, spaceId)
+        if (visibility.ordinal > spaceVisibility.ceiling().ordinal) {
+            throw ConflictException(PageErrorCode.PAGE_VISIBILITY_EXCEEDS_SPACE)
+        }
         parentPageId?.let { parentId ->
             pageRepository
                 .findBy(parentId)

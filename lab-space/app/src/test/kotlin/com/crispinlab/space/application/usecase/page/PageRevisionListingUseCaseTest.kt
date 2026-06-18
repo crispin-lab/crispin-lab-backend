@@ -8,11 +8,13 @@ import com.crispinlab.common.transaction.DummyTransactionProvider
 import com.crispinlab.space.application.port.incoming.page.PageRevisionListing.Request
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRevisionRepository
+import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.PageRevisionId
 import com.crispinlab.space.domain.page.Visibility
+import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.testsupport.Fixtures.basicPage
 import com.crispinlab.space.testsupport.Fixtures.basicPageRevision
 import com.crispinlab.user.domain.user.UserId
@@ -29,18 +31,26 @@ class PageRevisionListingUseCaseTest :
     DescribeSpec({
         val pageRepository = mockk<PageRepository>()
         val pageRevisionRepository = mockk<PageRevisionRepository>()
+        val spaceRepository = mockk<SpaceRepository>()
         val spaceMemberRepository = mockk<SpaceMemberRepository>()
         val useCase =
             PageRevisionListingUseCase(
                 pageRepository = pageRepository,
                 pageRevisionRepository = pageRevisionRepository,
+                spaceRepository = spaceRepository,
                 spaceMemberRepository = spaceMemberRepository,
                 transactionProvider = DummyTransactionProvider()
             )
 
         beforeEach {
-            clearMocks(pageRepository, pageRevisionRepository, spaceMemberRepository)
+            clearMocks(
+                pageRepository,
+                pageRevisionRepository,
+                spaceRepository,
+                spaceMemberRepository
+            )
             every { pageRepository.findBy(any()) } returns basicPage()
+            every { spaceRepository.findVisibility(any()) } returns SpaceVisibility.PUBLIC
             every { spaceMemberRepository.findSpaceIdsByUserId(any()) } returns emptySet()
         }
 

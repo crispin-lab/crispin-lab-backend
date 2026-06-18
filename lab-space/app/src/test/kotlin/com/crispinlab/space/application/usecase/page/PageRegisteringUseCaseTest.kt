@@ -1,5 +1,6 @@
 package com.crispinlab.space.application.usecase.page
 
+import com.crispinlab.common.exception.ConflictException
 import com.crispinlab.common.exception.ForbiddenException
 import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.common.id.IdGenerator
@@ -16,9 +17,9 @@ import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.PageLink
 import com.crispinlab.space.domain.page.PageRevision
 import com.crispinlab.space.domain.space.SpaceId
+import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.domain.spacemember.SpaceMemberRole
 import com.crispinlab.space.testsupport.Fixtures.basicPage
-import com.crispinlab.space.testsupport.Fixtures.basicSpace
 import com.crispinlab.space.testsupport.Fixtures.basicSpaceMember
 import com.crispinlab.space.testsupport.TipTapJsonFixtures.doc
 import com.crispinlab.space.testsupport.TipTapJsonFixtures.pageLink
@@ -67,7 +68,7 @@ class PageRegisteringUseCaseTest :
                 spaceMemberRepository,
                 idGenerator
             )
-            every { spaceRepository.findBy(any()) } returns basicSpace()
+            every { spaceRepository.findVisibility(any()) } returns SpaceVisibility.PUBLIC
             every {
                 spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
             } returns basicSpaceMember(role = SpaceMemberRole.MEMBER)
@@ -132,7 +133,7 @@ class PageRegisteringUseCaseTest :
             }
 
             it("스페이스가 없으면 NotFoundException") {
-                every { spaceRepository.findBy(any()) } returns null
+                every { spaceRepository.findVisibility(any()) } returns null
 
                 shouldThrow<NotFoundException> {
                     useCase.perform(basicRequest())
@@ -207,6 +208,51 @@ class PageRegisteringUseCaseTest :
                     useCase.perform(basicRequest(parentPageId = "99"))
                 }
                 verify(exactly = 0) { pageRepository.save(any()) }
+            }
+
+            it("INTERNAL space 안에 PUBLIC 페이지를 생성하면 ConflictException (cascade)") {
+                every { spaceRepository.findVisibility(any()) } returns SpaceVisibility.INTERNAL
+
+                shouldThrow<ConflictException> {
+                    useCase.perform(basicRequest(visibility = "PUBLIC"))
+                }
+                verify(exactly = 0) { pageRepository.save(any()) }
+            }
+
+            it("INTERNAL space 안에 MEMBER 페이지를 생성하면 ConflictException (cascade)") {
+                every { spaceRepository.findVisibility(any()) } returns SpaceVisibility.INTERNAL
+
+                shouldThrow<ConflictException> {
+                    useCase.perform(basicRequest(visibility = "MEMBER"))
+                }
+                verify(exactly = 0) { pageRepository.save(any()) }
+            }
+
+            it("INTERNAL space 안의 INTERNAL 페이지 생성은 통과한다") {
+                every { spaceRepository.findVisibility(any()) } returns SpaceVisibility.INTERNAL
+                every { idGenerator.next() } returns 1L
+
+                useCase.perform(basicRequest(visibility = "INTERNAL"))
+
+                verify(exactly = 1) { pageRepository.save(any()) }
+            }
+
+            it("INTERNAL space 안의 DRAFT 페이지 생성은 항상 통과한다") {
+                every { spaceRepository.findVisibility(any()) } returns SpaceVisibility.INTERNAL
+                every { idGenerator.next() } returns 1L
+
+                useCase.perform(basicRequest(visibility = "DRAFT"))
+
+                verify(exactly = 1) { pageRepository.save(any()) }
+            }
+
+            it("PUBLIC space 안의 PUBLIC 페이지 생성은 통과한다") {
+                every { spaceRepository.findVisibility(any()) } returns SpaceVisibility.PUBLIC
+                every { idGenerator.next() } returns 1L
+
+                useCase.perform(basicRequest(visibility = "PUBLIC"))
+
+                verify(exactly = 1) { pageRepository.save(any()) }
             }
         }
     }) {

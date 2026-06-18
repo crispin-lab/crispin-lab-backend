@@ -7,6 +7,7 @@ import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.Fixtures.basicPage
+import com.crispinlab.space.testsupport.seedPublicSpaces
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldHaveSize
@@ -16,6 +17,7 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 class ExposedPageRepositoryTest :
@@ -362,6 +364,7 @@ class ExposedPageRepositoryTest :
             }
 
             it("findVisibilitiesByIds 는 다중 id 를 한 번에 매핑한다") {
+                seedPublicSpaces(database, 300L, 301L)
                 transaction(database) {
                     repository.save(
                         basicPage(
@@ -400,6 +403,7 @@ class ExposedPageRepositoryTest :
             }
 
             it("findVisibilitiesByIds 는 soft deleted 페이지를 제외한다") {
+                seedPublicSpaces(database, 10L)
                 transaction(database) {
                     repository.save(
                         basicPage(id = PageId(310L), visibility = Visibility.PUBLIC)
@@ -413,6 +417,7 @@ class ExposedPageRepositoryTest :
             }
 
             it("findVisibilitiesByIds 는 alive 와 soft deleted 가 섞인 입력에서 alive 만 반환한다") {
+                seedPublicSpaces(database, 10L)
                 transaction(database) {
                     repository.save(basicPage(id = PageId(320L), visibility = Visibility.PUBLIC))
                     repository.save(basicPage(id = PageId(321L), visibility = Visibility.INTERNAL))
@@ -426,6 +431,29 @@ class ExposedPageRepositoryTest :
                         )
                     records.keys shouldBe setOf(PageId(320L))
                     records[PageId(320L)]?.visibility shouldBe Visibility.PUBLIC
+                }
+            }
+
+            it("findVisibilitiesByIds 는 soft-deleted space 의 page 를 결과에서 제외한다 (cascade)") {
+                seedPublicSpaces(database, 60L)
+                transaction(database) {
+                    repository.save(
+                        basicPage(
+                            id = PageId(330L),
+                            spaceId = SpaceId(60L),
+                            visibility = Visibility.PUBLIC
+                        )
+                    )
+                }
+
+                transaction(database) {
+                    TransactionManager
+                        .current()
+                        .exec("UPDATE spaces SET deleted_at = NOW() WHERE id = 60")
+                }
+
+                transaction(database) {
+                    repository.findVisibilitiesByIds(listOf(PageId(330L))).shouldBeEmpty()
                 }
             }
         }

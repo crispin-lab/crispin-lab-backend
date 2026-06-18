@@ -18,6 +18,7 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.core.statements.UpsertStatement
+import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.springframework.stereotype.Repository
 
@@ -33,12 +34,19 @@ class ExposedSpaceRepository :
     @Suppress("RedundantOverride")
     override fun delete(id: SpaceId) = super.delete(id)
 
+    override fun findVisibility(id: SpaceId): SpaceVisibility? =
+        Spaces
+            .select(Spaces.visibility)
+            .where { (Spaces.id eq id.value) and notDeleted() }
+            .singleOrNull()
+            ?.let { decodeSpaceVisibility(it[Spaces.visibility]) }
+
     override fun ResultRow.toEntity(): Space =
         Space(
             id = SpaceId(this[Spaces.id]),
             name = this[Spaces.name],
             description = this[Spaces.description],
-            visibility = decodeVisibility(this[Spaces.visibility]),
+            visibility = decodeSpaceVisibility(this[Spaces.visibility]),
             createdAt = this[Spaces.createdAt],
             updatedAt = this[Spaces.updatedAt],
             deletedAt = this[Spaces.deletedAt]
@@ -93,10 +101,10 @@ class ExposedSpaceRepository :
                 Op.TRUE
             }
         }
-
-    private fun decodeVisibility(stored: String): SpaceVisibility =
-        runCatching { stored.asSpaceVisibility() }
-            .getOrElse { cause ->
-                throw IllegalStateException("저장된 visibility 값을 해석할 수 없습니다.", cause)
-            }
 }
+
+internal fun decodeSpaceVisibility(stored: String): SpaceVisibility =
+    runCatching { stored.asSpaceVisibility() }
+        .getOrElse { cause ->
+            throw IllegalStateException("저장된 visibility 값을 해석할 수 없습니다.", cause)
+        }

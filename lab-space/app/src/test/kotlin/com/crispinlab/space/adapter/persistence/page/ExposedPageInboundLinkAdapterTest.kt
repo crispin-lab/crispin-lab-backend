@@ -9,10 +9,13 @@ import com.crispinlab.space.domain.page.PageLinkId
 import com.crispinlab.space.domain.page.PageRevisionId
 import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.space.SpaceId
+import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.Fixtures.basicPage
 import com.crispinlab.space.testsupport.Fixtures.basicPageLink
 import com.crispinlab.space.testsupport.Fixtures.basicPageRevision
+import com.crispinlab.space.testsupport.seedPublicSpaces
+import com.crispinlab.space.testsupport.seedSpaces
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldHaveSize
@@ -27,6 +30,8 @@ class ExposedPageInboundLinkAdapterTest :
         val revisionRepository = ExposedPageRevisionRepository()
         val linkRepository = ExposedPageLinkRepository()
         val adapter = ExposedPageInboundLinkAdapter()
+
+        beforeEach { seedPublicSpaces(database, 10L, 99L) }
 
         afterEach { PostgresTestContext.truncateAll() }
 
@@ -450,6 +455,46 @@ class ExposedPageInboundLinkAdapterTest :
 
                 result.items shouldHaveSize 1
                 result.items.map { it.pageId } shouldBe listOf(PageId(11L))
+                result.totalElements shouldBe 1L
+            }
+
+            it("cascade — INTERNAL space 안의 PUBLIC source 는 anonymous 결과에서 빠진다") {
+                seedSpaces(database, 50L to SpaceVisibility.INTERNAL)
+                transaction(database) {
+                    seedSource(
+                        pageRepository,
+                        revisionRepository,
+                        linkRepository,
+                        sourcePageId = 11L,
+                        sourceRevisionId = 101L,
+                        sourceVisibility = Visibility.PUBLIC,
+                        sourceSpaceId = 50L,
+                        targetPageId = 50L,
+                        linkId = 1001L
+                    )
+                    seedSource(
+                        pageRepository,
+                        revisionRepository,
+                        linkRepository,
+                        sourcePageId = 12L,
+                        sourceRevisionId = 102L,
+                        sourceVisibility = Visibility.PUBLIC,
+                        sourceSpaceId = 10L,
+                        targetPageId = 50L,
+                        linkId = 1002L
+                    )
+                }
+
+                val result =
+                    transaction(database) {
+                        adapter.findInboundLinksOf(
+                            targetPageId = PageId(50L),
+                            scope = VisibilityScope.Anonymous,
+                            pageRequest = PageRequest.firstPage()
+                        )
+                    }
+
+                result.items.map { it.pageId } shouldBe listOf(PageId(12L))
                 result.totalElements shouldBe 1L
             }
         }

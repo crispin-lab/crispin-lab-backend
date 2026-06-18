@@ -7,6 +7,7 @@ import com.crispinlab.space.domain.page.PageContent
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.space.SpaceId
+import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.testsupport.TipTapJsonFixtures.doc
 import com.crispinlab.space.testsupport.TipTapJsonFixtures.pageLink
 import com.crispinlab.space.testsupport.TipTapJsonFixtures.paragraph
@@ -421,6 +422,7 @@ class PageLinkMaskingTest :
                 pageId = pageId,
                 visibility = visibility,
                 spaceId = spaceId,
+                spaceVisibility = SpaceVisibility.PUBLIC,
                 authorId = authorId
             )
 

@@ -12,11 +12,15 @@ import com.crispinlab.space.domain.page.PageContent
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.space.SpaceId
+import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.domain.tag.TagId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.Fixtures.basicPage
+import com.crispinlab.space.testsupport.seedPublicSpaces
+import com.crispinlab.space.testsupport.seedSpaces
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.core.spec.style.DescribeSpec
+import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import java.time.Instant
@@ -29,6 +33,10 @@ class ExposedPageSearchAdapterTest :
         val database = PostgresTestContext.database
         val pageRepository = ExposedPageRepository()
         val adapter = ExposedPageSearchAdapter()
+
+        beforeEach {
+            seedPublicSpaces(database, 10L, 20L, 99L)
+        }
 
         afterEach {
             PostgresTestContext.truncateAll()
@@ -918,6 +926,192 @@ class ExposedPageSearchAdapterTest :
                 result.items.map { it.id }.toSet() shouldBe
                     setOf(PageId(1L), PageId(2L), PageId(3L), PageId(4L))
                 result.totalElements shouldBe 4L
+            }
+
+            it("cascade — INTERNAL space 안의 PUBLIC 페이지는 anonymous 검색 결과에서 빠진다") {
+                seedSpaces(database, 50L to SpaceVisibility.INTERNAL)
+                transaction(database) {
+                    pageRepository.save(
+                        publicPage(id = PageId(500L), spaceId = SpaceId(50L), title = "비공개")
+                    )
+                    pageRepository.save(
+                        publicPage(id = PageId(501L), spaceId = SpaceId(10L), title = "공개")
+                    )
+                }
+
+                val result =
+                    transaction(database) {
+                        adapter.search(
+                            keyword = null,
+                            spaceId = null,
+                            tagIds = emptyList(),
+                            sort = SortOption.UPDATED_AT,
+                            scope = VisibilityScope.Anonymous,
+                            pageRequest = PageRequest.firstPage()
+                        )
+                    }
+
+                result.items.map { it.id } shouldBe listOf(PageId(501L))
+                result.totalElements shouldBe 1L
+            }
+
+            it(
+                "cascade — INTERNAL space 안의 PUBLIC 페이지는 작성자에게는 노출 (effective=INTERNAL, author=viewer)"
+            ) {
+                seedSpaces(database, 50L to SpaceVisibility.INTERNAL)
+                transaction(database) {
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(500L),
+                            spaceId = SpaceId(50L),
+                            authorId = UserId(100L),
+                            visibility = Visibility.PUBLIC
+                        )
+                    )
+                }
+
+                val result =
+                    transaction(database) {
+                        adapter.search(
+                            keyword = null,
+                            spaceId = null,
+                            tagIds = emptyList(),
+                            sort = SortOption.UPDATED_AT,
+                            scope =
+                                VisibilityScope.Authenticated(
+                                    viewerId = UserId(100L),
+                                    memberOfSpaceIds = emptySet()
+                                ),
+                            pageRequest = PageRequest.firstPage()
+                        )
+                    }
+
+                result.items.map { it.id } shouldBe listOf(PageId(500L))
+            }
+
+            it(
+                "cascade — INTERNAL space 안의 PUBLIC 페이지는 비작성자 멤버에게도 가려진다 (effective=INTERNAL, author≠viewer)"
+            ) {
+                seedSpaces(database, 50L to SpaceVisibility.INTERNAL)
+                transaction(database) {
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(500L),
+                            spaceId = SpaceId(50L),
+                            authorId = UserId(200L),
+                            visibility = Visibility.PUBLIC
+                        )
+                    )
+                }
+
+                val result =
+                    transaction(database) {
+                        adapter.search(
+                            keyword = null,
+                            spaceId = null,
+                            tagIds = emptyList(),
+                            sort = SortOption.UPDATED_AT,
+                            scope =
+                                VisibilityScope.Authenticated(
+                                    viewerId = UserId(100L),
+                                    memberOfSpaceIds = setOf(SpaceId(50L))
+                                ),
+                            pageRequest = PageRequest.firstPage()
+                        )
+                    }
+
+                result.items.shouldBeEmpty()
+            }
+
+            it("cascade — INTERNAL space 안의 MEMBER 페이지도 비작성자 멤버에게 가려진다 (effective=INTERNAL)") {
+                seedSpaces(database, 50L to SpaceVisibility.INTERNAL)
+                transaction(database) {
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(500L),
+                            spaceId = SpaceId(50L),
+                            authorId = UserId(200L),
+                            visibility = Visibility.MEMBER
+                        )
+                    )
+                }
+
+                val result =
+                    transaction(database) {
+                        adapter.search(
+                            keyword = null,
+                            spaceId = null,
+                            tagIds = emptyList(),
+                            sort = SortOption.UPDATED_AT,
+                            scope =
+                                VisibilityScope.Authenticated(
+                                    viewerId = UserId(100L),
+                                    memberOfSpaceIds = setOf(SpaceId(50L))
+                                ),
+                            pageRequest = PageRequest.firstPage()
+                        )
+                    }
+
+                result.items.shouldBeEmpty()
+            }
+
+            it("cascade — PUBLIC space 안의 MEMBER 페이지는 멤버에게 노출 (cascade 영향 없음)") {
+                transaction(database) {
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(500L),
+                            spaceId = SpaceId(10L),
+                            authorId = UserId(200L),
+                            visibility = Visibility.MEMBER
+                        )
+                    )
+                }
+
+                val result =
+                    transaction(database) {
+                        adapter.search(
+                            keyword = null,
+                            spaceId = null,
+                            tagIds = emptyList(),
+                            sort = SortOption.UPDATED_AT,
+                            scope =
+                                VisibilityScope.Authenticated(
+                                    viewerId = UserId(100L),
+                                    memberOfSpaceIds = setOf(SpaceId(10L))
+                                ),
+                            pageRequest = PageRequest.firstPage()
+                        )
+                    }
+
+                result.items.map { it.id } shouldBe listOf(PageId(500L))
+            }
+
+            it("cascade — INTERNAL space 안의 페이지도 Privileged 에게는 모두 노출") {
+                seedSpaces(database, 50L to SpaceVisibility.INTERNAL)
+                transaction(database) {
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(500L),
+                            spaceId = SpaceId(50L),
+                            authorId = UserId(200L),
+                            visibility = Visibility.PUBLIC
+                        )
+                    )
+                }
+
+                val result =
+                    transaction(database) {
+                        adapter.search(
+                            keyword = null,
+                            spaceId = null,
+                            tagIds = emptyList(),
+                            sort = SortOption.UPDATED_AT,
+                            scope = VisibilityScope.Privileged,
+                            pageRequest = PageRequest.firstPage()
+                        )
+                    }
+
+                result.items.map { it.id } shouldBe listOf(PageId(500L))
             }
         }
     }) {

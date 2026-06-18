@@ -1,5 +1,6 @@
 package com.crispinlab.space.application.usecase.page
 
+import com.crispinlab.common.exception.ConflictException
 import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.common.id.IdGenerator
 import com.crispinlab.common.transaction.TransactionProvider
@@ -9,6 +10,7 @@ import com.crispinlab.space.application.port.incoming.page.PageEditing.Result
 import com.crispinlab.space.application.port.outgoing.page.PageLinkRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRevisionRepository
+import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.application.usecase.access.requireWritePermission
 import com.crispinlab.space.domain.page.Page
@@ -17,6 +19,8 @@ import com.crispinlab.space.domain.page.PageLink
 import com.crispinlab.space.domain.page.PageLinkId
 import com.crispinlab.space.domain.page.PageRevision
 import com.crispinlab.space.domain.page.PageRevisionId
+import com.crispinlab.space.domain.page.Visibility
+import com.crispinlab.space.domain.space.SpaceId
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.stereotype.Service
 
@@ -25,6 +29,7 @@ class PageEditingUseCase(
     private val pageRepository: PageRepository,
     private val pageRevisionRepository: PageRevisionRepository,
     private val pageLinkRepository: PageLinkRepository,
+    private val spaceRepository: SpaceRepository,
     private val spaceMemberRepository: SpaceMemberRepository,
     private val idGenerator: IdGenerator,
     private val transactionProvider: TransactionProvider,
@@ -52,6 +57,7 @@ class PageEditingUseCase(
             val visibilityChanged: Boolean =
                 request.visibility
                     ?.takeIf { it != visibility }
+                    ?.also { requireVisibilityWithinSpaceCeiling(it, spaceId) }
                     ?.also { changeVisibility(it) } != null
             val editResult: Page.EditResult? =
                 takeIf { it.needsNewRevision(request) }
@@ -64,6 +70,23 @@ class PageEditingUseCase(
             }
             editResult?.let { saveRevisionAndLinksWith(it) }
         }
+
+    /**
+     * cascade 검증은 *visibility 변경 시점에만* 트리거된다 (호출 측 `?.takeIf { it != visibility }` 가드).
+     * 부모 space 가 좁아진 뒤 남아 있는 위반 상태 page 의 title/content edit 은 정책상 허용 — read-time
+     * 마스킹이 노출을 차단하고, recovery edit 을 막지 않는다.
+     */
+    private fun requireVisibilityWithinSpaceCeiling(
+        visibility: Visibility,
+        spaceId: SpaceId
+    ) {
+        val spaceVisibility =
+            spaceRepository.findVisibility(spaceId)
+                ?: throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
+        if (visibility.ordinal > spaceVisibility.ceiling().ordinal) {
+            throw ConflictException(PageErrorCode.PAGE_VISIBILITY_EXCEEDS_SPACE)
+        }
+    }
 
     private fun Page.needsNewRevision(request: Request): Boolean =
         title != request.title || content.raw != request.content

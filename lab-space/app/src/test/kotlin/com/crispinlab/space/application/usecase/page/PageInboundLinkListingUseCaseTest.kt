@@ -10,11 +10,13 @@ import com.crispinlab.space.application.port.outgoing.page.PageInboundLinkPort
 import com.crispinlab.space.application.port.outgoing.page.PageInboundLinkPort.InboundLinkSummary
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
+import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.space.SpaceId
+import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.Fixtures.basicPage
 import com.crispinlab.user.application.port.outgoing.user.UserHandleQuery
@@ -33,20 +35,29 @@ class PageInboundLinkListingUseCaseTest :
     DescribeSpec({
         val pageRepository = mockk<PageRepository>()
         val pageInboundLinkPort = mockk<PageInboundLinkPort>()
+        val spaceRepository = mockk<SpaceRepository>()
         val spaceMemberRepository = mockk<SpaceMemberRepository>()
         val userHandleQuery = mockk<UserHandleQuery>()
         val useCase =
             PageInboundLinkListingUseCase(
                 pageRepository = pageRepository,
                 pageInboundLinkPort = pageInboundLinkPort,
+                spaceRepository = spaceRepository,
                 spaceMemberRepository = spaceMemberRepository,
                 userHandleQuery = userHandleQuery,
                 transactionProvider = DummyTransactionProvider()
             )
 
         beforeEach {
-            clearMocks(pageRepository, pageInboundLinkPort, spaceMemberRepository, userHandleQuery)
+            clearMocks(
+                pageRepository,
+                pageInboundLinkPort,
+                spaceRepository,
+                spaceMemberRepository,
+                userHandleQuery
+            )
             every { pageRepository.findBy(any()) } returns basicPage(visibility = Visibility.PUBLIC)
+            every { spaceRepository.findVisibility(any()) } returns SpaceVisibility.PUBLIC
             every { spaceMemberRepository.findSpaceIdsByUserId(any()) } returns emptySet()
         }
 
@@ -174,6 +185,32 @@ class PageInboundLinkListingUseCaseTest :
 
                 result.items shouldBe emptyList()
                 verify(exactly = 0) { userHandleQuery.handlesOf(any()) }
+            }
+
+            it("cascade — INTERNAL space 의 PUBLIC target 은 anonymous 에게 NotFoundException") {
+                every { pageRepository.findBy(any()) } returns
+                    basicPage(visibility = Visibility.PUBLIC)
+                every { spaceRepository.findVisibility(any()) } returns SpaceVisibility.INTERNAL
+
+                shouldThrow<NotFoundException> {
+                    useCase.perform(basicRequest(viewer = Viewer.Anonymous))
+                }
+                verify(exactly = 0) {
+                    pageInboundLinkPort.findInboundLinksOf(any(), any(), any())
+                }
+            }
+
+            it("cascade — dangling space 인 target 은 NotFoundException") {
+                every { pageRepository.findBy(any()) } returns
+                    basicPage(visibility = Visibility.PUBLIC)
+                every { spaceRepository.findVisibility(any()) } returns null
+
+                shouldThrow<NotFoundException> {
+                    useCase.perform(basicRequest())
+                }
+                verify(exactly = 0) {
+                    pageInboundLinkPort.findInboundLinksOf(any(), any(), any())
+                }
             }
         }
     }) {

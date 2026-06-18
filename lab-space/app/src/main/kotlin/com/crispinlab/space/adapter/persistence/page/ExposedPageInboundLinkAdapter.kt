@@ -2,6 +2,7 @@ package com.crispinlab.space.adapter.persistence.page
 
 import com.crispinlab.common.pagination.PageRequest
 import com.crispinlab.common.pagination.PageResult
+import com.crispinlab.space.adapter.persistence.space.Spaces
 import com.crispinlab.space.adapter.persistence.toPageResult
 import com.crispinlab.space.application.port.outgoing.page.PageInboundLinkPort
 import com.crispinlab.space.application.port.outgoing.page.PageInboundLinkPort.InboundLinkSummary
@@ -10,12 +11,14 @@ import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.user.domain.user.UserId
 import org.jetbrains.exposed.v1.core.Exists
+import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.innerJoin
+import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.springframework.stereotype.Repository
@@ -28,9 +31,14 @@ class ExposedPageInboundLinkAdapter : PageInboundLinkPort {
         pageRequest: PageRequest
     ): PageResult<InboundLinkSummary> =
         Pages
-            .selectAll()
+            .join(
+                otherTable = Spaces,
+                joinType = JoinType.INNER,
+                additionalConstraint = { Pages.spaceId eq Spaces.id }
+            ).selectAll()
             .where {
                 Pages.notDeleted() and
+                    Spaces.deletedAt.isNull() and
                     scope.toPagesCondition() and
                     hasCurrentRevisionLinkTo(targetPageId)
             }.toPageResult(

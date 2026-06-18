@@ -7,8 +7,9 @@ import com.crispinlab.space.application.port.incoming.comment.CommentRegistering
 import com.crispinlab.space.application.port.incoming.comment.CommentRegistering.Result
 import com.crispinlab.space.application.port.outgoing.comment.CommentRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
+import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
-import com.crispinlab.space.application.usecase.access.findReadablePage
+import com.crispinlab.space.application.usecase.access.requireReadablePage
 import com.crispinlab.space.application.usecase.access.requireWritePermission
 import com.crispinlab.space.domain.comment.Comment
 import com.crispinlab.space.domain.comment.CommentId
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service
 class CommentRegisteringUseCase(
     private val commentRepository: CommentRepository,
     private val pageRepository: PageRepository,
+    private val spaceRepository: SpaceRepository,
     private val spaceMemberRepository: SpaceMemberRepository,
     private val idGenerator: IdGenerator,
     private val transactionProvider: TransactionProvider
@@ -34,7 +36,14 @@ class CommentRegisteringUseCase(
         }
 
     private fun Request.validate() {
-        val page = findReadablePage(pageRepository, spaceMemberRepository, viewer, pageId)
+        val page =
+            requireReadablePage(
+                pageRepository,
+                spaceRepository,
+                spaceMemberRepository,
+                viewer,
+                pageId
+            )
         spaceMemberRepository.requireWritePermission(viewer, page.spaceId)
     }
 

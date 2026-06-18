@@ -1,5 +1,6 @@
 package com.crispinlab.space.application.usecase.page
 
+import com.crispinlab.common.exception.ConflictException
 import com.crispinlab.common.exception.ForbiddenException
 import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.common.id.IdGenerator
@@ -8,13 +9,16 @@ import com.crispinlab.space.application.port.incoming.page.PageEditing.Request
 import com.crispinlab.space.application.port.outgoing.page.PageLinkRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRevisionRepository
+import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.Page
+import com.crispinlab.space.domain.page.PageErrorCode
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.PageLink
 import com.crispinlab.space.domain.page.PageRevision
 import com.crispinlab.space.domain.page.Visibility
+import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.domain.spacemember.SpaceMemberRole
 import com.crispinlab.space.testsupport.Fixtures.basicPage
 import com.crispinlab.space.testsupport.Fixtures.basicSpaceMember
@@ -42,6 +46,7 @@ class PageEditingUseCaseTest :
         val pageRepository = mockk<PageRepository>()
         val pageRevisionRepository = mockk<PageRevisionRepository>()
         val pageLinkRepository = mockk<PageLinkRepository>()
+        val spaceRepository = mockk<SpaceRepository>()
         val spaceMemberRepository = mockk<SpaceMemberRepository>()
         val idGenerator = mockk<IdGenerator>()
         val useCase =
@@ -49,6 +54,7 @@ class PageEditingUseCaseTest :
                 pageRepository = pageRepository,
                 pageRevisionRepository = pageRevisionRepository,
                 pageLinkRepository = pageLinkRepository,
+                spaceRepository = spaceRepository,
                 spaceMemberRepository = spaceMemberRepository,
                 idGenerator = idGenerator,
                 transactionProvider = DummyTransactionProvider(),
@@ -60,12 +66,14 @@ class PageEditingUseCaseTest :
                 pageRepository,
                 pageRevisionRepository,
                 pageLinkRepository,
+                spaceRepository,
                 spaceMemberRepository,
                 idGenerator
             )
             every {
                 spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
             } returns basicSpaceMember(role = SpaceMemberRole.MEMBER)
+            every { spaceRepository.findVisibility(any()) } returns SpaceVisibility.PUBLIC
             every { pageRepository.save(any()) } answers { firstArg() }
             every { pageRevisionRepository.save(any()) } answers { firstArg() }
             every { pageLinkRepository.saveAll(any()) } answers { firstArg() }
@@ -269,6 +277,70 @@ class PageEditingUseCaseTest :
                 savedPage.captured.currentVersion shouldBe 3
                 verify(exactly = 0) { pageRevisionRepository.save(any()) }
                 verify(exactly = 0) { pageLinkRepository.saveAll(any()) }
+            }
+
+            it("INTERNAL space 의 page 를 PUBLIC 으로 바꾸려 하면 ConflictException (cascade)") {
+                val page = basicPage(visibility = Visibility.DRAFT)
+                every { pageRepository.findBy(page.id) } returns page
+                every { spaceRepository.findVisibility(page.spaceId) } returns
+                    SpaceVisibility.INTERNAL
+
+                val exception =
+                    shouldThrow<ConflictException> {
+                        useCase.perform(
+                            basicRequest(
+                                pageId = page.id.value.toString(),
+                                title = page.title,
+                                content = page.content.raw,
+                                visibility = Visibility.PUBLIC.name
+                            )
+                        )
+                    }
+
+                exception.errorCode shouldBe PageErrorCode.PAGE_VISIBILITY_EXCEEDS_SPACE
+                verify(exactly = 0) { pageRepository.save(any()) }
+                verify(exactly = 0) { pageRevisionRepository.save(any()) }
+                verify(exactly = 0) { pageLinkRepository.saveAll(any()) }
+            }
+
+            it("INTERNAL space 안의 page 라도 visibility 가 그대로면 cascade 검증 자체가 실행되지 않는다") {
+                val page = basicPage(visibility = Visibility.INTERNAL)
+                every { pageRepository.findBy(page.id) } returns page
+
+                useCase.perform(
+                    basicRequest(
+                        pageId = page.id.value.toString(),
+                        title = page.title,
+                        content = page.content.raw,
+                        visibility = Visibility.INTERNAL.name
+                    )
+                )
+
+                verify(exactly = 0) { spaceRepository.findVisibility(any()) }
+            }
+
+            it(
+                "recovery edit — space 가 좁아진 뒤 위반 상태로 남은 page 의 title/content 수정은 허용 (request.visibility=null)"
+            ) {
+                val page =
+                    basicPage(visibility = Visibility.PUBLIC, currentVersion = 1)
+                every { pageRepository.findBy(page.id) } returns page
+                every { idGenerator.next() } returnsMany listOf(101L)
+                val savedPage = slot<Page>()
+                every { pageRepository.save(capture(savedPage)) } answers { savedPage.captured }
+
+                useCase.perform(
+                    basicRequest(
+                        pageId = page.id.value.toString(),
+                        title = "복구 수정",
+                        content = "본문 정리",
+                        visibility = null
+                    )
+                )
+
+                savedPage.captured.visibility shouldBe Visibility.PUBLIC
+                savedPage.captured.title shouldBe "복구 수정"
+                verify(exactly = 0) { spaceRepository.findVisibility(any()) }
             }
         }
     }) {

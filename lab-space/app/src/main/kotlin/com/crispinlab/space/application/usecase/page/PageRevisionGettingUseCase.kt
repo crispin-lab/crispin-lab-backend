@@ -7,8 +7,9 @@ import com.crispinlab.space.application.port.incoming.page.PageRevisionGetting.R
 import com.crispinlab.space.application.port.incoming.page.PageRevisionGetting.Result
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRevisionRepository
+import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
-import com.crispinlab.space.application.usecase.access.findReadablePage
+import com.crispinlab.space.application.usecase.access.requireReadablePage
 import com.crispinlab.space.domain.page.PageRevision
 import com.crispinlab.space.domain.page.PageRevisionErrorCode
 import org.springframework.stereotype.Service
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service
 class PageRevisionGettingUseCase(
     private val pageRepository: PageRepository,
     private val pageRevisionRepository: PageRevisionRepository,
+    private val spaceRepository: SpaceRepository,
     private val spaceMemberRepository: SpaceMemberRepository,
     private val transactionProvider: TransactionProvider
 ) : PageRevisionGetting {
@@ -30,7 +32,7 @@ class PageRevisionGettingUseCase(
         }
 
     private fun Request.validate() {
-        findReadablePage(pageRepository, spaceMemberRepository, viewer, pageId)
+        requireReadablePage(pageRepository, spaceRepository, spaceMemberRepository, viewer, pageId)
     }
 
     private fun Request.toEntity(): PageRevision =

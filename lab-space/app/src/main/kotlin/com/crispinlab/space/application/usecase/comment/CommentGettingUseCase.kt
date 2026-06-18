@@ -7,8 +7,9 @@ import com.crispinlab.space.application.port.incoming.comment.CommentGetting.Req
 import com.crispinlab.space.application.port.incoming.comment.CommentGetting.Result
 import com.crispinlab.space.application.port.outgoing.comment.CommentRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
+import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
-import com.crispinlab.space.application.usecase.access.findReadablePage
+import com.crispinlab.space.application.usecase.access.requireReadablePage
 import com.crispinlab.space.domain.comment.Comment
 import com.crispinlab.space.domain.comment.CommentErrorCode
 import org.springframework.stereotype.Service
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service
 class CommentGettingUseCase(
     private val commentRepository: CommentRepository,
     private val pageRepository: PageRepository,
+    private val spaceRepository: SpaceRepository,
     private val spaceMemberRepository: SpaceMemberRepository,
     private val transactionProvider: TransactionProvider
 ) : CommentGetting {
@@ -30,7 +32,7 @@ class CommentGettingUseCase(
         }
 
     private fun Request.validate() {
-        findReadablePage(pageRepository, spaceMemberRepository, viewer, pageId)
+        requireReadablePage(pageRepository, spaceRepository, spaceMemberRepository, viewer, pageId)
     }
 
     private fun Request.toEntity(): Comment =

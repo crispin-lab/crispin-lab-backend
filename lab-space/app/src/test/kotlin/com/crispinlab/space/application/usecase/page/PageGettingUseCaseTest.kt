@@ -7,6 +7,7 @@ import com.crispinlab.space.application.port.outgoing.page.PageAncestorPort
 import com.crispinlab.space.application.port.outgoing.page.PageAncestorPort.Ancestor
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.page.PageVisibilityRecord
+import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.application.usecase.page.PageLinkMaskingPolicy.MASKED_DISPLAY_TEXT
 import com.crispinlab.space.domain.access.Viewer
@@ -14,6 +15,7 @@ import com.crispinlab.space.domain.page.PageContent
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.space.SpaceId
+import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.testsupport.Fixtures.basicPage
 import com.crispinlab.space.testsupport.TipTapJsonFixtures.doc
 import com.crispinlab.space.testsupport.TipTapJsonFixtures.pageLink
@@ -37,6 +39,7 @@ class PageGettingUseCaseTest :
     DescribeSpec({
         val pageRepository = mockk<PageRepository>()
         val pageAncestorPort = mockk<PageAncestorPort>()
+        val spaceRepository = mockk<SpaceRepository>()
         val spaceMemberRepository = mockk<SpaceMemberRepository>()
         val userHandleQuery = mockk<UserHandleQuery>()
         val objectMapper = ObjectMapper()
@@ -44,6 +47,7 @@ class PageGettingUseCaseTest :
             PageGettingUseCase(
                 pageRepository = pageRepository,
                 pageAncestorPort = pageAncestorPort,
+                spaceRepository = spaceRepository,
                 spaceMemberRepository = spaceMemberRepository,
                 userHandleQuery = userHandleQuery,
                 transactionProvider = DummyTransactionProvider(),
@@ -51,8 +55,15 @@ class PageGettingUseCaseTest :
             )
 
         beforeEach {
-            clearMocks(pageRepository, pageAncestorPort, spaceMemberRepository, userHandleQuery)
+            clearMocks(
+                pageRepository,
+                pageAncestorPort,
+                spaceRepository,
+                spaceMemberRepository,
+                userHandleQuery
+            )
             every { spaceMemberRepository.findSpaceIdsByUserId(any()) } returns emptySet()
+            every { spaceRepository.findVisibility(any()) } returns SpaceVisibility.PUBLIC
             every { pageAncestorPort.findAncestorsOf(any()) } returns emptyList()
             every { pageRepository.findVisibilitiesByIds(any()) } returns emptyMap()
             every { userHandleQuery.handlesOf(any()) } returns
@@ -236,6 +247,80 @@ class PageGettingUseCaseTest :
 
                 result.pageId shouldBe page.id
             }
+
+            it("INTERNAL space 안의 PUBLIC 페이지는 anonymous 에게 NotFoundException 으로 응답한다 (cascade)") {
+                val page =
+                    basicPage(
+                        spaceId = SpaceId(10L),
+                        authorId = UserId(200L),
+                        visibility = Visibility.PUBLIC
+                    )
+                every { pageRepository.findBy(page.id) } returns page
+                every { spaceRepository.findVisibility(SpaceId(10L)) } returns
+                    SpaceVisibility.INTERNAL
+
+                shouldThrow<NotFoundException> {
+                    useCase.perform(basicRequest(viewer = Viewer.Anonymous))
+                }
+            }
+
+            it("INTERNAL space 안의 PUBLIC 페이지는 작성자에게는 노출된다 (effective=INTERNAL)") {
+                val page =
+                    basicPage(
+                        spaceId = SpaceId(10L),
+                        authorId = UserId(100L),
+                        visibility = Visibility.PUBLIC
+                    )
+                every { pageRepository.findBy(page.id) } returns page
+                every { spaceRepository.findVisibility(SpaceId(10L)) } returns
+                    SpaceVisibility.INTERNAL
+
+                val result = useCase.perform(basicRequest())
+
+                result.pageId shouldBe page.id
+            }
+
+            it(
+                "INTERNAL space 안의 PUBLIC 페이지는 비작성자 멤버에게도 NotFoundException 으로 응답한다 (cascade=INTERNAL)"
+            ) {
+                val page =
+                    basicPage(
+                        spaceId = SpaceId(10L),
+                        authorId = UserId(200L),
+                        visibility = Visibility.PUBLIC
+                    )
+                every { pageRepository.findBy(page.id) } returns page
+                every { spaceRepository.findVisibility(SpaceId(10L)) } returns
+                    SpaceVisibility.INTERNAL
+                every { spaceMemberRepository.findSpaceIdsByUserId(UserId(100L)) } returns
+                    setOf(SpaceId(10L))
+
+                shouldThrow<NotFoundException> {
+                    useCase.perform(basicRequest())
+                }
+            }
+
+            it("PUBLIC space 안의 PUBLIC 페이지는 cascade 영향 없이 anonymous 에게 노출된다") {
+                val page =
+                    basicPage(spaceId = SpaceId(10L), visibility = Visibility.PUBLIC)
+                every { pageRepository.findBy(page.id) } returns page
+                every { spaceRepository.findVisibility(SpaceId(10L)) } returns
+                    SpaceVisibility.PUBLIC
+
+                val result = useCase.perform(basicRequest(viewer = Viewer.Anonymous))
+
+                result.pageId shouldBe page.id
+            }
+
+            it("space 가 사라진 dangling page 는 NotFoundException 으로 응답한다 (IDOR 정합)") {
+                val page = basicPage(visibility = Visibility.PUBLIC)
+                every { pageRepository.findBy(page.id) } returns page
+                every { spaceRepository.findVisibility(any()) } returns null
+
+                shouldThrow<NotFoundException> {
+                    useCase.perform(basicRequest(viewer = Viewer.Anonymous))
+                }
+            }
         }
 
         describe("content 의 PageLink displayText 마스킹") {
@@ -265,6 +350,7 @@ class PageGettingUseCaseTest :
                                 pageId = PageId(42L),
                                 visibility = Visibility.INTERNAL,
                                 spaceId = SpaceId(10L),
+                                spaceVisibility = SpaceVisibility.PUBLIC,
                                 authorId = UserId(200L)
                             )
                     )
@@ -293,6 +379,7 @@ class PageGettingUseCaseTest :
                                 pageId = PageId(42L),
                                 visibility = Visibility.PUBLIC,
                                 spaceId = SpaceId(10L),
+                                spaceVisibility = SpaceVisibility.PUBLIC,
                                 authorId = UserId(200L)
                             )
                     )
@@ -348,6 +435,7 @@ class PageGettingUseCaseTest :
                             pageId = PageId(2L),
                             title = "타인의 초안",
                             spaceId = SpaceId(10L),
+                            spaceVisibility = SpaceVisibility.PUBLIC,
                             authorId = UserId(200L),
                             visibility = Visibility.DRAFT
                         ),
@@ -369,6 +457,7 @@ class PageGettingUseCaseTest :
                             pageId = PageId(2L),
                             title = "타인의 초안",
                             spaceId = SpaceId(10L),
+                            spaceVisibility = SpaceVisibility.PUBLIC,
                             authorId = UserId(200L),
                             visibility = Visibility.DRAFT
                         )
@@ -384,6 +473,38 @@ class PageGettingUseCaseTest :
 
                 result.ancestors shouldHaveSize 1
                 result.ancestors[0].pageId shouldBe PageId(2L)
+            }
+
+            it("cascade — INTERNAL space 의 PUBLIC ancestor 는 anonymous 의 ancestors 응답에서 빠진다") {
+                val page =
+                    basicPage(
+                        id = PageId(6L),
+                        spaceId = SpaceId(10L),
+                        parentPageId = PageId(7L),
+                        visibility = Visibility.PUBLIC
+                    )
+                every { pageRepository.findBy(page.id) } returns page
+                every { pageAncestorPort.findAncestorsOf(page.id) } returns
+                    listOf(
+                        Ancestor(
+                            pageId = PageId(7L),
+                            title = "INTERNAL space 의 PUBLIC ancestor",
+                            spaceId = SpaceId(50L),
+                            spaceVisibility = SpaceVisibility.INTERNAL,
+                            authorId = UserId(200L),
+                            visibility = Visibility.PUBLIC
+                        )
+                    )
+
+                val result =
+                    useCase.perform(
+                        basicRequest(
+                            pageId = page.id.value.toString(),
+                            viewer = Viewer.Anonymous
+                        )
+                    )
+
+                result.ancestors shouldBe emptyList()
             }
         }
     }) {
@@ -405,6 +526,7 @@ class PageGettingUseCaseTest :
                 pageId = pageId,
                 title = title,
                 spaceId = SpaceId(10L),
+                spaceVisibility = SpaceVisibility.PUBLIC,
                 authorId = UserId(100L),
                 visibility = Visibility.PUBLIC
             )

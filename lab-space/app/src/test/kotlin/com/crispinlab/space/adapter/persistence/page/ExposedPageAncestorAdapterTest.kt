@@ -4,12 +4,16 @@ import com.crispinlab.common.persistence.PostgresTestContext
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.space.SpaceId
+import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.testsupport.Fixtures.basicPage
+import com.crispinlab.space.testsupport.seedPublicSpaces
+import com.crispinlab.space.testsupport.seedSpaces
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
+import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 class ExposedPageAncestorAdapterTest :
@@ -17,6 +21,10 @@ class ExposedPageAncestorAdapterTest :
         val database = PostgresTestContext.database
         val repository = ExposedPageRepository()
         val adapter = ExposedPageAncestorAdapter()
+
+        beforeEach {
+            seedPublicSpaces(database, 10L, 11L, 99L)
+        }
 
         afterEach {
             PostgresTestContext.truncateAll()
@@ -55,7 +63,9 @@ class ExposedPageAncestorAdapterTest :
                 }
             }
 
-            it("ancestor 의 metadata (spaceId / authorId / visibility) 도 함께 반환한다") {
+            it(
+                "ancestor 의 metadata (spaceId / spaceVisibility / authorId / visibility) 도 함께 반환한다"
+            ) {
                 val root =
                     basicPage(
                         id = PageId(1L),
@@ -82,6 +92,7 @@ class ExposedPageAncestorAdapterTest :
                     ancestors shouldHaveSize 1
                     ancestors[0].pageId shouldBe root.id
                     ancestors[0].spaceId shouldBe root.spaceId
+                    ancestors[0].spaceVisibility shouldBe SpaceVisibility.PUBLIC
                     ancestors[0].authorId shouldBe root.authorId
                     ancestors[0].visibility shouldBe root.visibility
                 }
@@ -163,6 +174,35 @@ class ExposedPageAncestorAdapterTest :
 
                 transaction(database) {
                     repository.delete(PageId(2L))
+                }
+
+                transaction(database) {
+                    adapter.findAncestorsOf(PageId(2L)).shouldBeEmpty()
+                }
+            }
+
+            it("target 의 space 가 soft delete 되어 있으면 anchor + recursive 양쪽 spaces JOIN 이 같이 차단된다") {
+                seedSpaces(database, 50L to SpaceVisibility.PUBLIC)
+                transaction(database) {
+                    repository.save(
+                        basicPage(id = PageId(1L), spaceId = SpaceId(50L), title = "root")
+                    )
+                    repository.save(
+                        basicPage(
+                            id = PageId(2L),
+                            spaceId = SpaceId(50L),
+                            parentPageId = PageId(1L),
+                            title = "leaf"
+                        )
+                    )
+                }
+
+                transaction(database) {
+                    TransactionManager
+                        .current()
+                        .exec(
+                            "UPDATE spaces SET deleted_at = NOW() WHERE id = 50"
+                        )
                 }
 
                 transaction(database) {

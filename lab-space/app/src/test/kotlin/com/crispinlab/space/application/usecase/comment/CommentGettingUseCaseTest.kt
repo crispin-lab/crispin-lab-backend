@@ -5,11 +5,13 @@ import com.crispinlab.common.transaction.DummyTransactionProvider
 import com.crispinlab.space.application.port.incoming.comment.CommentGetting.Request
 import com.crispinlab.space.application.port.outgoing.comment.CommentRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
+import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.Visibility
+import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.testsupport.Fixtures.basicComment
 import com.crispinlab.space.testsupport.Fixtures.basicPage
 import com.crispinlab.user.domain.user.UserId
@@ -25,17 +27,20 @@ class CommentGettingUseCaseTest :
     DescribeSpec({
         val commentRepository = mockk<CommentRepository>()
         val pageRepository = mockk<PageRepository>()
+        val spaceRepository = mockk<SpaceRepository>()
         val spaceMemberRepository = mockk<SpaceMemberRepository>()
         val useCase =
             CommentGettingUseCase(
                 commentRepository = commentRepository,
                 pageRepository = pageRepository,
+                spaceRepository = spaceRepository,
                 spaceMemberRepository = spaceMemberRepository,
                 transactionProvider = DummyTransactionProvider()
             )
 
         beforeEach {
-            clearMocks(commentRepository, pageRepository, spaceMemberRepository)
+            clearMocks(commentRepository, pageRepository, spaceRepository, spaceMemberRepository)
+            every { spaceRepository.findVisibility(any()) } returns SpaceVisibility.PUBLIC
             every { spaceMemberRepository.findSpaceIdsByUserId(any()) } returns emptySet()
         }
 
@@ -152,6 +157,34 @@ class CommentGettingUseCaseTest :
                 shouldThrow<IllegalArgumentException> {
                     basicRequest(pageId = "not-a-number")
                 }
+            }
+
+            it("cascade — INTERNAL space 의 PUBLIC 페이지 댓글은 비작성자에게 NotFoundException") {
+                val page =
+                    basicPage(
+                        id = PageId(10L),
+                        authorId = UserId(999L),
+                        visibility = Visibility.PUBLIC
+                    )
+                every { pageRepository.findBy(page.id) } returns page
+                every { spaceRepository.findVisibility(page.spaceId) } returns
+                    SpaceVisibility.INTERNAL
+
+                shouldThrow<NotFoundException> {
+                    useCase.perform(basicRequest(userId = UserId(100L)))
+                }
+                verify(exactly = 0) { commentRepository.findBy(any()) }
+            }
+
+            it("cascade — dangling space (findVisibility=null) 인 page 의 댓글은 NotFoundException") {
+                val page = basicPage(id = PageId(10L), visibility = Visibility.PUBLIC)
+                every { pageRepository.findBy(page.id) } returns page
+                every { spaceRepository.findVisibility(page.spaceId) } returns null
+
+                shouldThrow<NotFoundException> {
+                    useCase.perform(basicRequest())
+                }
+                verify(exactly = 0) { commentRepository.findBy(any()) }
             }
         }
     }) {

@@ -34,7 +34,7 @@ private fun ObjectNode.maskIfDeniedBy(
     val allowed: Boolean =
         attrsPageId()
             ?.let { visibilities[it] }
-            ?.let { scope.allows(it.visibility, it.spaceId, it.authorId) }
+            ?.let { scope.allows(it.visibility, it.spaceVisibility, it.spaceId, it.authorId) }
             ?: false
     if (!allowed) {
         attrs.put("displayText", PageLinkMaskingPolicy.MASKED_DISPLAY_TEXT)

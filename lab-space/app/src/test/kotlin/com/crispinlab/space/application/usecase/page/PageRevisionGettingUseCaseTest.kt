@@ -5,6 +5,7 @@ import com.crispinlab.common.transaction.DummyTransactionProvider
 import com.crispinlab.space.application.port.incoming.page.PageRevisionGetting.Request
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRevisionRepository
+import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.PageErrorCode
@@ -12,6 +13,7 @@ import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.PageRevisionErrorCode
 import com.crispinlab.space.domain.page.PageRevisionId
 import com.crispinlab.space.domain.page.Visibility
+import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.testsupport.Fixtures.basicPage
 import com.crispinlab.space.testsupport.Fixtures.basicPageRevision
 import com.crispinlab.user.domain.user.UserId
@@ -27,18 +29,26 @@ class PageRevisionGettingUseCaseTest :
     DescribeSpec({
         val pageRepository = mockk<PageRepository>()
         val pageRevisionRepository = mockk<PageRevisionRepository>()
+        val spaceRepository = mockk<SpaceRepository>()
         val spaceMemberRepository = mockk<SpaceMemberRepository>()
         val useCase =
             PageRevisionGettingUseCase(
                 pageRepository = pageRepository,
                 pageRevisionRepository = pageRevisionRepository,
+                spaceRepository = spaceRepository,
                 spaceMemberRepository = spaceMemberRepository,
                 transactionProvider = DummyTransactionProvider()
             )
 
         beforeEach {
-            clearMocks(pageRepository, pageRevisionRepository, spaceMemberRepository)
+            clearMocks(
+                pageRepository,
+                pageRevisionRepository,
+                spaceRepository,
+                spaceMemberRepository
+            )
             every { pageRepository.findBy(any()) } returns basicPage()
+            every { spaceRepository.findVisibility(any()) } returns SpaceVisibility.PUBLIC
             every { spaceMemberRepository.findSpaceIdsByUserId(any()) } returns emptySet()
         }
 
@@ -118,6 +128,36 @@ class PageRevisionGettingUseCaseTest :
             it("version 이 1 미만이면 Request 생성에서 실패한다") {
                 shouldThrow<IllegalArgumentException> {
                     basicRequest(version = 0)
+                }
+            }
+
+            it("cascade — INTERNAL space 의 PUBLIC 페이지 리비전은 비작성자에게 PAGE_NOT_FOUND") {
+                every { pageRepository.findBy(any()) } returns
+                    basicPage(authorId = UserId(999L), visibility = Visibility.PUBLIC)
+                every { spaceRepository.findVisibility(any()) } returns SpaceVisibility.INTERNAL
+
+                val exception =
+                    shouldThrow<NotFoundException> {
+                        useCase.perform(basicRequest())
+                    }
+                exception.errorCode shouldBe PageErrorCode.PAGE_NOT_FOUND
+                verify(exactly = 0) {
+                    pageRevisionRepository.findBy(any<PageId>(), any<Int>())
+                }
+            }
+
+            it("cascade — dangling space 인 page 의 리비전은 PAGE_NOT_FOUND") {
+                every { pageRepository.findBy(any()) } returns
+                    basicPage(visibility = Visibility.PUBLIC)
+                every { spaceRepository.findVisibility(any()) } returns null
+
+                val exception =
+                    shouldThrow<NotFoundException> {
+                        useCase.perform(basicRequest())
+                    }
+                exception.errorCode shouldBe PageErrorCode.PAGE_NOT_FOUND
+                verify(exactly = 0) {
+                    pageRevisionRepository.findBy(any<PageId>(), any<Int>())
                 }
             }
         }

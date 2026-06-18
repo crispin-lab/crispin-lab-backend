@@ -8,6 +8,7 @@ import com.crispinlab.space.application.port.incoming.page.PageGetting.Result
 import com.crispinlab.space.application.port.outgoing.page.PageAncestorPort
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
+import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.application.usecase.access.memberSpaceIdsOf
 import com.crispinlab.space.domain.page.Page
@@ -21,6 +22,7 @@ import org.springframework.stereotype.Service
 class PageGettingUseCase(
     private val pageRepository: PageRepository,
     private val pageAncestorPort: PageAncestorPort,
+    private val spaceRepository: SpaceRepository,
     private val spaceMemberRepository: SpaceMemberRepository,
     private val userHandleQuery: UserHandleQuery,
     private val transactionProvider: TransactionProvider,
@@ -40,17 +42,24 @@ class PageGettingUseCase(
     private fun Request.toScope(): VisibilityScope =
         VisibilityScope.of(viewer, spaceMemberRepository.memberSpaceIdsOf(viewer))
 
-    private fun Request.toEntity(scope: VisibilityScope): Page =
-        pageRepository
-            .findBy(pageId)
-            ?.takeIf { scope.allows(it.visibility, it.spaceId, it.authorId) }
-            ?: throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
+    private fun Request.toEntity(scope: VisibilityScope): Page {
+        val page =
+            pageRepository.findBy(pageId)
+                ?: throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
+        val spaceVisibility =
+            spaceRepository.findVisibility(page.spaceId)
+                ?: throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
+        return page.takeIf {
+            scope.allows(it.visibility, spaceVisibility, it.spaceId, it.authorId)
+        } ?: throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
+    }
 
     private fun Page.ancestorsVisibleTo(scope: VisibilityScope): List<Result.AncestorSummary> =
         pageAncestorPort
             .findAncestorsOf(id)
-            .filter { scope.allows(it.visibility, it.spaceId, it.authorId) }
-            .map {
+            .filter {
+                scope.allows(it.visibility, it.spaceVisibility, it.spaceId, it.authorId)
+            }.map {
                 Result.AncestorSummary(
                     pageId = it.pageId,
                     title = it.title

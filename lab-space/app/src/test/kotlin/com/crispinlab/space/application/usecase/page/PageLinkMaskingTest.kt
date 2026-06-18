@@ -416,13 +416,14 @@ class PageLinkMaskingTest :
             pageId: PageId,
             visibility: Visibility,
             spaceId: SpaceId,
-            authorId: UserId
+            authorId: UserId,
+            spaceVisibility: SpaceVisibility = SpaceVisibility.PUBLIC
         ): PageVisibilityRecord =
             PageVisibilityRecord(
                 pageId = pageId,
                 visibility = visibility,
                 spaceId = spaceId,
-                spaceVisibility = SpaceVisibility.PUBLIC,
+                spaceVisibility = spaceVisibility,
                 authorId = authorId
             )
 

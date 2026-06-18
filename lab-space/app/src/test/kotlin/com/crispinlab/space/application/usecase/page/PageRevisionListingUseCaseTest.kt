@@ -169,6 +169,32 @@ class PageRevisionListingUseCaseTest :
                     pageRevisionRepository.findByPageId(any(), any())
                 }
             }
+
+            it("cascade — INTERNAL space 의 PUBLIC 페이지 리비전 목록은 비작성자에게 NotFoundException") {
+                every { pageRepository.findBy(any()) } returns
+                    basicPage(authorId = UserId(999L), visibility = Visibility.PUBLIC)
+                every { spaceRepository.findVisibility(any()) } returns SpaceVisibility.INTERNAL
+
+                shouldThrow<NotFoundException> {
+                    useCase.perform(basicRequest())
+                }
+                verify(exactly = 0) {
+                    pageRevisionRepository.findByPageId(any(), any())
+                }
+            }
+
+            it("cascade — dangling space 인 page 의 리비전 목록은 NotFoundException") {
+                every { pageRepository.findBy(any()) } returns
+                    basicPage(visibility = Visibility.PUBLIC)
+                every { spaceRepository.findVisibility(any()) } returns null
+
+                shouldThrow<NotFoundException> {
+                    useCase.perform(basicRequest())
+                }
+                verify(exactly = 0) {
+                    pageRevisionRepository.findByPageId(any(), any())
+                }
+            }
         }
     }) {
     companion object {

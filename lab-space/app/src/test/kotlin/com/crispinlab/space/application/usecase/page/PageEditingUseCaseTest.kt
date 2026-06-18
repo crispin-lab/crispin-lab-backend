@@ -13,6 +13,7 @@ import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.Page
+import com.crispinlab.space.domain.page.PageErrorCode
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.PageLink
 import com.crispinlab.space.domain.page.PageRevision
@@ -284,17 +285,22 @@ class PageEditingUseCaseTest :
                 every { spaceRepository.findVisibility(page.spaceId) } returns
                     SpaceVisibility.INTERNAL
 
-                shouldThrow<ConflictException> {
-                    useCase.perform(
-                        basicRequest(
-                            pageId = page.id.value.toString(),
-                            title = page.title,
-                            content = page.content.raw,
-                            visibility = Visibility.PUBLIC.name
+                val exception =
+                    shouldThrow<ConflictException> {
+                        useCase.perform(
+                            basicRequest(
+                                pageId = page.id.value.toString(),
+                                title = page.title,
+                                content = page.content.raw,
+                                visibility = Visibility.PUBLIC.name
+                            )
                         )
-                    )
-                }
+                    }
+
+                exception.errorCode shouldBe PageErrorCode.PAGE_VISIBILITY_EXCEEDS_SPACE
                 verify(exactly = 0) { pageRepository.save(any()) }
+                verify(exactly = 0) { pageRevisionRepository.save(any()) }
+                verify(exactly = 0) { pageLinkRepository.saveAll(any()) }
             }
 
             it("INTERNAL space 안의 page 라도 visibility 가 그대로면 cascade 검증 자체가 실행되지 않는다") {
@@ -310,6 +316,30 @@ class PageEditingUseCaseTest :
                     )
                 )
 
+                verify(exactly = 0) { spaceRepository.findVisibility(any()) }
+            }
+
+            it(
+                "recovery edit — space 가 좁아진 뒤 위반 상태로 남은 page 의 title/content 수정은 허용 (request.visibility=null)"
+            ) {
+                val page =
+                    basicPage(visibility = Visibility.PUBLIC, currentVersion = 1)
+                every { pageRepository.findBy(page.id) } returns page
+                every { idGenerator.next() } returnsMany listOf(101L)
+                val savedPage = slot<Page>()
+                every { pageRepository.save(capture(savedPage)) } answers { savedPage.captured }
+
+                useCase.perform(
+                    basicRequest(
+                        pageId = page.id.value.toString(),
+                        title = "복구 수정",
+                        content = "본문 정리",
+                        visibility = null
+                    )
+                )
+
+                savedPage.captured.visibility shouldBe Visibility.PUBLIC
+                savedPage.captured.title shouldBe "복구 수정"
                 verify(exactly = 0) { spaceRepository.findVisibility(any()) }
             }
         }

@@ -186,6 +186,32 @@ class PageInboundLinkListingUseCaseTest :
                 result.items shouldBe emptyList()
                 verify(exactly = 0) { userHandleQuery.handlesOf(any()) }
             }
+
+            it("cascade — INTERNAL space 의 PUBLIC target 은 anonymous 에게 NotFoundException") {
+                every { pageRepository.findBy(any()) } returns
+                    basicPage(visibility = Visibility.PUBLIC)
+                every { spaceRepository.findVisibility(any()) } returns SpaceVisibility.INTERNAL
+
+                shouldThrow<NotFoundException> {
+                    useCase.perform(basicRequest(viewer = Viewer.Anonymous))
+                }
+                verify(exactly = 0) {
+                    pageInboundLinkPort.findInboundLinksOf(any(), any(), any())
+                }
+            }
+
+            it("cascade — dangling space 인 target 은 NotFoundException") {
+                every { pageRepository.findBy(any()) } returns
+                    basicPage(visibility = Visibility.PUBLIC)
+                every { spaceRepository.findVisibility(any()) } returns null
+
+                shouldThrow<NotFoundException> {
+                    useCase.perform(basicRequest())
+                }
+                verify(exactly = 0) {
+                    pageInboundLinkPort.findInboundLinksOf(any(), any(), any())
+                }
+            }
         }
     }) {
     companion object {

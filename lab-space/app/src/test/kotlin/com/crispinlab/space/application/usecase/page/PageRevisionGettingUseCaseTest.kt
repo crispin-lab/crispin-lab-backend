@@ -130,6 +130,36 @@ class PageRevisionGettingUseCaseTest :
                     basicRequest(version = 0)
                 }
             }
+
+            it("cascade — INTERNAL space 의 PUBLIC 페이지 리비전은 비작성자에게 PAGE_NOT_FOUND") {
+                every { pageRepository.findBy(any()) } returns
+                    basicPage(authorId = UserId(999L), visibility = Visibility.PUBLIC)
+                every { spaceRepository.findVisibility(any()) } returns SpaceVisibility.INTERNAL
+
+                val exception =
+                    shouldThrow<NotFoundException> {
+                        useCase.perform(basicRequest())
+                    }
+                exception.errorCode shouldBe PageErrorCode.PAGE_NOT_FOUND
+                verify(exactly = 0) {
+                    pageRevisionRepository.findBy(any<PageId>(), any<Int>())
+                }
+            }
+
+            it("cascade — dangling space 인 page 의 리비전은 PAGE_NOT_FOUND") {
+                every { pageRepository.findBy(any()) } returns
+                    basicPage(visibility = Visibility.PUBLIC)
+                every { spaceRepository.findVisibility(any()) } returns null
+
+                val exception =
+                    shouldThrow<NotFoundException> {
+                        useCase.perform(basicRequest())
+                    }
+                exception.errorCode shouldBe PageErrorCode.PAGE_NOT_FOUND
+                verify(exactly = 0) {
+                    pageRevisionRepository.findBy(any<PageId>(), any<Int>())
+                }
+            }
         }
     }) {
     companion object {

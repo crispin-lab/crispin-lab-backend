@@ -2,13 +2,16 @@ package com.crispinlab.space.adapter.persistence.page
 
 import com.crispinlab.common.persistence.ExposedEntityRepository
 import com.crispinlab.space.adapter.persistence.space.Spaces
-import com.crispinlab.space.adapter.persistence.space.decodeSpaceVisibility
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.page.PageVisibilityRecord
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageContent
 import com.crispinlab.space.domain.page.PageId
+import com.crispinlab.space.domain.page.Visibility
+import com.crispinlab.space.domain.page.Visibility.Companion.asVisibility
 import com.crispinlab.space.domain.space.SpaceId
+import com.crispinlab.space.domain.space.SpaceVisibility
+import com.crispinlab.space.domain.space.SpaceVisibility.Companion.asSpaceVisibility
 import com.crispinlab.user.domain.user.UserId
 import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.ResultRow
@@ -20,12 +23,15 @@ import org.jetbrains.exposed.v1.core.max
 import org.jetbrains.exposed.v1.core.statements.UpsertStatement
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Repository
 
 @Repository
 class ExposedPageRepository :
     ExposedEntityRepository<Page, PageId>(),
     PageRepository {
+    private val log = LoggerFactory.getLogger(javaClass)
+
     override val table = Pages
     override val idColumn = Pages.id
     override val deletedAtColumn = Pages.deletedAt
@@ -91,18 +97,47 @@ class ExposedPageRepository :
                 Spaces.visibility
             ).where {
                 (Pages.id inList rawIds) and notDeleted() and Spaces.deletedAt.isNull()
-            }.associate { row ->
+            }.mapNotNull { row ->
                 val pageId = PageId(row[Pages.id])
+                val visibility =
+                    decodeVisibilityOrSkip(row[Pages.visibility], pageId) ?: return@mapNotNull null
+                val spaceVisibility =
+                    decodeSpaceVisibilityOrSkip(row[Spaces.visibility], pageId)
+                        ?: return@mapNotNull null
                 pageId to
                     PageVisibilityRecord(
                         pageId = pageId,
-                        visibility = decodeVisibility(row[Pages.visibility]),
+                        visibility = visibility,
                         spaceId = SpaceId(row[Pages.spaceId]),
-                        spaceVisibility = decodeSpaceVisibility(row[Spaces.visibility]),
+                        spaceVisibility = spaceVisibility,
                         authorId = UserId(row[Pages.authorId])
                     )
-            }
+            }.toMap()
     }
+
+    private fun decodeVisibilityOrSkip(
+        stored: String,
+        pageId: PageId
+    ): Visibility? =
+        runCatching { stored.asVisibility() }
+            .onFailure {
+                log.warn(
+                    "저장된 page visibility 값을 해석할 수 없습니다 — skip. pageId={}",
+                    pageId.value
+                )
+            }.getOrNull()
+
+    private fun decodeSpaceVisibilityOrSkip(
+        stored: String,
+        pageId: PageId
+    ): SpaceVisibility? =
+        runCatching { stored.asSpaceVisibility() }
+            .onFailure {
+                log.warn(
+                    "저장된 space visibility 값을 해석할 수 없습니다 — skip. pageId={}",
+                    pageId.value
+                )
+            }.getOrNull()
 
     override fun findRoots(spaceId: SpaceId): List<Page> =
         Pages

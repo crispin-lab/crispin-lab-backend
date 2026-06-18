@@ -210,12 +210,10 @@ class ExposedPageAncestorAdapterTest :
                 }
             }
 
-            it("chain 중간 페이지의 space 가 soft delete 되어 있으면 그 지점에서 recursion 이 끊긴다") {
-                seedSpaces(
-                    database,
-                    51L to SpaceVisibility.PUBLIC,
-                    52L to SpaceVisibility.PUBLIC
-                )
+            it(
+                "chain 안의 page 들이 모두 같은 space 라 space soft-delete 시 recursive JOIN 도 끊긴다 (anchor + recursive 양쪽 spaces JOIN 차단)"
+            ) {
+                seedSpaces(database, 51L to SpaceVisibility.PUBLIC)
                 transaction(database) {
                     repository.save(
                         basicPage(id = PageId(1L), spaceId = SpaceId(51L), title = "root")
@@ -225,6 +223,14 @@ class ExposedPageAncestorAdapterTest :
                             id = PageId(2L),
                             spaceId = SpaceId(51L),
                             parentPageId = PageId(1L),
+                            title = "mid"
+                        )
+                    )
+                    repository.save(
+                        basicPage(
+                            id = PageId(3L),
+                            spaceId = SpaceId(51L),
+                            parentPageId = PageId(2L),
                             title = "leaf"
                         )
                     )
@@ -239,7 +245,7 @@ class ExposedPageAncestorAdapterTest :
                 }
 
                 transaction(database) {
-                    adapter.findAncestorsOf(PageId(2L)).shouldBeEmpty()
+                    adapter.findAncestorsOf(PageId(3L)).shouldBeEmpty()
                 }
             }
 

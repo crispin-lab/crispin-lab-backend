@@ -158,6 +158,34 @@ class CommentGettingUseCaseTest :
                     basicRequest(pageId = "not-a-number")
                 }
             }
+
+            it("cascade — INTERNAL space 의 PUBLIC 페이지 댓글은 비작성자에게 NotFoundException") {
+                val page =
+                    basicPage(
+                        id = PageId(10L),
+                        authorId = UserId(999L),
+                        visibility = Visibility.PUBLIC
+                    )
+                every { pageRepository.findBy(page.id) } returns page
+                every { spaceRepository.findVisibility(page.spaceId) } returns
+                    SpaceVisibility.INTERNAL
+
+                shouldThrow<NotFoundException> {
+                    useCase.perform(basicRequest(userId = UserId(100L)))
+                }
+                verify(exactly = 0) { commentRepository.findBy(any()) }
+            }
+
+            it("cascade — dangling space (findVisibility=null) 인 page 의 댓글은 NotFoundException") {
+                val page = basicPage(id = PageId(10L), visibility = Visibility.PUBLIC)
+                every { pageRepository.findBy(page.id) } returns page
+                every { spaceRepository.findVisibility(page.spaceId) } returns null
+
+                shouldThrow<NotFoundException> {
+                    useCase.perform(basicRequest())
+                }
+                verify(exactly = 0) { commentRepository.findBy(any()) }
+            }
         }
     }) {
     companion object {

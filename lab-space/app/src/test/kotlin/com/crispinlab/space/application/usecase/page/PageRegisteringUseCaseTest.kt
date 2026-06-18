@@ -13,6 +13,7 @@ import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.Page
+import com.crispinlab.space.domain.page.PageErrorCode
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.PageLink
 import com.crispinlab.space.domain.page.PageRevision
@@ -213,18 +214,24 @@ class PageRegisteringUseCaseTest :
             it("INTERNAL space 안에 PUBLIC 페이지를 생성하면 ConflictException (cascade)") {
                 every { spaceRepository.findVisibility(any()) } returns SpaceVisibility.INTERNAL
 
-                shouldThrow<ConflictException> {
-                    useCase.perform(basicRequest(visibility = "PUBLIC"))
-                }
+                val exception =
+                    shouldThrow<ConflictException> {
+                        useCase.perform(basicRequest(visibility = "PUBLIC"))
+                    }
+
+                exception.errorCode shouldBe PageErrorCode.PAGE_VISIBILITY_EXCEEDS_SPACE
                 verify(exactly = 0) { pageRepository.save(any()) }
             }
 
             it("INTERNAL space 안에 MEMBER 페이지를 생성하면 ConflictException (cascade)") {
                 every { spaceRepository.findVisibility(any()) } returns SpaceVisibility.INTERNAL
 
-                shouldThrow<ConflictException> {
-                    useCase.perform(basicRequest(visibility = "MEMBER"))
-                }
+                val exception =
+                    shouldThrow<ConflictException> {
+                        useCase.perform(basicRequest(visibility = "MEMBER"))
+                    }
+
+                exception.errorCode shouldBe PageErrorCode.PAGE_VISIBILITY_EXCEEDS_SPACE
                 verify(exactly = 0) { pageRepository.save(any()) }
             }
 

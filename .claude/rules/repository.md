@@ -232,6 +232,10 @@ interface PageSearchPort {
 
 **태그 AND 매칭은 두 단계 분리 쿼리**: 다중 tagIds 의 AND 보장 (`HAVING COUNT(DISTINCT tag_id) = N`) 은 별도 `matchedPageIdsByTag` 쿼리로 page_id 리스트를 먼저 모은 뒤 baseQuery 의 `Pages.id inList tagPageIds` 로 합성. 단일 쿼리에 group by + having + 일반 where 를 통합하지 않는 이유: baseQuery 의 `count()` (`toPageResult` 내부) 가 join row 곱셈으로 부풀려지는 회귀 방지. round-trip 1회 추가는 의도된 비용.
 
+**`tagIdsAnyOf` 는 OR sub-query (HAVING 없음)**: 한 그룹 안에서 OR 매칭이 필요한 경우의 별도 파라미터. `matchedPageIdsByAnyTag` 가 `HAVING COUNT(...) = N` 없이 `GROUP BY page_id` 만 두어 OR 시맨틱을 표현, 같은 baseQuery 에 `Pages.id inList anyOfPageIds` 한 절을 추가. `tagIds` (AND) 와 함께 오면 두 sub-query 의 결과가 baseQuery 안에서 자연 AND 결합. AND 와 OR sub-query 가 SQL 본문은 동일하고 `having` 절만 분기하므로 어댑터 안에서는 `matchedPageIdsBy(tagIds, requireAllMatch)` 한 함수로 묶고 `matchedPageIdsByTag` / `matchedPageIdsByAnyTag` 가 thin wrapper 로 호출 측 의도를 유지 — soft-delete / visibility 필터를 두 곳에 중복 인코딩하지 않아 한쪽만 갱신되는 회귀를 차단.
+
+**`tagName → tagIds` cross-space 해석은 UseCase 책임 (`TagRepository.findIdsByName`)**: 어댑터는 OR 시맨틱만 알고 name 추상은 모른다. tagName lookup 이 0건이면 UseCase 에서 short-circuit (port 호출 없이 `PageResult.empty`) — 어댑터의 `tagIdsAnyOf` 는 기존 `tagIds` 와 동일하게 `emptyList() = no constraint` 시맨틱. cross-space name lookup 의 hot path 보호를 위해 `tags(name)` 단독 인덱스 (`tags_name_idx`) 가 별도로 들어가 있다 (landing TagCloud chip → `/v1/pages?tagName=foo` 가 빈번 클릭 경로).
+
 ### 트리 traversal 어댑터 정책
 
 `ExposedPageAncestorAdapter` 처럼 Postgres `WITH RECURSIVE` CTE 로 부모/자식 chain 을 따라가는 그래프 조회 어댑터의 invariant. Exposed v1 DSL 이 recursive CTE 를 표현하지 못해 본 어댑터들은 `TransactionManager.current().exec(stmt, args, StatementType.SELECT) { rs -> ... }` 로 raw SQL 을 실행한다 — 본 저장소의 첫 raw SQL 사용 케이스. 트랜잭션은 UseCase 의 `transactional` 안에서 흐른다 가정 (어댑터는 새 트랜잭션을 열지 않는다).

@@ -361,5 +361,34 @@ class ExposedTagRepositoryTest :
                         listOf(PageId(5000L))
                 }
             }
+
+            it("findIdsByName 은 cross-space 로 같은 이름의 모든 tagId 를 모은다") {
+                transaction(database) {
+                    repository.save(
+                        basicTag(id = TagId(91L), spaceId = SpaceId(10L), name = "kotlin")
+                    )
+                    repository.save(
+                        basicTag(id = TagId(92L), spaceId = SpaceId(20L), name = "kotlin")
+                    )
+                    repository.save(
+                        basicTag(id = TagId(93L), spaceId = SpaceId(30L), name = "scala")
+                    )
+                }
+
+                transaction(database) {
+                    repository.findIdsByName("kotlin") shouldContainExactlyInAnyOrder
+                        listOf(TagId(91L), TagId(92L))
+                }
+            }
+
+            it("findIdsByName 은 매치되는 tag 가 없으면 빈 리스트를 반환한다") {
+                transaction(database) {
+                    repository.save(basicTag(id = TagId(94L), name = "kotlin"))
+                }
+
+                transaction(database) {
+                    repository.findIdsByName("존재하지않음").shouldBeEmpty()
+                }
+            }
         }
     })

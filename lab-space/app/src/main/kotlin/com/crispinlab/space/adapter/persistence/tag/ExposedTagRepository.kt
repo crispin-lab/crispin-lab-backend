@@ -91,6 +91,12 @@ class ExposedTagRepository :
             .empty()
             .not()
 
+    override fun findIdsByName(name: String): List<TagId> =
+        Tags
+            .select(Tags.id)
+            .where { Tags.name eq name }
+            .map { TagId(it[Tags.id]) }
+
     override fun attach(pageTag: PageTag) {
         PageTags.insertIgnore {
             it[pageId] = pageTag.pageId.value

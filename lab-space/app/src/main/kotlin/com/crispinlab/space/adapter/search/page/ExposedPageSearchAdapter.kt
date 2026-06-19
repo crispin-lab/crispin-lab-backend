@@ -41,6 +41,7 @@ class ExposedPageSearchAdapter : PageSearchPort {
         keyword: String?,
         spaceId: SpaceId?,
         tagIds: Collection<TagId>,
+        tagIdsAnyOf: Collection<TagId>,
         sort: SortOption,
         scope: VisibilityScope,
         pageRequest: PageRequest
@@ -53,27 +54,52 @@ class ExposedPageSearchAdapter : PageSearchPort {
                 if (matched.isEmpty()) return PageResult.empty(pageRequest)
                 matched
             }
+        val anyOfPageIds =
+            if (tagIdsAnyOf.isEmpty()) {
+                null
+            } else {
+                val matched = matchedPageIdsByAnyTag(tagIdsAnyOf)
+                if (matched.isEmpty()) return PageResult.empty(pageRequest)
+                matched
+            }
 
-        return baseQuery(keyword, spaceId, tagPageIds, scope.toPagesCondition())
+        return baseQuery(keyword, spaceId, tagPageIds, anyOfPageIds, scope.toPagesCondition())
             .toPageResult(pageRequest, *sort.toOrderColumns()) { it.toSummary() }
     }
 
-    private fun matchedPageIdsByTag(tagIds: Collection<TagId>): List<Long> {
+    private fun matchedPageIdsByTag(tagIds: Collection<TagId>): List<Long> =
+        matchedPageIdsBy(tagIds, requireAllMatch = true)
+
+    private fun matchedPageIdsByAnyTag(tagIdsAnyOf: Collection<TagId>): List<Long> =
+        matchedPageIdsBy(tagIdsAnyOf, requireAllMatch = false)
+
+    private fun matchedPageIdsBy(
+        tagIds: Collection<TagId>,
+        requireAllMatch: Boolean
+    ): List<Long> {
         val distinctTagIds = tagIds.map { it.value }.distinct()
-        return PageTags
-            .innerJoin(Pages)
-            .join(
-                otherTable = Spaces,
-                joinType = JoinType.INNER,
-                additionalConstraint = { Pages.spaceId eq Spaces.id }
-            ).select(PageTags.pageId)
-            .where {
-                (PageTags.tagId inList distinctTagIds) and
-                    Pages.notDeleted() and
-                    Spaces.deletedAt.isNull()
-            }.groupBy(PageTags.pageId)
-            .having { PageTags.tagId.countDistinct() eq distinctTagIds.size.toLong() }
-            .map { it[PageTags.pageId] }
+        val grouped =
+            PageTags
+                .innerJoin(Pages)
+                .join(
+                    otherTable = Spaces,
+                    joinType = JoinType.INNER,
+                    additionalConstraint = { Pages.spaceId eq Spaces.id }
+                ).select(PageTags.pageId)
+                .where {
+                    (PageTags.tagId inList distinctTagIds) and
+                        Pages.notDeleted() and
+                        Spaces.deletedAt.isNull()
+                }.groupBy(PageTags.pageId)
+        val matched =
+            if (requireAllMatch) {
+                grouped.having {
+                    PageTags.tagId.countDistinct() eq distinctTagIds.size.toLong()
+                }
+            } else {
+                grouped
+            }
+        return matched.map { it[PageTags.pageId] }
     }
 
     private fun SortOption.toOrderColumns(): Array<Pair<Expression<*>, SortOrder>> =
@@ -105,6 +131,7 @@ class ExposedPageSearchAdapter : PageSearchPort {
         keyword: String?,
         spaceId: SpaceId?,
         tagPageIds: List<Long>?,
+        anyOfPageIds: List<Long>?,
         visibilityCondition: Op<Boolean>
     ): Query {
         val conditions =
@@ -121,6 +148,7 @@ class ExposedPageSearchAdapter : PageSearchPort {
                 }
                 spaceId?.let { add(Pages.spaceId eq it.value) }
                 tagPageIds?.let { add(Pages.id inList it) }
+                anyOfPageIds?.let { add(Pages.id inList it) }
             }
         val combined = conditions.compoundAnd()
         return Pages

@@ -23,6 +23,8 @@ interface TagRepository {
         name: String
     ): Boolean
 
+    fun findIdsByName(name: String): List<TagId>
+
     fun delete(id: TagId)
 
     fun attach(pageTag: PageTag)

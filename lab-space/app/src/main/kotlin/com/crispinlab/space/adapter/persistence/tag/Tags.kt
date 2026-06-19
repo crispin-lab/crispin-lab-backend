@@ -6,7 +6,7 @@ import org.jetbrains.exposed.v1.javatime.timestamp
 object Tags : Table("tags") {
     val id = long("id")
     val spaceId = long("space_id").index("tags_space_id_idx")
-    val name = varchar("name", length = 30)
+    val name = varchar("name", length = 30).index("tags_name_idx")
     val createdAt = timestamp("created_at")
 
     override val primaryKey = PrimaryKey(id)

@@ -444,9 +444,9 @@ class ExposedPageSearchAdapterTest :
                     pageRepository.save(publicPage(id = PageId(1L), spaceId = SpaceId(10L)))
                     pageRepository.save(publicPage(id = PageId(2L), spaceId = SpaceId(20L)))
                     pageRepository.save(publicPage(id = PageId(3L), spaceId = SpaceId(10L)))
-                    attachTag(pageId = 1L, tagId = 100L)
-                    attachTag(pageId = 2L, tagId = 200L)
-                    attachTag(pageId = 3L, tagId = 300L)
+                    attachTag(pageId = 1L, tagId = 100L, spaceId = 10L, name = "kotlin")
+                    attachTag(pageId = 2L, tagId = 200L, spaceId = 20L, name = "kotlin")
+                    attachTag(pageId = 3L, tagId = 300L, spaceId = 10L, name = "scala")
                 }
 
                 val result =
@@ -1255,12 +1255,13 @@ class ExposedPageSearchAdapterTest :
         fun attachTag(
             pageId: Long,
             tagId: Long,
-            spaceId: Long = 10L
+            spaceId: Long = 10L,
+            name: String = "tag-$tagId"
         ) {
             Tags.insertIgnore {
                 it[id] = tagId
                 it[Tags.spaceId] = spaceId
-                it[name] = "tag-$tagId"
+                it[Tags.name] = name
                 it[createdAt] = DUMMY_INSTANT
             }
             PageTags.insert {

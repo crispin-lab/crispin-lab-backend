@@ -102,6 +102,9 @@ class PageSearchingControllerTest :
                             "query" isParameterFor "검색 키워드 (제목·본문, 대소문자 무시)" isOptional true,
                             "space" isParameterFor "스페이스 ID 필터" isOptional true,
                             "tag" isParameterFor "태그 ID 필터 (다중 시 AND 매칭)" isOptional true,
+                            "tagName" isParameterFor
+                                "태그 이름 필터 (cross-space 같은 이름의 모든 태그 중 하나 이상 보유, 미매치 시 빈 결과)"
+                                isOptional true,
                             "sort" isParameterFor
                                 "정렬 옵션 (CREATED_AT / UPDATED_AT / RELEVANCE / TREE, 기본값 UPDATED_AT)"
                                 isOptional true
@@ -170,6 +173,26 @@ class PageSearchingControllerTest :
                     ).then(status().isOk)
 
                 requestSlot.captured.tagIds.map { it.value } shouldBe listOf(100L, 200L, 300L)
+            }
+
+            it("tagName 파라미터가 UseCase Request 에 전달된다") {
+                val requestSlot = slot<PageSearching.Request>()
+                every { useCase.perform(capture(requestSlot)) } returns
+                    PageResult(
+                        items = emptyList(),
+                        page = 0,
+                        size = 20,
+                        totalElements = 0L
+                    )
+
+                controller
+                    .`when`(
+                        get("/v1/pages")
+                            .withAuth()
+                            .param("tagName", "kotlin")
+                    ).then(status().isOk)
+
+                requestSlot.captured.tagName shouldBe "kotlin"
             }
 
             it("space 형식이 숫자가 아니면 400 을 반환한다") {

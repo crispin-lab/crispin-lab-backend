@@ -23,6 +23,7 @@ interface PageSearching : UseCase<Request, PageResult<Summary>> {
         keyword: String?,
         spaceId: String?,
         tagIds: List<String>,
+        tagName: String? = null,
         sort: String? = null,
         page: Int = 0,
         size: Int = DEFAULT_SIZE,
@@ -31,6 +32,7 @@ interface PageSearching : UseCase<Request, PageResult<Summary>> {
         val keyword: String? = keyword?.trim()?.takeIf { it.isNotEmpty() }
         val spaceId: SpaceId? = spaceId?.asSpaceId()
         val tagIds: List<TagId> = tagIds.map { it.asTagId() }
+        val tagName: String? = tagName?.trim()?.takeIf { it.isNotEmpty() }
         val sort: SortOption = sort?.asSortOption() ?: SortOption.UPDATED_AT
         val pageRequest: PageRequest =
             PageRequest(

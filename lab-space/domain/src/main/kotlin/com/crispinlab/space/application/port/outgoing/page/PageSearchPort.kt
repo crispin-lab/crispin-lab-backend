@@ -16,6 +16,7 @@ interface PageSearchPort {
         keyword: String?,
         spaceId: SpaceId?,
         tagIds: Collection<TagId>,
+        tagIdsAnyOf: Collection<TagId>,
         sort: SortOption,
         scope: VisibilityScope,
         pageRequest: PageRequest

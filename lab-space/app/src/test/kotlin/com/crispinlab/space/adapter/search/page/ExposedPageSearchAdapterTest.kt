@@ -69,6 +69,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = emptyList(),
+                            tagIdsAnyOf = emptyList(),
                             sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
@@ -106,6 +107,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = emptyList(),
+                            tagIdsAnyOf = emptyList(),
                             sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
@@ -142,6 +144,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = "회고",
                             spaceId = null,
                             tagIds = emptyList(),
+                            tagIdsAnyOf = emptyList(),
                             sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
@@ -164,6 +167,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = "NOTE",
                             spaceId = null,
                             tagIds = emptyList(),
+                            tagIdsAnyOf = emptyList(),
                             sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
@@ -191,6 +195,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = "spring",
                             spaceId = null,
                             tagIds = emptyList(),
+                            tagIdsAnyOf = emptyList(),
                             sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
@@ -213,6 +218,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = "90%",
                             spaceId = null,
                             tagIds = emptyList(),
+                            tagIdsAnyOf = emptyList(),
                             sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
@@ -226,6 +232,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = "snake_case",
                             spaceId = null,
                             tagIds = emptyList(),
+                            tagIdsAnyOf = emptyList(),
                             sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
@@ -268,6 +275,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = "회고",
                             spaceId = null,
                             tagIds = emptyList(),
+                            tagIdsAnyOf = emptyList(),
                             sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
@@ -290,6 +298,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = SpaceId(20L),
                             tagIds = emptyList(),
+                            tagIdsAnyOf = emptyList(),
                             sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
@@ -319,6 +328,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = listOf(TagId(100L), TagId(200L)),
+                            tagIdsAnyOf = emptyList(),
                             sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
@@ -343,6 +353,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = listOf(TagId(100L), TagId(100L), TagId(100L)),
+                            tagIdsAnyOf = emptyList(),
                             sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
@@ -369,6 +380,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = listOf(TagId(100L)),
+                            tagIdsAnyOf = emptyList(),
                             sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
@@ -393,6 +405,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = listOf(TagId(100L), TagId(200L), TagId(300L)),
+                            tagIdsAnyOf = emptyList(),
                             sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
@@ -415,6 +428,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = listOf(TagId(999L)),
+                            tagIdsAnyOf = emptyList(),
                             sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
@@ -423,6 +437,86 @@ class ExposedPageSearchAdapterTest :
 
                 result.items shouldBe emptyList()
                 result.totalElements shouldBe 0L
+            }
+
+            it("tagIdsAnyOf 는 cross-space 같은 이름 태그들의 OR 매칭으로 페이지를 모은다") {
+                transaction(database) {
+                    pageRepository.save(publicPage(id = PageId(1L), spaceId = SpaceId(10L)))
+                    pageRepository.save(publicPage(id = PageId(2L), spaceId = SpaceId(20L)))
+                    pageRepository.save(publicPage(id = PageId(3L), spaceId = SpaceId(10L)))
+                    attachTag(pageId = 1L, tagId = 100L)
+                    attachTag(pageId = 2L, tagId = 200L)
+                    attachTag(pageId = 3L, tagId = 300L)
+                }
+
+                val result =
+                    transaction(database) {
+                        adapter.search(
+                            keyword = null,
+                            spaceId = null,
+                            tagIds = emptyList(),
+                            tagIdsAnyOf = listOf(TagId(100L), TagId(200L)),
+                            sort = SortOption.UPDATED_AT,
+                            scope = VisibilityScope.Anonymous,
+                            pageRequest = PageRequest.firstPage()
+                        )
+                    }
+
+                result.items.map { it.id }.toSet() shouldBe setOf(PageId(1L), PageId(2L))
+                result.totalElements shouldBe 2L
+            }
+
+            it("tagIdsAnyOf 와 tagIds 가 같이 오면 두 필터의 AND 결합으로 매칭된다") {
+                transaction(database) {
+                    pageRepository.save(publicPage(id = PageId(1L)))
+                    pageRepository.save(publicPage(id = PageId(2L)))
+                    pageRepository.save(publicPage(id = PageId(3L)))
+                    attachTag(pageId = 1L, tagId = 50L)
+                    attachTag(pageId = 1L, tagId = 100L)
+                    attachTag(pageId = 2L, tagId = 50L)
+                    attachTag(pageId = 3L, tagId = 100L)
+                    attachTag(pageId = 3L, tagId = 200L)
+                }
+
+                val result =
+                    transaction(database) {
+                        adapter.search(
+                            keyword = null,
+                            spaceId = null,
+                            tagIds = listOf(TagId(50L)),
+                            tagIdsAnyOf = listOf(TagId(100L), TagId(200L)),
+                            sort = SortOption.UPDATED_AT,
+                            scope = VisibilityScope.Anonymous,
+                            pageRequest = PageRequest.firstPage()
+                        )
+                    }
+
+                result.items.map { it.id }.toSet() shouldBe setOf(PageId(1L))
+                result.totalElements shouldBe 1L
+            }
+
+            it("tagIdsAnyOf 가 한 페이지의 여러 태그와 매치돼도 결과에 한 번만 나온다") {
+                transaction(database) {
+                    pageRepository.save(publicPage(id = PageId(1L)))
+                    attachTag(pageId = 1L, tagId = 100L)
+                    attachTag(pageId = 1L, tagId = 200L)
+                }
+
+                val result =
+                    transaction(database) {
+                        adapter.search(
+                            keyword = null,
+                            spaceId = null,
+                            tagIds = emptyList(),
+                            tagIdsAnyOf = listOf(TagId(100L), TagId(200L)),
+                            sort = SortOption.UPDATED_AT,
+                            scope = VisibilityScope.Anonymous,
+                            pageRequest = PageRequest.firstPage()
+                        )
+                    }
+
+                result.items.map { it.id } shouldBe listOf(PageId(1L))
+                result.totalElements shouldBe 1L
             }
 
             it("keyword + spaceId + tagIds 조합을 동시에 적용한다") {
@@ -447,6 +541,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = "회고",
                             spaceId = SpaceId(10L),
                             tagIds = listOf(TagId(100L)),
+                            tagIdsAnyOf = emptyList(),
                             sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
@@ -490,6 +585,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = emptyList(),
+                            tagIdsAnyOf = emptyList(),
                             sort = SortOption.CREATED_AT,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
@@ -501,6 +597,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = emptyList(),
+                            tagIdsAnyOf = emptyList(),
                             sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
@@ -537,6 +634,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = emptyList(),
+                            tagIdsAnyOf = emptyList(),
                             sort = SortOption.RELEVANCE,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
@@ -548,6 +646,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = emptyList(),
+                            tagIdsAnyOf = emptyList(),
                             sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
@@ -575,6 +674,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = emptyList(),
+                            tagIdsAnyOf = emptyList(),
                             sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest(page = 1, size = 2)
@@ -602,6 +702,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = emptyList(),
+                            tagIdsAnyOf = emptyList(),
                             sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
@@ -630,6 +731,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = listOf(TagId(100L)),
+                            tagIdsAnyOf = emptyList(),
                             sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
@@ -703,6 +805,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = emptyList(),
+                            tagIdsAnyOf = emptyList(),
                             sort = SortOption.UPDATED_AT,
                             scope =
                                 VisibilityScope.Authenticated(
@@ -753,6 +856,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = emptyList(),
+                            tagIdsAnyOf = emptyList(),
                             sort = SortOption.UPDATED_AT,
                             scope =
                                 VisibilityScope.Authenticated(
@@ -793,6 +897,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = emptyList(),
+                            tagIdsAnyOf = emptyList(),
                             sort = SortOption.TREE,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
@@ -843,6 +948,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = emptyList(),
+                            tagIdsAnyOf = emptyList(),
                             sort = SortOption.UPDATED_AT,
                             scope =
                                 VisibilityScope.Authenticated(
@@ -875,6 +981,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = emptyList(),
+                            tagIdsAnyOf = emptyList(),
                             sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
@@ -917,6 +1024,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = emptyList(),
+                            tagIdsAnyOf = emptyList(),
                             sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Privileged,
                             pageRequest = PageRequest.firstPage()
@@ -945,6 +1053,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = emptyList(),
+                            tagIdsAnyOf = emptyList(),
                             sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Anonymous,
                             pageRequest = PageRequest.firstPage()
@@ -976,6 +1085,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = emptyList(),
+                            tagIdsAnyOf = emptyList(),
                             sort = SortOption.UPDATED_AT,
                             scope =
                                 VisibilityScope.Authenticated(
@@ -1010,6 +1120,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = emptyList(),
+                            tagIdsAnyOf = emptyList(),
                             sort = SortOption.UPDATED_AT,
                             scope =
                                 VisibilityScope.Authenticated(
@@ -1042,6 +1153,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = emptyList(),
+                            tagIdsAnyOf = emptyList(),
                             sort = SortOption.UPDATED_AT,
                             scope =
                                 VisibilityScope.Authenticated(
@@ -1073,6 +1185,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = emptyList(),
+                            tagIdsAnyOf = emptyList(),
                             sort = SortOption.UPDATED_AT,
                             scope =
                                 VisibilityScope.Authenticated(
@@ -1105,6 +1218,7 @@ class ExposedPageSearchAdapterTest :
                             keyword = null,
                             spaceId = null,
                             tagIds = emptyList(),
+                            tagIdsAnyOf = emptyList(),
                             sort = SortOption.UPDATED_AT,
                             scope = VisibilityScope.Privileged,
                             pageRequest = PageRequest.firstPage()

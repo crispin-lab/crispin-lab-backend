@@ -10,6 +10,7 @@ import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.PageSu
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.SortOption
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
+import com.crispinlab.space.application.port.outgoing.tag.TagRepository
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.Visibility
@@ -30,18 +31,20 @@ import io.mockk.verify
 class PageSearchingUseCaseTest :
     DescribeSpec({
         val pageSearchPort = mockk<PageSearchPort>()
+        val tagRepository = mockk<TagRepository>()
         val spaceMemberRepository = mockk<SpaceMemberRepository>()
         val userHandleQuery = mockk<UserHandleQuery>()
         val useCase =
             PageSearchingUseCase(
                 pageSearchPort = pageSearchPort,
+                tagRepository = tagRepository,
                 spaceMemberRepository = spaceMemberRepository,
                 userHandleQuery = userHandleQuery,
                 transactionProvider = DummyTransactionProvider()
             )
 
         beforeEach {
-            clearMocks(pageSearchPort, spaceMemberRepository, userHandleQuery)
+            clearMocks(pageSearchPort, tagRepository, spaceMemberRepository, userHandleQuery)
             every { spaceMemberRepository.findSpaceIdsByUserId(any()) } returns emptySet()
             every { userHandleQuery.handlesOf(any()) } returns
                 mapOf(
@@ -80,6 +83,7 @@ class PageSearchingUseCaseTest :
                         keyword = "회고",
                         spaceId = SpaceId(10L),
                         tagIds = listOf(TagId(100L), TagId(200L)),
+                        tagIdsAnyOf = emptyList(),
                         sort = any(),
                         scope = any(),
                         pageRequest = any()
@@ -116,6 +120,7 @@ class PageSearchingUseCaseTest :
                         keyword = "회고",
                         spaceId = SpaceId(10L),
                         tagIds = listOf(TagId(100L), TagId(200L)),
+                        tagIdsAnyOf = emptyList(),
                         sort = any(),
                         scope = any(),
                         pageRequest =
@@ -133,6 +138,7 @@ class PageSearchingUseCaseTest :
                         keyword = null,
                         spaceId = null,
                         tagIds = emptyList(),
+                        tagIdsAnyOf = emptyList(),
                         sort = any(),
                         scope = any(),
                         pageRequest = any()
@@ -146,6 +152,7 @@ class PageSearchingUseCaseTest :
                         keyword = null,
                         spaceId = null,
                         tagIds = emptyList(),
+                        tagIdsAnyOf = emptyList(),
                         sort = any(),
                         scope = any(),
                         pageRequest = any()
@@ -159,6 +166,7 @@ class PageSearchingUseCaseTest :
                         keyword = null,
                         spaceId = null,
                         tagIds = emptyList(),
+                        tagIdsAnyOf = emptyList(),
                         sort = any(),
                         scope = any(),
                         pageRequest = any()
@@ -177,6 +185,7 @@ class PageSearchingUseCaseTest :
                         keyword = any(),
                         spaceId = any(),
                         tagIds = any(),
+                        tagIdsAnyOf = any(),
                         sort = any(),
                         scope = any(),
                         pageRequest = any()
@@ -190,6 +199,7 @@ class PageSearchingUseCaseTest :
                         keyword = any(),
                         spaceId = any(),
                         tagIds = any(),
+                        tagIdsAnyOf = any(),
                         sort = SortOption.CREATED_AT,
                         scope = any(),
                         pageRequest = any()
@@ -203,6 +213,7 @@ class PageSearchingUseCaseTest :
                         keyword = any(),
                         spaceId = any(),
                         tagIds = any(),
+                        tagIdsAnyOf = any(),
                         sort = any(),
                         scope = any(),
                         pageRequest = any()
@@ -216,6 +227,7 @@ class PageSearchingUseCaseTest :
                         keyword = any(),
                         spaceId = any(),
                         tagIds = any(),
+                        tagIdsAnyOf = any(),
                         sort = SortOption.UPDATED_AT,
                         scope = any(),
                         pageRequest = any()
@@ -229,6 +241,7 @@ class PageSearchingUseCaseTest :
                         keyword = any(),
                         spaceId = any(),
                         tagIds = any(),
+                        tagIdsAnyOf = any(),
                         sort = any(),
                         scope = any(),
                         pageRequest = any()
@@ -242,6 +255,7 @@ class PageSearchingUseCaseTest :
                         keyword = any(),
                         spaceId = any(),
                         tagIds = any(),
+                        tagIdsAnyOf = any(),
                         sort = any(),
                         scope = VisibilityScope.Anonymous,
                         pageRequest = any()
@@ -258,6 +272,7 @@ class PageSearchingUseCaseTest :
                         keyword = any(),
                         spaceId = any(),
                         tagIds = any(),
+                        tagIdsAnyOf = any(),
                         sort = any(),
                         scope = any(),
                         pageRequest = any()
@@ -275,6 +290,7 @@ class PageSearchingUseCaseTest :
                         keyword = any(),
                         spaceId = any(),
                         tagIds = any(),
+                        tagIdsAnyOf = any(),
                         sort = any(),
                         scope =
                             VisibilityScope.Authenticated(
@@ -325,6 +341,7 @@ class PageSearchingUseCaseTest :
                         keyword = any(),
                         spaceId = any(),
                         tagIds = any(),
+                        tagIdsAnyOf = any(),
                         sort = any(),
                         scope = any(),
                         pageRequest = any()
@@ -363,6 +380,7 @@ class PageSearchingUseCaseTest :
                         keyword = any(),
                         spaceId = any(),
                         tagIds = any(),
+                        tagIdsAnyOf = any(),
                         sort = any(),
                         scope = any(),
                         pageRequest = any()
@@ -382,12 +400,125 @@ class PageSearchingUseCaseTest :
                 result.items.single().authorHandle shouldBe ""
             }
 
+            it("tagName 이 cross-space 로 해석돼 tagIdsAnyOf 로 port 에 전달된다") {
+                every { tagRepository.findIdsByName("kotlin") } returns
+                    listOf(TagId(500L), TagId(600L))
+                every {
+                    pageSearchPort.search(
+                        keyword = any(),
+                        spaceId = any(),
+                        tagIds = any(),
+                        tagIdsAnyOf = any(),
+                        sort = any(),
+                        scope = any(),
+                        pageRequest = any()
+                    )
+                } returns PageResult.empty(basicRequest().pageRequest)
+
+                useCase.perform(basicRequest(tagName = "kotlin"))
+
+                verify {
+                    pageSearchPort.search(
+                        keyword = any(),
+                        spaceId = any(),
+                        tagIds = emptyList(),
+                        tagIdsAnyOf = listOf(TagId(500L), TagId(600L)),
+                        sort = any(),
+                        scope = any(),
+                        pageRequest = any()
+                    )
+                }
+            }
+
+            it("tagName 이 어느 tag 와도 매치되지 않으면 port 호출 없이 빈 결과를 반환한다") {
+                every { tagRepository.findIdsByName("존재하지않음") } returns emptyList()
+
+                val result = useCase.perform(basicRequest(tagName = "존재하지않음"))
+
+                result.items shouldBe emptyList()
+                result.totalElements shouldBe 0L
+                verify(exactly = 1) { tagRepository.findIdsByName("존재하지않음") }
+                verify(exactly = 0) {
+                    pageSearchPort.search(
+                        keyword = any(),
+                        spaceId = any(),
+                        tagIds = any(),
+                        tagIdsAnyOf = any(),
+                        sort = any(),
+                        scope = any(),
+                        pageRequest = any()
+                    )
+                }
+            }
+
+            it("tagName 공백/빈 문자열은 null 로 정규화돼 TagRepository 를 호출하지 않는다") {
+                every {
+                    pageSearchPort.search(
+                        keyword = any(),
+                        spaceId = any(),
+                        tagIds = any(),
+                        tagIdsAnyOf = any(),
+                        sort = any(),
+                        scope = any(),
+                        pageRequest = any()
+                    )
+                } returns PageResult.empty(basicRequest().pageRequest)
+
+                useCase.perform(basicRequest(tagName = "   "))
+
+                verify(exactly = 0) { tagRepository.findIdsByName(any()) }
+                verify {
+                    pageSearchPort.search(
+                        keyword = any(),
+                        spaceId = any(),
+                        tagIds = any(),
+                        tagIdsAnyOf = emptyList(),
+                        sort = any(),
+                        scope = any(),
+                        pageRequest = any()
+                    )
+                }
+            }
+
+            it("tag (AND) 와 tagName (OR) 이 함께 오면 두 필터가 모두 port 로 전달된다") {
+                every { tagRepository.findIdsByName("kotlin") } returns
+                    listOf(TagId(500L), TagId(600L))
+                every {
+                    pageSearchPort.search(
+                        keyword = any(),
+                        spaceId = any(),
+                        tagIds = any(),
+                        tagIdsAnyOf = any(),
+                        sort = any(),
+                        scope = any(),
+                        pageRequest = any()
+                    )
+                } returns PageResult.empty(basicRequest().pageRequest)
+
+                useCase.perform(
+                    basicRequest(tagIds = listOf("100", "200"), tagName = "kotlin")
+                )
+
+                verify {
+                    pageSearchPort.search(
+                        keyword = any(),
+                        spaceId = any(),
+                        tagIds = listOf(TagId(100L), TagId(200L)),
+                        tagIdsAnyOf = listOf(TagId(500L), TagId(600L)),
+                        sort = any(),
+                        scope = any(),
+                        pageRequest = any()
+                    )
+                }
+            }
+
             it("ADMIN 은 Privileged scope 로 검색한다") {
                 every {
                     pageSearchPort.search(
                         keyword = any(),
                         spaceId = any(),
                         tagIds = any(),
+                        tagIdsAnyOf = any(),
                         sort = any(),
                         scope = any(),
                         pageRequest = any()
@@ -405,6 +536,7 @@ class PageSearchingUseCaseTest :
                         keyword = any(),
                         spaceId = any(),
                         tagIds = any(),
+                        tagIdsAnyOf = any(),
                         sort = any(),
                         scope = VisibilityScope.Privileged,
                         pageRequest = any()
@@ -453,6 +585,7 @@ class PageSearchingUseCaseTest :
             keyword: String? = null,
             spaceId: String? = null,
             tagIds: List<String> = emptyList(),
+            tagName: String? = null,
             sort: String? = null,
             page: Int = 0,
             size: Int = DEFAULT_SIZE,
@@ -462,6 +595,7 @@ class PageSearchingUseCaseTest :
                 keyword = keyword,
                 spaceId = spaceId,
                 tagIds = tagIds,
+                tagName = tagName,
                 sort = sort,
                 page = page,
                 size = size,

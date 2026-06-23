@@ -8,7 +8,9 @@ import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRep
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.space.SpaceVisibility
+import com.crispinlab.space.domain.spacemember.SpaceMemberRole
 import com.crispinlab.space.testsupport.Fixtures.basicSpace
+import com.crispinlab.space.testsupport.Fixtures.basicSpaceMember
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -16,6 +18,7 @@ import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 
 class SpaceGettingUseCaseTest :
     DescribeSpec({
@@ -30,7 +33,9 @@ class SpaceGettingUseCaseTest :
 
         beforeEach {
             clearMocks(spaceRepository, spaceMemberRepository)
-            every { spaceMemberRepository.findSpaceIdsByUserId(any()) } returns emptySet()
+            every {
+                spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
+            } returns null
         }
 
         describe("스페이스 단건 조회") {
@@ -81,8 +86,8 @@ class SpaceGettingUseCaseTest :
                 val space = basicSpace(id = SpaceId(1L), visibility = SpaceVisibility.INTERNAL)
                 every { spaceRepository.findBy(space.id) } returns space
                 every {
-                    spaceMemberRepository.findSpaceIdsByUserId(UserId(100L))
-                } returns emptySet()
+                    spaceMemberRepository.findBySpaceIdAndUserId(space.id, UserId(100L))
+                } returns null
 
                 shouldThrow<NotFoundException> {
                     useCase.perform(basicRequest())
@@ -93,8 +98,8 @@ class SpaceGettingUseCaseTest :
                 val space = basicSpace(id = SpaceId(1L), visibility = SpaceVisibility.INTERNAL)
                 every { spaceRepository.findBy(space.id) } returns space
                 every {
-                    spaceMemberRepository.findSpaceIdsByUserId(UserId(100L))
-                } returns setOf(SpaceId(1L))
+                    spaceMemberRepository.findBySpaceIdAndUserId(space.id, UserId(100L))
+                } returns basicSpaceMember(role = SpaceMemberRole.MEMBER)
 
                 val result = useCase.perform(basicRequest())
 
@@ -113,6 +118,85 @@ class SpaceGettingUseCaseTest :
                     )
 
                 result.visibility shouldBe SpaceVisibility.INTERNAL
+            }
+        }
+
+        describe("응답의 canWrite — viewer 의 쓰기 권한 노출") {
+            it("anonymous 는 PUBLIC 스페이스라도 쓸 수 없다") {
+                val space = basicSpace(visibility = SpaceVisibility.PUBLIC)
+                every { spaceRepository.findBy(space.id) } returns space
+
+                val result = useCase.perform(basicRequest(viewer = Viewer.Anonymous))
+
+                result.canWrite shouldBe false
+                verify(exactly = 0) {
+                    spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
+                }
+            }
+
+            it("비멤버 authenticated 는 쓸 수 없다") {
+                val space = basicSpace(visibility = SpaceVisibility.PUBLIC)
+                every { spaceRepository.findBy(space.id) } returns space
+                every {
+                    spaceMemberRepository.findBySpaceIdAndUserId(space.id, UserId(100L))
+                } returns null
+
+                val result = useCase.perform(basicRequest())
+
+                result.canWrite shouldBe false
+            }
+
+            it("VIEWER role 은 쓸 수 없다") {
+                val space = basicSpace(visibility = SpaceVisibility.INTERNAL, id = SpaceId(1L))
+                every { spaceRepository.findBy(space.id) } returns space
+                every {
+                    spaceMemberRepository.findBySpaceIdAndUserId(space.id, UserId(100L))
+                } returns basicSpaceMember(role = SpaceMemberRole.VIEWER)
+
+                val result = useCase.perform(basicRequest())
+
+                result.canWrite shouldBe false
+            }
+
+            it("MEMBER role 은 쓸 수 있다") {
+                val space = basicSpace(visibility = SpaceVisibility.INTERNAL, id = SpaceId(1L))
+                every { spaceRepository.findBy(space.id) } returns space
+                every {
+                    spaceMemberRepository.findBySpaceIdAndUserId(space.id, UserId(100L))
+                } returns basicSpaceMember(role = SpaceMemberRole.MEMBER)
+
+                val result = useCase.perform(basicRequest())
+
+                result.canWrite shouldBe true
+            }
+
+            it("OWNER role 은 쓸 수 있다") {
+                val space = basicSpace(visibility = SpaceVisibility.INTERNAL, id = SpaceId(1L))
+                every { spaceRepository.findBy(space.id) } returns space
+                every {
+                    spaceMemberRepository.findBySpaceIdAndUserId(space.id, UserId(100L))
+                } returns basicSpaceMember(role = SpaceMemberRole.OWNER)
+
+                val result = useCase.perform(basicRequest())
+
+                result.canWrite shouldBe true
+            }
+
+            it("ADMIN 글로벌 권한은 멤버가 아니어도 쓸 수 있다") {
+                val space = basicSpace(visibility = SpaceVisibility.PUBLIC)
+                every { spaceRepository.findBy(space.id) } returns space
+
+                val result =
+                    useCase.perform(
+                        basicRequest(
+                            viewer = Viewer.Member(userId = UserId(100L), isAdmin = true)
+                        )
+                    )
+
+                result.canWrite shouldBe true
+                verify(exactly = 0) {
+                    spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
+                }
             }
         }
     }) {

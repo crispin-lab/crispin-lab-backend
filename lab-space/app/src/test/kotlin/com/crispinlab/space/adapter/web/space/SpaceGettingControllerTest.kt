@@ -34,6 +34,7 @@ class SpaceGettingControllerTest :
                         name = "팀 위키",
                         description = "공유 공간",
                         visibility = SpaceVisibility.INTERNAL,
+                        canWrite = true,
                         createdAt = DUMMY_INSTANT,
                         updatedAt = DUMMY_INSTANT
                     )
@@ -44,7 +45,8 @@ class SpaceGettingControllerTest :
                     ).then(
                         status().isOk,
                         jsonPath("$.spaceId").value("1"),
-                        jsonPath("$.name").value("팀 위키")
+                        jsonPath("$.name").value("팀 위키"),
+                        jsonPath("$.canWrite").value(true)
                     ).document(
                         authHeader(required = false),
                         responseFields {
@@ -52,6 +54,9 @@ class SpaceGettingControllerTest :
                             "name".string("이름")
                             "description".string("설명")
                             "visibility".string("공개 범위")
+                            "canWrite".boolean(
+                                "viewer 가 본 스페이스에 페이지를 작성할 수 있는지 여부 (ADMIN / OWNER / MEMBER → true, VIEWER · 비멤버 · 비로그인 → false)"
+                            )
                             "createdAt".datetime("생성 시각")
                             "updatedAt".datetime("최근 갱신 시각")
                         },
@@ -73,13 +78,14 @@ class SpaceGettingControllerTest :
                     )
             }
 
-            it("비로그인 상태에서도 PUBLIC 스페이스는 200 으로 응답한다") {
+            it("비로그인 상태에서도 PUBLIC 스페이스는 200 으로 응답한다 — canWrite = false") {
                 every { useCase.perform(any()) } returns
                     Result(
                         spaceId = SpaceId(1L),
                         name = "공개 스페이스",
                         description = "누구나 볼 수 있음",
                         visibility = SpaceVisibility.PUBLIC,
+                        canWrite = false,
                         createdAt = DUMMY_INSTANT,
                         updatedAt = DUMMY_INSTANT
                     )
@@ -88,7 +94,8 @@ class SpaceGettingControllerTest :
                     .`when`(get("/v1/spaces/{spaceId}", 1))
                     .then(
                         status().isOk,
-                        jsonPath("$.visibility").value("PUBLIC")
+                        jsonPath("$.visibility").value("PUBLIC"),
+                        jsonPath("$.canWrite").value(false)
                     )
                 verify {
                     useCase.perform(

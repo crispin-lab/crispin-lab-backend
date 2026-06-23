@@ -21,6 +21,8 @@
 
 `ErrorCode` 는 도메인 모듈이 `PageErrorCode : ErrorCode` 형태로 implement 하는 super-type 이라 `lab-common-port` 로 옮겼지만, 패키지 `com.crispinlab.common.exception` 은 그대로 유지한다. `NotFoundException` / `ConflictException` / `DomainException` 은 `lab-common` 의 같은 패키지에 남았다 — 모듈은 다르지만 패키지가 같은 **split package** 상태. JVM 동작에는 문제 없고, import 경로 변경을 도메인 모듈 전반에 일으키지 않으려는 의도. IDE 의 "이 클래스가 어느 모듈?" 추적이 약간 추가 비용이 들지만, port super-type 인 `ErrorCode` 와 예외 구현체가 같은 패키지에 모여 있는 도메인적 일관성이 더 크다.
 
+도메인 모듈 (`lab-{domain}/domain`) 은 `DomainException` / `NotFoundException` / `ConflictException` 류를 throw 하지 않는다 — 도메인 entity / VO 는 `require` / `check` 의 kotlin stdlib 예외 (IAE/ISE) 또는 **sealed Outcome factory 패턴** 으로 자기 검증을 표현하고, ErrorCode 운반 예외 throw 는 UseCase / 어댑터 (lab-{domain}/app) 의 책임. Outcome factory 예: `Password.parse(raw): Password.Outcome` (sealed Ok | Violation) 을 도메인이 반환하고 UseCase 가 unwrap 하면서 `PasswordPolicyException(errorCode)` 으로 변환. 이 패턴은 (1) 도메인이 throwing-mechanism 무지, (2) FE 가 구분 가능한 도메인 ErrorCode 운반, (3) 모듈 경계 보존 — 세 가지를 한 번에 만족.
+
 ### 의존 정책 — `lab-common-infra` 가 `labCommonDomain` 을 `implementation` 으로 받는 이유
 
 `EntityIdSerializer` 의 시그니처에 `EntityId` 가 등장하지만 `lab-common-infra` 는 이 의존을 `api` 가 아닌 `implementation` 으로만 노출한다. consumer 가 `EntityIdSerializer` 를 직접 import 할 일은 거의 없고 (Spring Boot 의 Jackson auto-config 가 `SimpleModule` 빈을 자동 wiring), 직접 참조하는 곳 (예: `lab-api-support` 의 `ControllerDescribeSpec`) 은 이미 별도로 `api(labCommonDomain)` 을 명시한다. `lab-common-infra` 가 `api(labCommonDomain)` 으로 올리면 transitive 노출이 늘어나면서 분리 의도가 약해진다 — `EntityId` 가 필요한 consumer 는 자기 build.gradle.kts 에서 명시 의존을 갖는 것이 정합.

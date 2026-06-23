@@ -5,6 +5,7 @@ import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder
 import com.crispinlab.common.exception.ConflictException
 import com.crispinlab.user.application.port.incoming.user.UserSigning
 import com.crispinlab.user.application.port.incoming.user.UserSigning.Result
+import com.crispinlab.user.domain.credential.Password.Outcome.Ok
 import com.crispinlab.user.domain.user.UserErrorCode
 import com.crispinlab.user.domain.user.UserId
 import com.crispinlab.user.testsupport.Fixtures.basicSessionToken
@@ -32,7 +33,7 @@ class UserSigningControllerTest :
                         match {
                             it.email.value == "user@example.com" &&
                                 it.handle.value == "test_user" &&
-                                it.password == "pass1234"
+                                it.password is Ok
                         }
                     )
                 } returns Result(userId = UserId(42L), token = token)
@@ -44,7 +45,7 @@ class UserSigningControllerTest :
                                 mapOf(
                                     "email" to "user@example.com",
                                     "handle" to "test_user",
-                                    "password" to "pass1234"
+                                    "password" to "Crispin!2026"
                                 )
                             )
                     ).then(
@@ -77,7 +78,7 @@ class UserSigningControllerTest :
                                 mapOf(
                                     "email" to "user@example.com",
                                     "handle" to "test_user",
-                                    "password" to "pass1234"
+                                    "password" to "Crispin!2026"
                                 )
                             )
                     ).then(

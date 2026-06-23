@@ -8,6 +8,7 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
+import io.mockk.verifyOrder
 import org.springframework.boot.ApplicationArguments
 import org.springframework.data.redis.core.SetOperations
 import org.springframework.data.redis.core.StringRedisTemplate
@@ -35,10 +36,10 @@ class PasswordBlocklistSeedRunnerTest :
 
                 runner.run(args)
 
-                verify(exactly = 1) {
+                verifyOrder {
                     opsForSet.add(RedisPasswordBlocklistAdapter.KEY, *anyVararg())
+                    opsForValue.set(MARKER_KEY, "true")
                 }
-                verify(exactly = 1) { opsForValue.set(MARKER_KEY, "true") }
             }
 
             it("MARKER 가 이미 있으면 SADD 가 호출되지 않는다") {

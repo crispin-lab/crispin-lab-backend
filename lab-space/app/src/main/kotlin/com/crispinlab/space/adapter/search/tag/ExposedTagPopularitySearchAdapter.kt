@@ -6,6 +6,7 @@ import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.Visibi
 import com.crispinlab.space.application.port.outgoing.tag.TagPopularitySearchPort
 import com.crispinlab.space.application.port.outgoing.tag.TagPopularitySearchPort.TagPopularitySummary
 import com.crispinlab.space.domain.page.Visibility
+import com.crispinlab.space.domain.space.SpaceVisibility
 import org.jetbrains.exposed.v1.core.IColumnType
 import org.jetbrains.exposed.v1.core.IntegerColumnType
 import org.jetbrains.exposed.v1.core.LongColumnType
@@ -30,7 +31,10 @@ class ExposedTagPopularitySearchAdapter : TagPopularitySearchPort {
                 FROM tags
                 INNER JOIN page_tags ON page_tags.tag_id = tags.id
                 INNER JOIN pages ON pages.id = page_tags.page_id
-                WHERE pages.deleted_at IS NULL AND ${visibility.sql}
+                INNER JOIN spaces ON spaces.id = pages.space_id
+                WHERE pages.deleted_at IS NULL
+                  AND spaces.deleted_at IS NULL
+                  AND ${visibility.sql}
                 GROUP BY tags.name
             ) AS grouped
             ORDER BY usage_count DESC, name ASC
@@ -79,8 +83,12 @@ class ExposedTagPopularitySearchAdapter : TagPopularitySearchPort {
         when (this) {
             is VisibilityScope.Anonymous -> {
                 VisibilityFragment(
-                    sql = "pages.visibility = ?",
-                    args = listOf(VarCharColumnType() to Visibility.PUBLIC.name)
+                    sql = "(pages.visibility = ? AND spaces.visibility = ?)",
+                    args =
+                        listOf(
+                            VarCharColumnType() to Visibility.PUBLIC.name,
+                            VarCharColumnType() to SpaceVisibility.PUBLIC.name
+                        )
                 )
             }
 
@@ -88,18 +96,28 @@ class ExposedTagPopularitySearchAdapter : TagPopularitySearchPort {
                 val clauses = mutableListOf<String>()
                 val args = mutableListOf<Pair<IColumnType<*>, Any?>>()
 
-                clauses += "pages.visibility = ?"
+                clauses += "(pages.visibility = ? AND spaces.visibility = ?)"
                 args += VarCharColumnType() to Visibility.PUBLIC.name
+                args += VarCharColumnType() to SpaceVisibility.PUBLIC.name
 
                 if (memberOfSpaceIds.isNotEmpty()) {
                     val placeholders = memberOfSpaceIds.joinToString(", ") { "?" }
-                    clauses += "(pages.visibility = ? AND pages.space_id IN ($placeholders))"
+                    clauses +=
+                        "(pages.visibility = ? AND spaces.visibility = ? " +
+                        "AND pages.space_id IN ($placeholders))"
                     args += VarCharColumnType() to Visibility.MEMBER.name
+                    args += VarCharColumnType() to SpaceVisibility.PUBLIC.name
                     memberOfSpaceIds.forEach { args += LongColumnType() to it.value }
                 }
 
-                clauses += "(pages.visibility = ? AND pages.author_id = ?)"
+                clauses +=
+                    "((pages.visibility = ? " +
+                    "OR (pages.visibility IN (?, ?) AND spaces.visibility = ?)) " +
+                    "AND pages.author_id = ?)"
                 args += VarCharColumnType() to Visibility.INTERNAL.name
+                args += VarCharColumnType() to Visibility.PUBLIC.name
+                args += VarCharColumnType() to Visibility.MEMBER.name
+                args += VarCharColumnType() to SpaceVisibility.INTERNAL.name
                 args += LongColumnType() to viewerId.value
 
                 clauses += "(pages.visibility = ? AND pages.author_id = ?)"

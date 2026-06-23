@@ -5,14 +5,20 @@ import com.crispinlab.common.persistence.PostgresTestContext
 import com.crispinlab.space.adapter.persistence.page.ExposedPageRepository
 import com.crispinlab.space.adapter.persistence.tag.PageTags
 import com.crispinlab.space.adapter.persistence.tag.Tags
+import com.crispinlab.space.adapter.search.page.ExposedPageSearchAdapter
+import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.SortOption
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.space.SpaceId
+import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.Fixtures.basicPage
+import com.crispinlab.space.testsupport.seedPublicSpaces
+import com.crispinlab.space.testsupport.seedSpaces
 import com.crispinlab.user.domain.user.UserId
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
@@ -24,6 +30,7 @@ class ExposedTagPopularitySearchAdapterTest :
         val database = PostgresTestContext.database
         val pageRepository = ExposedPageRepository()
         val adapter = ExposedTagPopularitySearchAdapter()
+        val pageAdapter = ExposedPageSearchAdapter()
 
         afterEach {
             PostgresTestContext.truncateAll()
@@ -31,6 +38,7 @@ class ExposedTagPopularitySearchAdapterTest :
 
         describe("인기 태그 검색") {
             it("count 내림차순, 동률은 name 오름차순으로 정렬한다") {
+                seedPublicSpaces(database, 10L)
                 transaction(database) {
                     pageRepository.save(publicPage(id = PageId(1L)))
                     pageRepository.save(publicPage(id = PageId(2L)))
@@ -59,6 +67,7 @@ class ExposedTagPopularitySearchAdapterTest :
             }
 
             it("같은 name 의 tag 가 여러 space 에 흩어져 있어도 cross-space 합산한다") {
+                seedPublicSpaces(database, 10L, 20L)
                 transaction(database) {
                     pageRepository.save(publicPage(id = PageId(1L), spaceId = SpaceId(10L)))
                     pageRepository.save(publicPage(id = PageId(2L), spaceId = SpaceId(20L)))
@@ -83,6 +92,7 @@ class ExposedTagPopularitySearchAdapterTest :
             }
 
             it("Anonymous 는 PUBLIC 페이지의 태그만 집계한다") {
+                seedPublicSpaces(database, 10L)
                 transaction(database) {
                     pageRepository.save(publicPage(id = PageId(1L)))
                     pageRepository.save(
@@ -122,6 +132,7 @@ class ExposedTagPopularitySearchAdapterTest :
             ) {
                 val viewerId = UserId(100L)
                 val otherId = UserId(200L)
+                seedPublicSpaces(database, 10L, 20L)
                 transaction(database) {
                     pageRepository.save(publicPage(id = PageId(1L)))
                     pageRepository.save(
@@ -202,6 +213,7 @@ class ExposedTagPopularitySearchAdapterTest :
             }
 
             it("Privileged 는 모든 visibility 의 페이지 태그를 집계한다") {
+                seedPublicSpaces(database, 10L)
                 transaction(database) {
                     pageRepository.save(publicPage(id = PageId(1L)))
                     pageRepository.save(
@@ -236,6 +248,7 @@ class ExposedTagPopularitySearchAdapterTest :
             }
 
             it("soft-deleted 페이지의 태그는 집계에서 제외된다") {
+                seedPublicSpaces(database, 10L)
                 transaction(database) {
                     pageRepository.save(publicPage(id = PageId(1L)))
                     pageRepository.save(
@@ -265,6 +278,7 @@ class ExposedTagPopularitySearchAdapterTest :
 
             it("paging — 동일 totalElements 위에서 page 별로 다른 슬라이스를 반환한다") {
                 val names = listOf("tag-a", "tag-b", "tag-c", "tag-d", "tag-e")
+                seedPublicSpaces(database, 10L)
                 transaction(database) {
                     names.forEachIndexed { idx, name ->
                         val pageId = (idx + 1).toLong()
@@ -299,6 +313,7 @@ class ExposedTagPopularitySearchAdapterTest :
             it("mixed-scope — 같은 name 의 cross-space tag 가 visibility 별로 부분 제거되어 합산된다") {
                 val viewerId = UserId(100L)
                 val otherId = UserId(200L)
+                seedPublicSpaces(database, 10L, 20L)
                 transaction(database) {
                     pageRepository.save(
                         publicPage(id = PageId(1L), spaceId = SpaceId(10L))
@@ -372,6 +387,296 @@ class ExposedTagPopularitySearchAdapterTest :
 
                 result.items shouldBe emptyList()
                 result.totalElements shouldBe 0L
+            }
+
+            it("Anonymous 는 INTERNAL space 의 PUBLIC 페이지 태그를 노출하지 않는다") {
+                seedSpaces(
+                    database,
+                    10L to SpaceVisibility.PUBLIC,
+                    20L to SpaceVisibility.INTERNAL
+                )
+                transaction(database) {
+                    pageRepository.save(publicPage(id = PageId(1L), spaceId = SpaceId(10L)))
+                    pageRepository.save(publicPage(id = PageId(2L), spaceId = SpaceId(20L)))
+                    insertTag(tagId = 1L, name = "public-tag")
+                    insertTag(tagId = 2L, spaceId = 20L, name = "leak-tag")
+                    attachPageTag(pageId = 1L, tagId = 1L)
+                    attachPageTag(pageId = 2L, tagId = 2L)
+                }
+
+                val result =
+                    transaction(database) {
+                        adapter.search(
+                            scope = VisibilityScope.Anonymous,
+                            pageRequest = PageRequest.firstPage()
+                        )
+                    }
+
+                result.items.map { it.name } shouldBe listOf("public-tag")
+                result.totalElements shouldBe 1L
+            }
+
+            it(
+                "Authenticated 비멤버는 INTERNAL space 의 " +
+                    "PUBLIC/MEMBER 페이지 태그를 노출하지 않는다"
+            ) {
+                val viewerId = UserId(100L)
+                val otherId = UserId(200L)
+                seedSpaces(
+                    database,
+                    10L to SpaceVisibility.PUBLIC,
+                    20L to SpaceVisibility.INTERNAL
+                )
+                transaction(database) {
+                    pageRepository.save(
+                        publicPage(
+                            id = PageId(1L),
+                            spaceId = SpaceId(10L),
+                            authorId = otherId
+                        )
+                    )
+                    pageRepository.save(
+                        publicPage(
+                            id = PageId(2L),
+                            spaceId = SpaceId(20L),
+                            authorId = otherId
+                        )
+                    )
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(3L),
+                            spaceId = SpaceId(20L),
+                            authorId = otherId,
+                            visibility = Visibility.MEMBER
+                        )
+                    )
+                    insertTag(tagId = 1L, name = "public-tag")
+                    insertTag(tagId = 2L, spaceId = 20L, name = "leak-public")
+                    insertTag(tagId = 3L, spaceId = 20L, name = "leak-member")
+                    attachPageTag(pageId = 1L, tagId = 1L)
+                    attachPageTag(pageId = 2L, tagId = 2L)
+                    attachPageTag(pageId = 3L, tagId = 3L)
+                }
+
+                val result =
+                    transaction(database) {
+                        adapter.search(
+                            scope =
+                                VisibilityScope.Authenticated(
+                                    viewerId = viewerId,
+                                    memberOfSpaceIds = emptySet()
+                                ),
+                            pageRequest = PageRequest.firstPage()
+                        )
+                    }
+
+                result.items.map { it.name } shouldBe listOf("public-tag")
+                result.totalElements shouldBe 1L
+            }
+
+            it(
+                "Authenticated author 는 자기 INTERNAL space 의 " +
+                    "PUBLIC/MEMBER/INTERNAL 페이지 태그를 본다"
+            ) {
+                val viewerId = UserId(100L)
+                val otherId = UserId(200L)
+                seedSpaces(
+                    database,
+                    10L to SpaceVisibility.PUBLIC,
+                    20L to SpaceVisibility.INTERNAL
+                )
+                transaction(database) {
+                    pageRepository.save(
+                        publicPage(
+                            id = PageId(1L),
+                            spaceId = SpaceId(10L),
+                            authorId = otherId
+                        )
+                    )
+                    pageRepository.save(
+                        publicPage(
+                            id = PageId(2L),
+                            spaceId = SpaceId(20L),
+                            authorId = viewerId
+                        )
+                    )
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(3L),
+                            spaceId = SpaceId(20L),
+                            authorId = viewerId,
+                            visibility = Visibility.MEMBER
+                        )
+                    )
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(4L),
+                            spaceId = SpaceId(20L),
+                            authorId = viewerId,
+                            visibility = Visibility.INTERNAL
+                        )
+                    )
+                    insertTag(tagId = 1L, name = "public-tag")
+                    insertTag(tagId = 2L, spaceId = 20L, name = "my-internal-public")
+                    insertTag(tagId = 3L, spaceId = 20L, name = "my-internal-member")
+                    insertTag(tagId = 4L, spaceId = 20L, name = "my-internal")
+                    attachPageTag(pageId = 1L, tagId = 1L)
+                    attachPageTag(pageId = 2L, tagId = 2L)
+                    attachPageTag(pageId = 3L, tagId = 3L)
+                    attachPageTag(pageId = 4L, tagId = 4L)
+                }
+
+                val result =
+                    transaction(database) {
+                        adapter.search(
+                            scope =
+                                VisibilityScope.Authenticated(
+                                    viewerId = viewerId,
+                                    memberOfSpaceIds = emptySet()
+                                ),
+                            pageRequest = PageRequest.firstPage()
+                        )
+                    }
+
+                result.items.map { it.name } shouldBe
+                    listOf(
+                        "my-internal",
+                        "my-internal-member",
+                        "my-internal-public",
+                        "public-tag"
+                    )
+                result.totalElements shouldBe 4L
+            }
+
+            it("두 검색 어댑터가 같은 visibility 룰을 적용한다 (cross-check)") {
+                val viewerId = UserId(100L)
+                val otherId = UserId(200L)
+                seedSpaces(
+                    database,
+                    10L to SpaceVisibility.PUBLIC,
+                    20L to SpaceVisibility.INTERNAL
+                )
+                transaction(database) {
+                    pageRepository.save(
+                        publicPage(
+                            id = PageId(1L),
+                            spaceId = SpaceId(10L),
+                            authorId = otherId
+                        )
+                    )
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(2L),
+                            spaceId = SpaceId(10L),
+                            authorId = otherId,
+                            visibility = Visibility.MEMBER
+                        )
+                    )
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(3L),
+                            spaceId = SpaceId(10L),
+                            authorId = viewerId,
+                            visibility = Visibility.INTERNAL
+                        )
+                    )
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(4L),
+                            spaceId = SpaceId(10L),
+                            authorId = otherId,
+                            visibility = Visibility.INTERNAL
+                        )
+                    )
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(5L),
+                            spaceId = SpaceId(10L),
+                            authorId = viewerId,
+                            visibility = Visibility.DRAFT
+                        )
+                    )
+                    pageRepository.save(
+                        publicPage(
+                            id = PageId(6L),
+                            spaceId = SpaceId(20L),
+                            authorId = viewerId
+                        )
+                    )
+                    pageRepository.save(
+                        publicPage(
+                            id = PageId(7L),
+                            spaceId = SpaceId(20L),
+                            authorId = otherId
+                        )
+                    )
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(8L),
+                            spaceId = SpaceId(20L),
+                            authorId = viewerId,
+                            visibility = Visibility.MEMBER
+                        )
+                    )
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(9L),
+                            spaceId = SpaceId(20L),
+                            authorId = viewerId,
+                            visibility = Visibility.DRAFT
+                        )
+                    )
+                    (1L..9L).forEach { id ->
+                        insertTag(tagId = id, name = "tag-p$id")
+                        attachPageTag(pageId = id, tagId = id)
+                    }
+                }
+
+                val scopes =
+                    listOf(
+                        VisibilityScope.Anonymous,
+                        VisibilityScope.Authenticated(
+                            viewerId = viewerId,
+                            memberOfSpaceIds = emptySet()
+                        ),
+                        VisibilityScope.Authenticated(
+                            viewerId = viewerId,
+                            memberOfSpaceIds = setOf(SpaceId(10L))
+                        ),
+                        VisibilityScope.Privileged
+                    )
+
+                scopes.forEach { scope ->
+                    val visiblePageIds =
+                        transaction(database) {
+                            pageAdapter
+                                .search(
+                                    keyword = null,
+                                    spaceId = null,
+                                    tagIds = emptyList(),
+                                    tagIdsAnyOf = emptyList(),
+                                    sort = SortOption.CREATED_AT,
+                                    scope = scope,
+                                    pageRequest = PageRequest(page = 0, size = 100)
+                                ).items
+                                .map { it.id.value }
+                                .toSet()
+                        }
+                    val taggedPageIds =
+                        transaction(database) {
+                            adapter
+                                .search(
+                                    scope = scope,
+                                    pageRequest = PageRequest(page = 0, size = 100)
+                                ).items
+                                .map { it.name.removePrefix("tag-p").toLong() }
+                                .toSet()
+                        }
+
+                    withClue("scope=$scope") {
+                        taggedPageIds shouldBe visiblePageIds
+                    }
+                }
             }
         }
     }) {

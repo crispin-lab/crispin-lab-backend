@@ -23,7 +23,6 @@ class PasswordBlocklistSeedRunner(
                 .add(RedisPasswordBlocklistAdapter.KEY, *SEED.map { digestOf(it) }.toTypedArray())
         }.onFailure { cause ->
             log.warn("blocklist seed 실패 type={}", cause.javaClass.simpleName)
-            // 마커 cleanup 은 best-effort — 실패해도 다음 부팅에서 SETNX 가 자연 복구한다.
             runCatching { redisTemplate.delete(MARKER_KEY) }
         }
     }

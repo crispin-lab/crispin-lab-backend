@@ -24,10 +24,6 @@ class RedisPasswordBlocklistAdapter(
     companion object {
         const val KEY: String = "password:blocklist"
 
-        /**
-         * 정책: case-insensitive 매칭. raw 를 lowercase 한 뒤 SHA-256.
-         * SEED / 운영자 ingest 가 같은 규약을 따라야 hit 가 일관.
-         */
         internal fun digestOf(raw: String): String =
             MessageDigest
                 .getInstance("SHA-256")

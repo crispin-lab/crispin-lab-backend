@@ -40,9 +40,10 @@ class UserSigningUseCase(
                 is Password.Outcome.Ok -> outcome.password
                 is Password.Outcome.Violation -> throw PasswordPolicyException(outcome.errorCode)
             }
+        request.preflightWith(password)
         return transactionProvider.transactional {
             request
-                .also { it.validateWith(password) }
+                .also { it.validateDuplicates() }
                 .toEntity()
                 .save()
                 .also { it.saveCredential(password) }
@@ -50,18 +51,21 @@ class UserSigningUseCase(
         }
     }
 
-    private fun Request.validateWith(password: Password) {
-        if (userRepository.existsByEmail(email)) {
-            throw ConflictException(UserErrorCode.EMAIL_DUPLICATED)
-        }
-        if (userRepository.existsByHandle(handle)) {
-            throw ConflictException(UserErrorCode.HANDLE_DUPLICATED)
-        }
+    private fun Request.preflightWith(password: Password) {
         if (password.containsIdentityOf(email, handle)) {
             throw PasswordPolicyException(PasswordErrorCode.PASSWORD_SIMILAR_TO_IDENTITY)
         }
         if (passwordBlocklist.isBlocked(password)) {
             throw PasswordPolicyException(PasswordErrorCode.PASSWORD_BLOCKED)
+        }
+    }
+
+    private fun Request.validateDuplicates() {
+        if (userRepository.existsByEmail(email)) {
+            throw ConflictException(UserErrorCode.EMAIL_DUPLICATED)
+        }
+        if (userRepository.existsByHandle(handle)) {
+            throw ConflictException(UserErrorCode.HANDLE_DUPLICATED)
         }
     }
 

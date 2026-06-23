@@ -16,14 +16,13 @@ class PasswordBlocklistSeedRunner(
 
     override fun run(args: ApplicationArguments) {
         runCatching {
-            val firstTime = redisTemplate.opsForValue().setIfAbsent(MARKER_KEY, "true")
-            if (firstTime != true) return
+            if (redisTemplate.hasKey(MARKER_KEY) == true) return
             redisTemplate
                 .opsForSet()
                 .add(RedisPasswordBlocklistAdapter.KEY, *SEED.map { digestOf(it) }.toTypedArray())
+            redisTemplate.opsForValue().set(MARKER_KEY, "true")
         }.onFailure { cause ->
             log.warn("blocklist seed 실패 type={}", cause.javaClass.simpleName)
-            runCatching { redisTemplate.delete(MARKER_KEY) }
         }
     }
 

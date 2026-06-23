@@ -41,7 +41,11 @@ data class Password private constructor(
 
         fun parse(raw: String): Outcome =
             when {
-                raw.isEmpty() || raw.first().isWhitespace() || raw.last().isWhitespace() -> {
+                raw.isEmpty() -> {
+                    Outcome.TooShort
+                }
+
+                raw.first().isWhitespace() || raw.last().isWhitespace() -> {
                     Outcome.ContainsWhitespace
                 }
 
@@ -66,7 +70,7 @@ data class Password private constructor(
             val seen = HashSet<Category>(Category.entries.size)
             for (c in raw) {
                 seen.add(c.category())
-                if (seen.size == Category.entries.size) return seen.size
+                if (seen.size >= REQUIRED_VARIETY) return seen.size
             }
             return seen.size
         }

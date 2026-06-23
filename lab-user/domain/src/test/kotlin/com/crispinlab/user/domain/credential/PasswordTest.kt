@@ -81,13 +81,13 @@ class PasswordTest :
                 Password.parse("abcd 1234").shouldBeInstanceOf<Outcome.Ok>()
             }
 
-            it("빈 문자열은 ContainsWhitespace 가 아니라 길이 분기로 가지 않게") {
-                Password.parse("") shouldBe Outcome.ContainsWhitespace
+            it("빈 문자열은 TooShort 로 떨어진다 (양끝 공백 메시지 회피)") {
+                Password.parse("") shouldBe Outcome.TooShort
             }
         }
 
         describe("위반 우선순위") {
-            it("양끝 공백이 있으면 길이/문자종보다 먼저 노출된다") {
+            it("양끝 공백이 길이/문자종보다 먼저 노출된다") {
                 Password.parse(" abc") shouldBe Outcome.ContainsWhitespace
             }
 

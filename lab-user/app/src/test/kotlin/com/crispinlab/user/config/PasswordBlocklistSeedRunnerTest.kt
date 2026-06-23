@@ -2,8 +2,10 @@ package com.crispinlab.user.config
 
 import com.crispinlab.user.adapter.credential.RedisPasswordBlocklistAdapter
 import io.kotest.core.spec.style.DescribeSpec
+import io.mockk.Runs
 import io.mockk.clearMocks
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
 import org.springframework.boot.ApplicationArguments
@@ -26,47 +28,48 @@ class PasswordBlocklistSeedRunnerTest :
         }
 
         describe("부팅 시 시드 주입") {
-            it("첫 부팅 (SETNX 성공) 이면 SADD 가 호출된다") {
-                every { opsForValue.setIfAbsent(MARKER_KEY, "true") } returns true
+            it("MARKER 가 없으면 SADD 후 MARKER 를 설정한다") {
+                every { redisTemplate.hasKey(MARKER_KEY) } returns false
                 every { opsForSet.add(RedisPasswordBlocklistAdapter.KEY, *anyVararg()) } returns 20L
+                every { opsForValue.set(MARKER_KEY, "true") } just Runs
 
                 runner.run(args)
 
                 verify(exactly = 1) {
                     opsForSet.add(RedisPasswordBlocklistAdapter.KEY, *anyVararg())
                 }
+                verify(exactly = 1) { opsForValue.set(MARKER_KEY, "true") }
             }
 
-            it("두번째 부팅 (SETNX 실패) 이면 SADD 가 호출되지 않는다") {
-                every { opsForValue.setIfAbsent(MARKER_KEY, "true") } returns false
+            it("MARKER 가 이미 있으면 SADD 가 호출되지 않는다") {
+                every { redisTemplate.hasKey(MARKER_KEY) } returns true
 
                 runner.run(args)
 
                 verify(exactly = 0) {
                     opsForSet.add(any<String>(), *anyVararg())
                 }
+                verify(exactly = 0) { opsForValue.set(any(), any()) }
             }
 
-            it("SADD 가 예외를 던지면 마커 cleanup 을 시도한다") {
-                every { opsForValue.setIfAbsent(MARKER_KEY, "true") } returns true
+            it("SADD 가 예외를 던지면 MARKER 가 설정되지 않는다 (다음 부팅 재시도 보장)") {
+                every { redisTemplate.hasKey(MARKER_KEY) } returns false
                 every { opsForSet.add(RedisPasswordBlocklistAdapter.KEY, *anyVararg()) } throws
                     RuntimeException("connection refused")
-                every { redisTemplate.delete(MARKER_KEY) } returns true
 
                 runner.run(args)
 
-                verify(exactly = 1) { redisTemplate.delete(MARKER_KEY) }
+                verify(exactly = 0) { opsForValue.set(any(), any()) }
             }
 
-            it("SETNX 자체가 예외를 던져도 cleanup 시도 후 silent 진행") {
-                every { opsForValue.setIfAbsent(MARKER_KEY, "true") } throws
+            it("hasKey 자체가 예외를 던져도 silent 진행") {
+                every { redisTemplate.hasKey(MARKER_KEY) } throws
                     RuntimeException("connection refused")
-                every { redisTemplate.delete(MARKER_KEY) } returns true
 
                 runner.run(args)
 
-                verify(exactly = 1) { redisTemplate.delete(MARKER_KEY) }
                 verify(exactly = 0) { opsForSet.add(any<String>(), *anyVararg()) }
+                verify(exactly = 0) { opsForValue.set(any(), any()) }
             }
         }
     }) {

@@ -16,7 +16,9 @@ import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.space.SpaceVisibility
+import com.crispinlab.space.domain.spacemember.SpaceMemberRole
 import com.crispinlab.space.testsupport.Fixtures.basicPage
+import com.crispinlab.space.testsupport.Fixtures.basicSpaceMember
 import com.crispinlab.space.testsupport.TipTapJsonFixtures.doc
 import com.crispinlab.space.testsupport.TipTapJsonFixtures.pageLink
 import com.crispinlab.space.testsupport.TipTapJsonFixtures.paragraph
@@ -63,6 +65,7 @@ class PageGettingUseCaseTest :
                 userHandleQuery
             )
             every { spaceMemberRepository.findSpaceIdsByUserId(any()) } returns emptySet()
+            every { spaceMemberRepository.findBySpaceIdAndUserId(any(), any()) } returns null
             every { spaceRepository.findVisibility(any()) } returns SpaceVisibility.PUBLIC
             every { pageAncestorPort.findAncestorsOf(any()) } returns emptyList()
             every { pageRepository.findVisibilitiesByIds(any()) } returns emptyMap()
@@ -505,6 +508,134 @@ class PageGettingUseCaseTest :
                     )
 
                 result.ancestors shouldBe emptyList()
+            }
+        }
+
+        describe("응답의 canEdit — viewer 의 수정 권한 노출") {
+            it("anonymous 는 PUBLIC 페이지라도 수정할 수 없다") {
+                val page = basicPage(visibility = Visibility.PUBLIC)
+                every { pageRepository.findBy(page.id) } returns page
+
+                val result = useCase.perform(basicRequest(viewer = Viewer.Anonymous))
+
+                result.canEdit shouldBe false
+                verify(exactly = 0) {
+                    spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
+                }
+            }
+
+            it("비멤버 authenticated 는 author 본인이어도 수정할 수 없다") {
+                val page =
+                    basicPage(
+                        spaceId = SpaceId(10L),
+                        authorId = UserId(100L),
+                        visibility = Visibility.DRAFT
+                    )
+                every { pageRepository.findBy(page.id) } returns page
+                every {
+                    spaceMemberRepository.findBySpaceIdAndUserId(SpaceId(10L), UserId(100L))
+                } returns null
+
+                val result = useCase.perform(basicRequest())
+
+                result.canEdit shouldBe false
+            }
+
+            it("VIEWER role 은 author 본인이어도 수정할 수 없다") {
+                val page =
+                    basicPage(
+                        spaceId = SpaceId(10L),
+                        authorId = UserId(100L),
+                        visibility = Visibility.DRAFT
+                    )
+                every { pageRepository.findBy(page.id) } returns page
+                every {
+                    spaceMemberRepository.findBySpaceIdAndUserId(SpaceId(10L), UserId(100L))
+                } returns basicSpaceMember(role = SpaceMemberRole.VIEWER)
+
+                val result = useCase.perform(basicRequest())
+
+                result.canEdit shouldBe false
+            }
+
+            it("MEMBER role + author 본인 은 수정할 수 있다") {
+                val page =
+                    basicPage(
+                        spaceId = SpaceId(10L),
+                        authorId = UserId(100L),
+                        visibility = Visibility.DRAFT
+                    )
+                every { pageRepository.findBy(page.id) } returns page
+                every {
+                    spaceMemberRepository.findBySpaceIdAndUserId(SpaceId(10L), UserId(100L))
+                } returns basicSpaceMember(role = SpaceMemberRole.MEMBER)
+
+                val result = useCase.perform(basicRequest())
+
+                result.canEdit shouldBe true
+            }
+
+            it("OWNER role + author 본인 은 수정할 수 있다") {
+                val page =
+                    basicPage(
+                        spaceId = SpaceId(10L),
+                        authorId = UserId(100L),
+                        visibility = Visibility.DRAFT
+                    )
+                every { pageRepository.findBy(page.id) } returns page
+                every {
+                    spaceMemberRepository.findBySpaceIdAndUserId(SpaceId(10L), UserId(100L))
+                } returns basicSpaceMember(role = SpaceMemberRole.OWNER)
+
+                val result = useCase.perform(basicRequest())
+
+                result.canEdit shouldBe true
+            }
+
+            it("MEMBER 라도 author 가 아니면 수정할 수 없고 lookup 도 하지 않는다") {
+                val page =
+                    basicPage(
+                        spaceId = SpaceId(10L),
+                        authorId = UserId(200L),
+                        visibility = Visibility.MEMBER
+                    )
+                every { pageRepository.findBy(page.id) } returns page
+                every {
+                    spaceMemberRepository.findSpaceIdsByUserId(UserId(100L))
+                } returns setOf(SpaceId(10L))
+
+                val result = useCase.perform(basicRequest())
+
+                result.canEdit shouldBe false
+                verify(exactly = 0) {
+                    spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
+                }
+            }
+
+            it("ADMIN 글로벌 권한은 멤버가 아니어도 수정할 수 있다") {
+                val page =
+                    basicPage(
+                        spaceId = SpaceId(10L),
+                        authorId = UserId(200L),
+                        visibility = Visibility.DRAFT
+                    )
+                every { pageRepository.findBy(page.id) } returns page
+
+                val result =
+                    useCase.perform(
+                        basicRequest(
+                            viewer =
+                                Viewer.Member(
+                                    userId = UserId(100L),
+                                    isAdmin = true
+                                )
+                        )
+                    )
+
+                result.canEdit shouldBe true
+                verify(exactly = 0) {
+                    spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
+                }
             }
         }
     }) {

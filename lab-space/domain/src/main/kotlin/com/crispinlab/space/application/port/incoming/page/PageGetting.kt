@@ -30,6 +30,7 @@ interface PageGetting : UseCase<Request, Result> {
         val visibility: Visibility,
         val currentVersion: Int,
         val displayOrder: Int,
+        val canEdit: Boolean,
         val createdAt: Instant,
         val updatedAt: Instant,
         val ancestors: List<AncestorSummary>

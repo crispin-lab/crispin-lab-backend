@@ -6,6 +6,7 @@ import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.spacemember.SpaceMember
 import com.crispinlab.space.domain.spacemember.SpaceMemberErrorCode
+import com.crispinlab.user.domain.user.UserId
 
 internal fun Viewer.canWrite(membership: SpaceMember?): Boolean =
     when {
@@ -48,3 +49,22 @@ internal fun SpaceMemberRepository.requireWritePermission(
         throw ForbiddenException(SpaceMemberErrorCode.SPACE_MEMBER_WRITE_DENIED)
     }
 }
+
+internal fun SpaceMemberRepository.canEdit(
+    viewer: Viewer,
+    authorId: UserId,
+    spaceId: SpaceId
+): Boolean =
+    when {
+        viewer.isAdmin -> {
+            true
+        }
+
+        viewer is Viewer.Member && viewer.userId == authorId -> {
+            findBySpaceIdAndUserId(spaceId, viewer.userId)?.role?.canWrite() == true
+        }
+
+        else -> {
+            false
+        }
+    }

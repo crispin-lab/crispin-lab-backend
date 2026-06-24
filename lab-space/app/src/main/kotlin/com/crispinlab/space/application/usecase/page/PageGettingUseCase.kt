@@ -10,6 +10,7 @@ import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
+import com.crispinlab.space.application.usecase.access.canEdit
 import com.crispinlab.space.application.usecase.access.memberSpaceIdsOf
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageContent
@@ -35,7 +36,17 @@ class PageGettingUseCase(
                 .let { scope ->
                     request
                         .toEntity(scope)
-                        .toResult(scope)
+                        .let { page ->
+                            page.toResult(
+                                scope = scope,
+                                canEdit =
+                                    spaceMemberRepository.canEdit(
+                                        viewer = request.viewer,
+                                        authorId = page.authorId,
+                                        spaceId = page.spaceId
+                                    )
+                            )
+                        }
                 }
         }
 
@@ -73,7 +84,10 @@ class PageGettingUseCase(
             visibilityLookup = pageRepository::findVisibilitiesByIds
         )
 
-    private fun Page.toResult(scope: VisibilityScope): Result =
+    private fun Page.toResult(
+        scope: VisibilityScope,
+        canEdit: Boolean
+    ): Result =
         Result(
             pageId = id,
             spaceId = spaceId,
@@ -85,6 +99,7 @@ class PageGettingUseCase(
             visibility = visibility,
             currentVersion = currentVersion,
             displayOrder = displayOrder,
+            canEdit = canEdit,
             createdAt = createdAt,
             updatedAt = updatedAt,
             ancestors = ancestorsVisibleTo(scope)

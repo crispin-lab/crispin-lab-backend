@@ -23,6 +23,7 @@ interface CommentEditing : UseCase<Request, Result> {
 
     data class Result(
         val commentId: CommentId,
+        val authorHandle: String,
         val body: String,
         val updatedAt: Instant
     )

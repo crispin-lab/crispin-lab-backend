@@ -8,11 +8,13 @@ import com.crispinlab.space.application.port.incoming.comment.CommentEditing.Res
 import com.crispinlab.space.application.port.outgoing.comment.CommentRepository
 import com.crispinlab.space.domain.comment.Comment
 import com.crispinlab.space.domain.comment.CommentErrorCode
+import com.crispinlab.user.application.port.outgoing.user.UserHandleQuery
 import org.springframework.stereotype.Service
 
 @Service
 class CommentEditingUseCase(
     private val commentRepository: CommentRepository,
+    private val userHandleQuery: UserHandleQuery,
     private val transactionProvider: TransactionProvider
 ) : CommentEditing {
     override fun perform(request: Request): Result =
@@ -40,6 +42,7 @@ class CommentEditingUseCase(
     private fun Comment.toResult(): Result =
         Result(
             commentId = id,
+            authorHandle = userHandleQuery.handlesOf(setOf(authorId))[authorId]?.value ?: "",
             body = body,
             updatedAt = updatedAt
         )

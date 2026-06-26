@@ -14,6 +14,8 @@ import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.testsupport.Fixtures.basicComment
 import com.crispinlab.space.testsupport.Fixtures.basicPage
+import com.crispinlab.user.application.port.outgoing.user.UserHandleQuery
+import com.crispinlab.user.domain.user.Handle
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -29,19 +31,29 @@ class CommentGettingUseCaseTest :
         val pageRepository = mockk<PageRepository>()
         val spaceRepository = mockk<SpaceRepository>()
         val spaceMemberRepository = mockk<SpaceMemberRepository>()
+        val userHandleQuery = mockk<UserHandleQuery>()
         val useCase =
             CommentGettingUseCase(
                 commentRepository = commentRepository,
                 pageRepository = pageRepository,
                 spaceRepository = spaceRepository,
                 spaceMemberRepository = spaceMemberRepository,
+                userHandleQuery = userHandleQuery,
                 transactionProvider = DummyTransactionProvider()
             )
 
         beforeEach {
-            clearMocks(commentRepository, pageRepository, spaceRepository, spaceMemberRepository)
+            clearMocks(
+                commentRepository,
+                pageRepository,
+                spaceRepository,
+                spaceMemberRepository,
+                userHandleQuery
+            )
             every { spaceRepository.findVisibility(any()) } returns SpaceVisibility.PUBLIC
             every { spaceMemberRepository.findSpaceIdsByUserId(any()) } returns emptySet()
+            every { userHandleQuery.handlesOf(any()) } returns
+                mapOf(UserId(100L) to Handle("test_user"))
         }
 
         describe("댓글 단건 조회") {
@@ -66,6 +78,21 @@ class CommentGettingUseCaseTest :
 
                 result.commentId shouldBe CommentId(7L)
                 result.body shouldBe "안녕하세요"
+                result.authorId shouldBe UserId(100L)
+                result.authorHandle shouldBe "test_user"
+                verify(exactly = 1) { userHandleQuery.handlesOf(setOf(UserId(100L))) }
+            }
+
+            it("author 가 삭제된 사용자라 handle 조회가 비면 authorHandle 은 빈 문자열로 응답한다") {
+                val page = basicPage(id = PageId(10L), visibility = Visibility.PUBLIC)
+                val comment = basicComment(pageId = page.id)
+                every { pageRepository.findBy(page.id) } returns page
+                every { commentRepository.findBy(comment.id) } returns comment
+                every { userHandleQuery.handlesOf(any()) } returns emptyMap()
+
+                val result = useCase.perform(basicRequest(pageId = "10"))
+
+                result.authorHandle shouldBe ""
             }
 
             it("페이지가 없으면 NotFoundException") {

@@ -32,7 +32,11 @@ class CommentRegisteringControllerTest :
                                 it.viewer.userId.value == 100L
                         }
                     )
-                } returns Result(commentId = CommentId(42L))
+                } returns
+                    Result(
+                        commentId = CommentId(42L),
+                        authorHandle = "test_user"
+                    )
 
                 controller
                     .`when`(
@@ -41,7 +45,8 @@ class CommentRegisteringControllerTest :
                             .body(mapOf("body" to "첫 댓글"))
                     ).then(
                         status().isCreated,
-                        jsonPath("$.commentId").value("42")
+                        jsonPath("$.commentId").value("42"),
+                        jsonPath("$.authorHandle").value("test_user")
                     ).document(
                         authHeader(required = true),
                         requestFields {
@@ -49,6 +54,9 @@ class CommentRegisteringControllerTest :
                         },
                         responseFields {
                             "commentId".string("생성된 댓글 식별자")
+                            "authorHandle".string(
+                                "작성자 사용자 이름 (삭제된 사용자의 경우 빈 문자열)"
+                            )
                         },
                         requestSchema = "CommentRegisterRequest",
                         responseSchema = "CommentRegisterResponse"

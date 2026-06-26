@@ -18,6 +18,7 @@ interface CommentRegistering : UseCase<Request, Result> {
     }
 
     data class Result(
-        val commentId: CommentId
+        val commentId: CommentId,
+        val authorHandle: String
     )
 }

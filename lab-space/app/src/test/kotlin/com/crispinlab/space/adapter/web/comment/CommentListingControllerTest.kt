@@ -35,6 +35,7 @@ class CommentListingControllerTest :
                                     commentId = CommentId(1L),
                                     pageId = PageId(10L),
                                     authorId = UserId(100L),
+                                    authorHandle = "alice",
                                     body = "첫 댓글",
                                     createdAt = DUMMY_INSTANT,
                                     updatedAt = DUMMY_INSTANT
@@ -43,6 +44,7 @@ class CommentListingControllerTest :
                                     commentId = CommentId(2L),
                                     pageId = PageId(10L),
                                     authorId = UserId(101L),
+                                    authorHandle = "bob",
                                     body = "두 번째",
                                     createdAt = DUMMY_INSTANT,
                                     updatedAt = DUMMY_INSTANT
@@ -64,6 +66,8 @@ class CommentListingControllerTest :
                         jsonPath("$.items.length()").value(2),
                         jsonPath("$.items[0].commentId").value("1"),
                         jsonPath("$.items[0].body").value("첫 댓글"),
+                        jsonPath("$.items[0].authorHandle").value("alice"),
+                        jsonPath("$.items[1].authorHandle").value("bob"),
                         jsonPath("$.totalElements").value(2),
                         jsonPath("$.hasNext").value(false)
                     ).document(
@@ -74,6 +78,9 @@ class CommentListingControllerTest :
                                 "commentId".string("댓글 식별자")
                                 "pageId".string("소속 페이지 식별자")
                                 "authorId".string("작성자 식별자")
+                                "authorHandle".string(
+                                    "작성자 사용자 이름 (삭제된 사용자의 경우 빈 문자열)"
+                                )
                                 "body".string("본문")
                                 "createdAt".datetime("생성 시각")
                                 "updatedAt".datetime("최근 갱신 시각")

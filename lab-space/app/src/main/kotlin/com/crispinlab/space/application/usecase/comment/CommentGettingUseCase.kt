@@ -12,6 +12,7 @@ import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRep
 import com.crispinlab.space.application.usecase.access.requireReadablePage
 import com.crispinlab.space.domain.comment.Comment
 import com.crispinlab.space.domain.comment.CommentErrorCode
+import com.crispinlab.user.application.port.outgoing.user.UserHandleQuery
 import org.springframework.stereotype.Service
 
 @Service
@@ -20,6 +21,7 @@ class CommentGettingUseCase(
     private val pageRepository: PageRepository,
     private val spaceRepository: SpaceRepository,
     private val spaceMemberRepository: SpaceMemberRepository,
+    private val userHandleQuery: UserHandleQuery,
     private val transactionProvider: TransactionProvider
 ) : CommentGetting {
     override fun perform(request: Request): Result =
@@ -46,6 +48,7 @@ class CommentGettingUseCase(
             commentId = id,
             pageId = pageId,
             authorId = authorId,
+            authorHandle = userHandleQuery.handlesOf(setOf(authorId))[authorId]?.value ?: "",
             body = body,
             createdAt = createdAt,
             updatedAt = updatedAt

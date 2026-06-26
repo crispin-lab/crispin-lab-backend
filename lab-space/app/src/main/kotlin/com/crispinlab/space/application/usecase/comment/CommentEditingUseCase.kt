@@ -6,6 +6,7 @@ import com.crispinlab.space.application.port.incoming.comment.CommentEditing
 import com.crispinlab.space.application.port.incoming.comment.CommentEditing.Request
 import com.crispinlab.space.application.port.incoming.comment.CommentEditing.Result
 import com.crispinlab.space.application.port.outgoing.comment.CommentRepository
+import com.crispinlab.space.application.usecase.access.handleOrEmpty
 import com.crispinlab.space.domain.comment.Comment
 import com.crispinlab.space.domain.comment.CommentErrorCode
 import com.crispinlab.user.application.port.outgoing.user.UserHandleQuery
@@ -42,7 +43,7 @@ class CommentEditingUseCase(
     private fun Comment.toResult(): Result =
         Result(
             commentId = id,
-            authorHandle = userHandleQuery.handlesOf(setOf(authorId))[authorId]?.value ?: "",
+            authorHandle = userHandleQuery.handleOrEmpty(authorId),
             body = body,
             updatedAt = updatedAt
         )

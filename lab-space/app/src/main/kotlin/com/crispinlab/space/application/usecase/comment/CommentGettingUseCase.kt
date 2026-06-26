@@ -10,11 +10,10 @@ import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.application.usecase.access.canEdit
+import com.crispinlab.space.application.usecase.access.handleOrEmpty
 import com.crispinlab.space.application.usecase.access.requireReadablePage
-import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.comment.Comment
 import com.crispinlab.space.domain.comment.CommentErrorCode
-import com.crispinlab.space.domain.page.Page
 import com.crispinlab.user.application.port.outgoing.user.UserHandleQuery
 import org.springframework.stereotype.Service
 
@@ -29,17 +28,27 @@ class CommentGettingUseCase(
 ) : CommentGetting {
     override fun perform(request: Request): Result =
         transactionProvider.transactional(readOnly = true) {
+            val page =
+                requireReadablePage(
+                    pageRepository,
+                    spaceRepository,
+                    spaceMemberRepository,
+                    request.viewer,
+                    request.pageId
+                )
             request
-                .requirePage()
-                .let { page ->
-                    request
-                        .toEntity()
-                        .toResult(viewer = request.viewer, page = page)
+                .toEntity()
+                .let { comment ->
+                    comment.toResult(
+                        canEdit =
+                            spaceMemberRepository.canEdit(
+                                viewer = request.viewer,
+                                authorId = comment.authorId,
+                                spaceId = page.spaceId
+                            )
+                    )
                 }
         }
-
-    private fun Request.requirePage(): Page =
-        requireReadablePage(pageRepository, spaceRepository, spaceMemberRepository, viewer, pageId)
 
     private fun Request.toEntity(): Comment =
         commentRepository
@@ -47,22 +56,14 @@ class CommentGettingUseCase(
             ?.takeIf { it.pageId == pageId }
             ?: throw NotFoundException(CommentErrorCode.COMMENT_NOT_FOUND)
 
-    private fun Comment.toResult(
-        viewer: Viewer.Member,
-        page: Page
-    ): Result =
+    private fun Comment.toResult(canEdit: Boolean): Result =
         Result(
             commentId = id,
             pageId = pageId,
             authorId = authorId,
-            authorHandle = userHandleQuery.handlesOf(setOf(authorId))[authorId]?.value ?: "",
+            authorHandle = userHandleQuery.handleOrEmpty(authorId),
             body = body,
-            canEdit =
-                spaceMemberRepository.canEdit(
-                    viewer = viewer,
-                    authorId = authorId,
-                    spaceId = page.spaceId
-                ),
+            canEdit = canEdit,
             createdAt = createdAt,
             updatedAt = updatedAt
         )

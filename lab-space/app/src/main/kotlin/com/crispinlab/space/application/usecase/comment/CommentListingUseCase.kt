@@ -10,6 +10,7 @@ import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.application.usecase.access.canEdit
+import com.crispinlab.space.application.usecase.access.handlesOrEmpty
 import com.crispinlab.space.application.usecase.access.requireReadablePage
 import com.crispinlab.space.domain.comment.Comment
 import com.crispinlab.space.domain.page.Page
@@ -41,16 +42,14 @@ class CommentListingUseCase(
         commentRepository
             .findByPageId(pageId, pageRequest)
             .let { comments ->
-                val handles = userHandleQuery.handlesOf(comments.items.map { it.authorId }.toSet())
+                val authorIds = comments.items.map { it.authorId }.toSet()
+                val handles = userHandleQuery.handlesOrEmpty(authorIds)
+                val canEditByAuthor =
+                    spaceMemberRepository.canEdit(viewer, authorIds, page.spaceId)
                 comments.map { comment ->
                     comment.toSummary(
-                        authorHandle = handles[comment.authorId]?.value ?: "",
-                        canEdit =
-                            spaceMemberRepository.canEdit(
-                                viewer = viewer,
-                                authorId = comment.authorId,
-                                spaceId = page.spaceId
-                            )
+                        authorHandle = handles[comment.authorId] ?: "",
+                        canEdit = canEditByAuthor[comment.authorId] == true
                     )
                 }
             }

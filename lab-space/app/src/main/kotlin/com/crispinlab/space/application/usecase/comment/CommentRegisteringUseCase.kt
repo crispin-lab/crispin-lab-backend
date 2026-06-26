@@ -9,6 +9,7 @@ import com.crispinlab.space.application.port.outgoing.comment.CommentRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
+import com.crispinlab.space.application.usecase.access.handleOrEmpty
 import com.crispinlab.space.application.usecase.access.requireReadablePage
 import com.crispinlab.space.application.usecase.access.requireWritePermission
 import com.crispinlab.space.domain.comment.Comment
@@ -60,6 +61,6 @@ class CommentRegisteringUseCase(
     private fun Comment.toResult(): Result =
         Result(
             commentId = id,
-            authorHandle = userHandleQuery.handlesOf(setOf(authorId))[authorId]?.value ?: ""
+            authorHandle = userHandleQuery.handleOrEmpty(authorId)
         )
 }

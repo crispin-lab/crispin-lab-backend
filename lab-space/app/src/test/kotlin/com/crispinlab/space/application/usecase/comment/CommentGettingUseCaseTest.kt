@@ -12,8 +12,10 @@ import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.space.SpaceVisibility
+import com.crispinlab.space.domain.spacemember.SpaceMemberRole
 import com.crispinlab.space.testsupport.Fixtures.basicComment
 import com.crispinlab.space.testsupport.Fixtures.basicPage
+import com.crispinlab.space.testsupport.Fixtures.basicSpaceMember
 import com.crispinlab.user.application.port.outgoing.user.UserHandleQuery
 import com.crispinlab.user.domain.user.Handle
 import com.crispinlab.user.domain.user.UserId
@@ -52,6 +54,7 @@ class CommentGettingUseCaseTest :
             )
             every { spaceRepository.findVisibility(any()) } returns SpaceVisibility.PUBLIC
             every { spaceMemberRepository.findSpaceIdsByUserId(any()) } returns emptySet()
+            every { spaceMemberRepository.findBySpaceIdAndUserId(any(), any()) } returns null
             every { userHandleQuery.handlesOf(any()) } returns
                 mapOf(UserId(100L) to Handle("test_user"))
         }
@@ -212,6 +215,90 @@ class CommentGettingUseCaseTest :
                     useCase.perform(basicRequest())
                 }
                 verify(exactly = 0) { commentRepository.findBy(any()) }
+            }
+        }
+
+        describe("응답의 canEdit — viewer 의 수정 권한 노출") {
+            it("ADMIN 이면 canEdit=true") {
+                val page = basicPage(id = PageId(10L), visibility = Visibility.PUBLIC)
+                val comment =
+                    basicComment(pageId = page.id, authorId = UserId(999L))
+                every { pageRepository.findBy(page.id) } returns page
+                every { commentRepository.findBy(comment.id) } returns comment
+
+                val result =
+                    useCase.perform(
+                        basicRequest(
+                            pageId = "10",
+                            commentId = comment.id.value.toString(),
+                            isAdmin = true
+                        )
+                    )
+
+                result.canEdit shouldBe true
+            }
+
+            it("본인 댓글 + 스페이스 쓰기 권한 보유면 canEdit=true") {
+                val page = basicPage(id = PageId(10L), visibility = Visibility.PUBLIC)
+                val comment = basicComment(pageId = page.id, authorId = UserId(100L))
+                every { pageRepository.findBy(page.id) } returns page
+                every { commentRepository.findBy(comment.id) } returns comment
+                every {
+                    spaceMemberRepository.findBySpaceIdAndUserId(page.spaceId, UserId(100L))
+                } returns basicSpaceMember(role = SpaceMemberRole.MEMBER)
+
+                val result =
+                    useCase.perform(
+                        basicRequest(
+                            pageId = "10",
+                            commentId = comment.id.value.toString(),
+                            userId = UserId(100L)
+                        )
+                    )
+
+                result.canEdit shouldBe true
+            }
+
+            it("본인 댓글이지만 스페이스 쓰기 권한이 없으면 canEdit=false (VIEWER role)") {
+                val page = basicPage(id = PageId(10L), visibility = Visibility.PUBLIC)
+                val comment = basicComment(pageId = page.id, authorId = UserId(100L))
+                every { pageRepository.findBy(page.id) } returns page
+                every { commentRepository.findBy(comment.id) } returns comment
+                every {
+                    spaceMemberRepository.findBySpaceIdAndUserId(page.spaceId, UserId(100L))
+                } returns basicSpaceMember(role = SpaceMemberRole.VIEWER)
+
+                val result =
+                    useCase.perform(
+                        basicRequest(
+                            pageId = "10",
+                            commentId = comment.id.value.toString(),
+                            userId = UserId(100L)
+                        )
+                    )
+
+                result.canEdit shouldBe false
+            }
+
+            it("타인 댓글이면 canEdit=false (일반 USER)") {
+                val page = basicPage(id = PageId(10L), visibility = Visibility.PUBLIC)
+                val comment = basicComment(pageId = page.id, authorId = UserId(999L))
+                every { pageRepository.findBy(page.id) } returns page
+                every { commentRepository.findBy(comment.id) } returns comment
+                every {
+                    spaceMemberRepository.findBySpaceIdAndUserId(page.spaceId, UserId(100L))
+                } returns basicSpaceMember(role = SpaceMemberRole.MEMBER)
+
+                val result =
+                    useCase.perform(
+                        basicRequest(
+                            pageId = "10",
+                            commentId = comment.id.value.toString(),
+                            userId = UserId(100L)
+                        )
+                    )
+
+                result.canEdit shouldBe false
             }
         }
     }) {

@@ -16,8 +16,10 @@ import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.space.SpaceVisibility
+import com.crispinlab.space.domain.spacemember.SpaceMemberRole
 import com.crispinlab.space.testsupport.Fixtures.basicComment
 import com.crispinlab.space.testsupport.Fixtures.basicPage
+import com.crispinlab.space.testsupport.Fixtures.basicSpaceMember
 import com.crispinlab.user.application.port.outgoing.user.UserHandleQuery
 import com.crispinlab.user.domain.user.Handle
 import com.crispinlab.user.domain.user.UserId
@@ -58,6 +60,7 @@ class CommentListingUseCaseTest :
             every { pageRepository.findBy(any()) } returns basicPage()
             every { spaceRepository.findVisibility(any()) } returns SpaceVisibility.PUBLIC
             every { spaceMemberRepository.findSpaceIdsByUserId(any()) } returns emptySet()
+            every { spaceMemberRepository.findBySpaceIdAndUserId(any(), any()) } returns null
             every { userHandleQuery.handlesOf(any()) } returns
                 mapOf(
                     UserId(100L) to Handle("alice"),
@@ -209,6 +212,68 @@ class CommentListingUseCaseTest :
                     useCase.perform(basicRequest())
                 }
                 verify(exactly = 0) { commentRepository.findByPageId(any(), any()) }
+            }
+        }
+
+        describe("각 Summary 의 canEdit — viewer 의 수정 권한 노출") {
+            it("ADMIN 은 본인/타인 댓글 모두 canEdit=true") {
+                every { commentRepository.findByPageId(any(), any()) } returns
+                    PageResult(
+                        items =
+                            listOf(
+                                basicComment(id = CommentId(1L), authorId = UserId(100L)),
+                                basicComment(id = CommentId(2L), authorId = UserId(999L))
+                            ),
+                        page = 0,
+                        size = 20,
+                        totalElements = 2L
+                    )
+
+                val result = useCase.perform(basicRequest(isAdmin = true))
+
+                result.items.map { it.canEdit } shouldBe listOf(true, true)
+            }
+
+            it("일반 USER 는 본인 댓글만 canEdit=true (멤버 + 쓰기 권한일 때)") {
+                val page = basicPage()
+                every { pageRepository.findBy(any()) } returns page
+                every {
+                    spaceMemberRepository.findBySpaceIdAndUserId(page.spaceId, UserId(100L))
+                } returns basicSpaceMember(role = SpaceMemberRole.MEMBER)
+                every { commentRepository.findByPageId(any(), any()) } returns
+                    PageResult(
+                        items =
+                            listOf(
+                                basicComment(id = CommentId(1L), authorId = UserId(100L)),
+                                basicComment(id = CommentId(2L), authorId = UserId(999L))
+                            ),
+                        page = 0,
+                        size = 20,
+                        totalElements = 2L
+                    )
+
+                val result = useCase.perform(basicRequest(userId = UserId(100L)))
+
+                result.items.map { it.canEdit } shouldBe listOf(true, false)
+            }
+
+            it("일반 USER 가 스페이스 쓰기 권한이 없으면 본인 댓글도 canEdit=false (VIEWER role)") {
+                val page = basicPage()
+                every { pageRepository.findBy(any()) } returns page
+                every {
+                    spaceMemberRepository.findBySpaceIdAndUserId(page.spaceId, UserId(100L))
+                } returns basicSpaceMember(role = SpaceMemberRole.VIEWER)
+                every { commentRepository.findByPageId(any(), any()) } returns
+                    PageResult(
+                        items = listOf(basicComment(authorId = UserId(100L))),
+                        page = 0,
+                        size = 20,
+                        totalElements = 1L
+                    )
+
+                val result = useCase.perform(basicRequest(userId = UserId(100L)))
+
+                result.items.single().canEdit shouldBe false
             }
         }
     }) {

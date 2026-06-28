@@ -28,21 +28,22 @@ class CommentListingUseCase(
 ) : CommentListing {
     override fun perform(request: Request): PageResult<Summary> =
         transactionProvider.transactional(readOnly = true) {
-            request
-                .requirePage()
-                .let { page ->
-                    request.toResult(page = page)
-                }
+            val page =
+                requireReadablePage(
+                    pageRepository,
+                    spaceRepository,
+                    spaceMemberRepository,
+                    request.viewer,
+                    request.pageId
+                )
+            request.toResult(page = page)
         }
-
-    private fun Request.requirePage(): Page =
-        requireReadablePage(pageRepository, spaceRepository, spaceMemberRepository, viewer, pageId)
 
     private fun Request.toResult(page: Page): PageResult<Summary> =
         commentRepository
             .findByPageId(pageId, pageRequest)
             .let { comments ->
-                val authorIds = comments.items.map { it.authorId }.toSet()
+                val authorIds = comments.items.map { it.authorId }
                 val handles = userHandleQuery.handlesOrEmpty(authorIds)
                 val canEditByAuthor =
                     spaceMemberRepository.canEdit(viewer, authorIds, page.spaceId)

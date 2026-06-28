@@ -11,6 +11,7 @@ import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.Visibi
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.application.usecase.access.canEdit
+import com.crispinlab.space.application.usecase.access.handleOrEmpty
 import com.crispinlab.space.application.usecase.access.memberSpaceIdsOf
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageContent
@@ -93,7 +94,7 @@ class PageGettingUseCase(
             spaceId = spaceId,
             parentPageId = parentPageId,
             authorId = authorId,
-            authorHandle = userHandleQuery.handlesOf(setOf(authorId))[authorId]?.value ?: "",
+            authorHandle = userHandleQuery.handleOrEmpty(authorId),
             title = title,
             content = maskedContent(scope).raw,
             visibility = visibility,

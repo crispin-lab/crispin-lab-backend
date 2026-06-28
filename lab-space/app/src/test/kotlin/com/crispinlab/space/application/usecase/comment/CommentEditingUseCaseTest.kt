@@ -8,6 +8,8 @@ import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.comment.Comment
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.testsupport.Fixtures.basicComment
+import com.crispinlab.user.application.port.outgoing.user.UserHandleQuery
+import com.crispinlab.user.domain.user.Handle
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -21,11 +23,22 @@ import io.mockk.verify
 class CommentEditingUseCaseTest :
     DescribeSpec({
         val commentRepository = mockk<CommentRepository>()
-        val useCase = CommentEditingUseCase(commentRepository, DummyTransactionProvider())
+        val userHandleQuery = mockk<UserHandleQuery>()
+        val useCase =
+            CommentEditingUseCase(
+                commentRepository = commentRepository,
+                userHandleQuery = userHandleQuery,
+                transactionProvider = DummyTransactionProvider()
+            )
 
         beforeEach {
-            clearMocks(commentRepository)
+            clearMocks(commentRepository, userHandleQuery)
             every { commentRepository.save(any()) } answers { firstArg() }
+            every { userHandleQuery.handlesOf(any()) } returns
+                mapOf(
+                    UserId(100L) to Handle("alice"),
+                    UserId(200L) to Handle("bob")
+                )
         }
 
         describe("댓글 수정") {
@@ -45,7 +58,25 @@ class CommentEditingUseCaseTest :
                     )
 
                 result.body shouldBe "수정됨"
+                result.authorHandle shouldBe "alice"
                 saved.captured.body shouldBe "수정됨"
+                verify(exactly = 1) { userHandleQuery.handlesOf(setOf(UserId(100L))) }
+            }
+
+            it("handle 조회가 비면 authorHandle 은 빈 문자열로 응답한다") {
+                val comment = basicComment(pageId = PageId(10L))
+                every { commentRepository.findBy(comment.id) } returns comment
+                every { userHandleQuery.handlesOf(any()) } returns emptyMap()
+
+                val result =
+                    useCase.perform(
+                        basicRequest(
+                            pageId = "10",
+                            commentId = comment.id.value.toString()
+                        )
+                    )
+
+                result.authorHandle shouldBe ""
             }
 
             it("댓글이 없으면 NotFoundException") {
@@ -101,7 +132,9 @@ class CommentEditingUseCaseTest :
                     )
 
                 result.body shouldBe "수정됨"
+                result.authorHandle shouldBe "bob"
                 saved.captured.body shouldBe "수정됨"
+                verify(exactly = 1) { userHandleQuery.handlesOf(setOf(UserId(200L))) }
             }
 
             it("ADMIN 이라도 URL 의 pageId 와 댓글의 pageId 가 다르면 NotFoundException") {

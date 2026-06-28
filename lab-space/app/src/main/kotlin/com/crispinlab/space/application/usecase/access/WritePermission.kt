@@ -68,3 +68,20 @@ internal fun SpaceMemberRepository.canEdit(
             false
         }
     }
+
+internal fun SpaceMemberRepository.canEdit(
+    viewer: Viewer,
+    authorIds: Collection<UserId>,
+    spaceId: SpaceId
+): Map<UserId, Boolean> {
+    if (viewer.isAdmin) {
+        return authorIds.associateWith { true }
+    }
+    if (viewer !is Viewer.Member || authorIds.none { it == viewer.userId }) {
+        return authorIds.associateWith { false }
+    }
+    val hasWriteRole = findBySpaceIdAndUserId(spaceId, viewer.userId)?.role?.canWrite() == true
+    return authorIds.associateWith { authorId ->
+        viewer.userId == authorId && hasWriteRole
+    }
+}

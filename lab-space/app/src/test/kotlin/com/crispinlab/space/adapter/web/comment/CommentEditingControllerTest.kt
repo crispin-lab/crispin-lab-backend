@@ -37,6 +37,7 @@ class CommentEditingControllerTest :
                 } returns
                     Result(
                         commentId = CommentId(7L),
+                        authorHandle = "test_user",
                         body = "수정된 댓글",
                         updatedAt = DUMMY_INSTANT
                     )
@@ -49,7 +50,8 @@ class CommentEditingControllerTest :
                     ).then(
                         status().isOk,
                         jsonPath("$.commentId").value("7"),
-                        jsonPath("$.body").value("수정된 댓글")
+                        jsonPath("$.body").value("수정된 댓글"),
+                        jsonPath("$.authorHandle").value("test_user")
                     ).document(
                         authHeader(required = true),
                         requestFields {
@@ -57,6 +59,9 @@ class CommentEditingControllerTest :
                         },
                         responseFields {
                             "commentId".string("댓글 식별자")
+                            "authorHandle".string(
+                                "작성자 사용자 이름 (삭제된 사용자의 경우 빈 문자열)"
+                            )
                             "body".string("갱신된 본문")
                             "updatedAt".datetime("갱신 시각")
                         },

@@ -30,11 +30,11 @@ class CommentGettingUseCase(
         transactionProvider.transactional(readOnly = true) {
             val page =
                 requireReadablePage(
-                    pageRepository,
-                    spaceRepository,
-                    spaceMemberRepository,
-                    request.viewer,
-                    request.pageId
+                    pageRepository = pageRepository,
+                    spaceRepository = spaceRepository,
+                    spaceMemberRepository = spaceMemberRepository,
+                    viewer = request.viewer,
+                    pageId = request.pageId
                 )
             request
                 .toEntity()

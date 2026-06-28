@@ -30,11 +30,11 @@ class CommentListingUseCase(
         transactionProvider.transactional(readOnly = true) {
             val page =
                 requireReadablePage(
-                    pageRepository,
-                    spaceRepository,
-                    spaceMemberRepository,
-                    request.viewer,
-                    request.pageId
+                    pageRepository = pageRepository,
+                    spaceRepository = spaceRepository,
+                    spaceMemberRepository = spaceMemberRepository,
+                    viewer = request.viewer,
+                    pageId = request.pageId
                 )
             request.toResult(page = page)
         }
@@ -46,7 +46,11 @@ class CommentListingUseCase(
                 val authorIds = comments.items.map { it.authorId }
                 val handles = userHandleQuery.handlesOrEmpty(authorIds)
                 val canEditByAuthor =
-                    spaceMemberRepository.canEdit(viewer, authorIds, page.spaceId)
+                    spaceMemberRepository.canEdit(
+                        viewer = viewer,
+                        authorIds = authorIds,
+                        spaceId = page.spaceId
+                    )
                 comments.map { comment ->
                     comment.toSummary(
                         authorHandle = handles[comment.authorId] ?: "",

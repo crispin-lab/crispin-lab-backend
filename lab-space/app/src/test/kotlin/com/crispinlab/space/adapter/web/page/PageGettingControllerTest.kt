@@ -58,6 +58,7 @@ class PageGettingControllerTest :
                         currentVersion = 1,
                         displayOrder = 2,
                         canEdit = true,
+                        canComment = true,
                         createdAt = DUMMY_INSTANT,
                         updatedAt = DUMMY_INSTANT,
                         ancestors =
@@ -84,6 +85,7 @@ class PageGettingControllerTest :
                         jsonPath("$.authorId").value("100"),
                         jsonPath("$.authorHandle").value("test_user"),
                         jsonPath("$.canEdit").value(true),
+                        jsonPath("$.canComment").value(true),
                         jsonPath("$.ancestors.length()").value(2),
                         jsonPath("$.ancestors[0].pageId").value("1"),
                         jsonPath("$.ancestors[0].title").value("개인 노트"),
@@ -116,6 +118,11 @@ class PageGettingControllerTest :
                             "canEdit".boolean(
                                 "현재 viewer 가 이 페이지를 수정할 수 있는지. " +
                                     "ADMIN 글로벌 권한 또는 (author 본인 && 스페이스 쓰기 권한) 일 때 true."
+                            )
+                            "canComment".boolean(
+                                "현재 viewer 가 이 페이지에 댓글을 남길 수 있는지. " +
+                                    "로그인 상태이면 true (본 응답을 받은 viewer 는 페이지를 GET 한 reader 임이 보장됨). " +
+                                    "비로그인은 false."
                             )
                             "createdAt".datetime("생성 시각")
                             "updatedAt".datetime("최근 갱신 시각")
@@ -163,6 +170,7 @@ class PageGettingControllerTest :
                         currentVersion = 1,
                         displayOrder = 0,
                         canEdit = false,
+                        canComment = false,
                         createdAt = DUMMY_INSTANT,
                         updatedAt = DUMMY_INSTANT,
                         ancestors = emptyList()
@@ -174,6 +182,7 @@ class PageGettingControllerTest :
                         status().isOk,
                         jsonPath("$.visibility").value("PUBLIC"),
                         jsonPath("$.canEdit").value(false),
+                        jsonPath("$.canComment").value(false),
                         jsonPath("$.ancestors.length()").value(0)
                     )
                 verify {
@@ -208,6 +217,7 @@ class PageGettingControllerTest :
                         currentVersion = 1,
                         displayOrder = 0,
                         canEdit = false,
+                        canComment = false,
                         createdAt = DUMMY_INSTANT,
                         updatedAt = DUMMY_INSTANT,
                         ancestors = emptyList()

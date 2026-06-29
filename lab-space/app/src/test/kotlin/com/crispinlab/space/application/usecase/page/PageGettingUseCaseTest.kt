@@ -638,6 +638,57 @@ class PageGettingUseCaseTest :
                 }
             }
         }
+
+        describe("응답의 canComment — viewer 의 댓글 권한 노출") {
+            it("anonymous 는 PUBLIC 페이지라도 댓글을 남길 수 없다") {
+                val page = basicPage(visibility = Visibility.PUBLIC)
+                every { pageRepository.findBy(page.id) } returns page
+
+                val result = useCase.perform(basicRequest(viewer = Viewer.Anonymous))
+
+                result.canComment shouldBe false
+            }
+
+            it("비멤버 authenticated reader 도 PUBLIC 페이지에서는 댓글을 남길 수 있다") {
+                val page =
+                    basicPage(
+                        spaceId = SpaceId(10L),
+                        authorId = UserId(200L),
+                        visibility = Visibility.PUBLIC
+                    )
+                every { pageRepository.findBy(page.id) } returns page
+                every {
+                    spaceMemberRepository.findSpaceIdsByUserId(UserId(100L))
+                } returns emptySet()
+
+                val result = useCase.perform(basicRequest())
+
+                result.canComment shouldBe true
+            }
+
+            it("ADMIN 은 다른 사용자의 DRAFT 페이지에서도 댓글을 남길 수 있다") {
+                val page =
+                    basicPage(
+                        spaceId = SpaceId(10L),
+                        authorId = UserId(200L),
+                        visibility = Visibility.DRAFT
+                    )
+                every { pageRepository.findBy(page.id) } returns page
+
+                val result =
+                    useCase.perform(
+                        basicRequest(
+                            viewer =
+                                Viewer.Member(
+                                    userId = UserId(100L),
+                                    isAdmin = true
+                                )
+                        )
+                    )
+
+                result.canComment shouldBe true
+            }
+        }
     }) {
     companion object {
         fun basicRequest(

@@ -10,6 +10,7 @@ import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
+import com.crispinlab.space.application.usecase.access.canComment
 import com.crispinlab.space.application.usecase.access.canEdit
 import com.crispinlab.space.application.usecase.access.handleOrEmpty
 import com.crispinlab.space.application.usecase.access.memberSpaceIdsOf
@@ -45,7 +46,8 @@ class PageGettingUseCase(
                                         viewer = request.viewer,
                                         authorId = page.authorId,
                                         spaceId = page.spaceId
-                                    )
+                                    ),
+                                canComment = request.viewer.canComment()
                             )
                         }
                 }
@@ -87,7 +89,8 @@ class PageGettingUseCase(
 
     private fun Page.toResult(
         scope: VisibilityScope,
-        canEdit: Boolean
+        canEdit: Boolean,
+        canComment: Boolean
     ): Result =
         Result(
             pageId = id,
@@ -101,6 +104,7 @@ class PageGettingUseCase(
             currentVersion = currentVersion,
             displayOrder = displayOrder,
             canEdit = canEdit,
+            canComment = canComment,
             createdAt = createdAt,
             updatedAt = updatedAt,
             ancestors = ancestorsVisibleTo(scope)

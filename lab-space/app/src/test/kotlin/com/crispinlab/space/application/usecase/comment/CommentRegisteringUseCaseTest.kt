@@ -1,6 +1,5 @@
 package com.crispinlab.space.application.usecase.comment
 
-import com.crispinlab.common.exception.ForbiddenException
 import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.common.id.IdGenerator
 import com.crispinlab.common.transaction.DummyTransactionProvider
@@ -13,10 +12,9 @@ import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.comment.Comment
 import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.domain.page.Visibility
+import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.space.SpaceVisibility
-import com.crispinlab.space.domain.spacemember.SpaceMemberRole
 import com.crispinlab.space.testsupport.Fixtures.basicPage
-import com.crispinlab.space.testsupport.Fixtures.basicSpaceMember
 import com.crispinlab.user.application.port.outgoing.user.UserHandleQuery
 import com.crispinlab.user.domain.user.Handle
 import com.crispinlab.user.domain.user.UserId
@@ -60,9 +58,6 @@ class CommentRegisteringUseCaseTest :
             every { pageRepository.findBy(any()) } returns basicPage()
             every { spaceRepository.findVisibility(any()) } returns SpaceVisibility.PUBLIC
             every { spaceMemberRepository.findSpaceIdsByUserId(any()) } returns emptySet()
-            every {
-                spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
-            } returns basicSpaceMember(role = SpaceMemberRole.MEMBER)
             every { commentRepository.save(any()) } answers { firstArg() }
             every { userHandleQuery.handlesOf(any()) } returns
                 mapOf(UserId(100L) to Handle("test_user"))
@@ -118,35 +113,53 @@ class CommentRegisteringUseCaseTest :
                 verify(exactly = 0) { commentRepository.save(any()) }
             }
 
-            it("Space 멤버가 아니면 ForbiddenException") {
-                every {
-                    spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
-                } returns null
+            it("Space 비멤버 reader 도 PUBLIC 페이지에 댓글을 등록할 수 있다") {
+                every { idGenerator.next() } returns 42L
+                every { pageRepository.findBy(any()) } returns
+                    basicPage(authorId = UserId(999L), visibility = Visibility.PUBLIC)
 
-                shouldThrow<ForbiddenException> {
-                    useCase.perform(basicRequest())
-                }
-                verify(exactly = 0) { commentRepository.save(any()) }
+                useCase.perform(basicRequest())
+
+                verify(exactly = 1) { commentRepository.save(any()) }
             }
 
-            it("VIEWER role 은 ForbiddenException") {
+            it("Space 멤버는 role 과 무관하게 MEMBER 페이지에 댓글을 등록할 수 있다") {
+                every { idGenerator.next() } returns 42L
+                every { pageRepository.findBy(any()) } returns
+                    basicPage(
+                        spaceId = SpaceId(10L),
+                        authorId = UserId(999L),
+                        visibility = Visibility.MEMBER
+                    )
                 every {
-                    spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
-                } returns basicSpaceMember(role = SpaceMemberRole.VIEWER)
+                    spaceMemberRepository.findSpaceIdsByUserId(UserId(100L))
+                } returns setOf(SpaceId(10L))
 
-                shouldThrow<ForbiddenException> {
-                    useCase.perform(basicRequest())
-                }
-                verify(exactly = 0) { commentRepository.save(any()) }
+                useCase.perform(basicRequest())
+
+                verify(exactly = 1) { commentRepository.save(any()) }
+            }
+
+            it("INTERNAL space 의 author 본인은 비멤버 상태에서도 댓글을 등록할 수 있다") {
+                every { idGenerator.next() } returns 42L
+                every { pageRepository.findBy(any()) } returns
+                    basicPage(
+                        spaceId = SpaceId(10L),
+                        authorId = UserId(100L),
+                        visibility = Visibility.PUBLIC
+                    )
+                every { spaceRepository.findVisibility(SpaceId(10L)) } returns
+                    SpaceVisibility.INTERNAL
+
+                useCase.perform(basicRequest())
+
+                verify(exactly = 1) { commentRepository.save(any()) }
             }
 
             it("ADMIN 은 다른 사용자의 DRAFT 페이지에도, 비멤버 상태에서도 댓글을 달 수 있다") {
                 every { idGenerator.next() } returns 42L
                 every { pageRepository.findBy(any()) } returns
                     basicPage(authorId = UserId(999L), visibility = Visibility.DRAFT)
-                every {
-                    spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
-                } returns null
 
                 useCase.perform(basicRequest(isAdmin = true))
 

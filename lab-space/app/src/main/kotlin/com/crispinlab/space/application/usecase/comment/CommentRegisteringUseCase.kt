@@ -10,8 +10,8 @@ import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.application.usecase.access.handleOrEmpty
+import com.crispinlab.space.application.usecase.access.requireCommentPermission
 import com.crispinlab.space.application.usecase.access.requireReadablePage
-import com.crispinlab.space.application.usecase.access.requireWritePermission
 import com.crispinlab.space.domain.comment.Comment
 import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.user.application.port.outgoing.user.UserHandleQuery
@@ -39,15 +39,14 @@ class CommentRegisteringUseCase(
         }
 
     private fun Request.validate() {
-        val page =
-            requireReadablePage(
-                pageRepository,
-                spaceRepository,
-                spaceMemberRepository,
-                viewer,
-                pageId
-            )
-        spaceMemberRepository.requireWritePermission(viewer, page.spaceId)
+        requireReadablePage(
+            pageRepository,
+            spaceRepository,
+            spaceMemberRepository,
+            viewer,
+            pageId
+        )
+        viewer.requireCommentPermission()
     }
 
     private fun Request.toEntity(): Comment =

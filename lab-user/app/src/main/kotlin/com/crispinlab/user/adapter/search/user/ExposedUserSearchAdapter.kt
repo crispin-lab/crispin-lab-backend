@@ -1,9 +1,10 @@
 package com.crispinlab.user.adapter.search.user
 
+import com.crispinlab.common.persistence.escapeLike
+import com.crispinlab.user.adapter.persistence.user.UserHandleDecoder
 import com.crispinlab.user.adapter.persistence.user.Users
 import com.crispinlab.user.application.port.outgoing.user.UserSearchPort
 import com.crispinlab.user.application.port.outgoing.user.UserSearchPort.Match
-import com.crispinlab.user.domain.user.Handle
 import com.crispinlab.user.domain.user.UserId
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
@@ -12,13 +13,10 @@ import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.like
 import org.jetbrains.exposed.v1.core.lowerCase
 import org.jetbrains.exposed.v1.jdbc.select
-import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Repository
 
 @Repository
 class ExposedUserSearchAdapter : UserSearchPort {
-    private val log = LoggerFactory.getLogger(javaClass)
-
     override fun search(
         query: String,
         size: Int
@@ -35,25 +33,8 @@ class ExposedUserSearchAdapter : UserSearchPort {
 
     private fun ResultRow.toMatch(): Match? {
         val userId = UserId(this[Users.id])
-        return decodeHandle(this[Users.handle], userId)?.let {
+        return UserHandleDecoder.decode(this[Users.handle], userId)?.let {
             Match(userId = userId, handle = it)
         }
     }
-
-    private fun decodeHandle(
-        stored: String,
-        userId: UserId
-    ): Handle? =
-        runCatching { Handle(stored) }
-            .onFailure {
-                log.warn(
-                    "저장된 handle 값을 해석할 수 없습니다 — skip. userId={}",
-                    userId.value
-                )
-            }.getOrNull()
-
-    private fun String.escapeLike(): String =
-        replace("\\", "\\\\")
-            .replace("%", "\\%")
-            .replace("_", "\\_")
 }

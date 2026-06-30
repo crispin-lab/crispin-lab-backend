@@ -82,20 +82,6 @@ class UserSearchingControllerTest :
                 captured.captured.size shouldBe 10
             }
 
-            it("Auth 의 userId 가 Request 의 currentUserId 로 전달된다") {
-                val captured = slot<Request>()
-                every { useCase.perform(capture(captured)) } returns Result(items = emptyList())
-
-                controller
-                    .`when`(
-                        get("/v1/users")
-                            .withAuth(userId = "99")
-                            .param("query", "ali")
-                    ).then(status().isOk)
-
-                captured.captured.currentUserId shouldBe UserId(99L)
-            }
-
             it("query 가 누락되면 400 을 반환하고 use case 를 호출하지 않는다") {
                 controller
                     .`when`(get("/v1/users").withAuth())

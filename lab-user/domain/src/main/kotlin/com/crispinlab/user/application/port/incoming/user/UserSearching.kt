@@ -5,13 +5,11 @@ import com.crispinlab.user.application.port.incoming.user.UserSearching.Request
 import com.crispinlab.user.application.port.incoming.user.UserSearching.Result
 import com.crispinlab.user.domain.user.Handle
 import com.crispinlab.user.domain.user.UserId
-import com.crispinlab.user.domain.user.UserId.Companion.asUserId
 
 interface UserSearching : UseCase<Request, Result> {
     class Request(
         query: String,
-        size: Int = DEFAULT_SIZE,
-        currentUserId: String
+        size: Int = DEFAULT_SIZE
     ) {
         val query: String =
             query.trim().also {
@@ -25,7 +23,6 @@ interface UserSearching : UseCase<Request, Result> {
                     "결과 수는 1 이상 ${MAX_SIZE} 이하여야 합니다."
                 }
             }
-        val currentUserId: UserId = currentUserId.asUserId()
 
         companion object {
             const val MIN_QUERY_LENGTH: Int = 1

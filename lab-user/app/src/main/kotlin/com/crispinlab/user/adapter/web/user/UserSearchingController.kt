@@ -19,11 +19,8 @@ class UserSearchingController(
     fun search(
         @RequestParam query: String,
         @RequestParam(defaultValue = "$DEFAULT_SIZE") size: Int,
-        auth: Auth
+        @Suppress("UNUSED_PARAMETER") auth: Auth
     ): Result =
-        Request(
-            query = query,
-            size = size,
-            currentUserId = auth.userId.value.toString()
-        ).let { useCase.perform(it) }
+        Request(query = query, size = size)
+            .let { useCase.perform(it) }
 }

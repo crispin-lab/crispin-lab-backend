@@ -104,13 +104,7 @@ class UserSearchingUseCaseTest :
     companion object {
         fun basicRequest(
             query: String,
-            size: Int = DEFAULT_SIZE,
-            currentUserId: String = "100"
-        ): Request =
-            Request(
-                query = query,
-                size = size,
-                currentUserId = currentUserId
-            )
+            size: Int = DEFAULT_SIZE
+        ): Request = Request(query = query, size = size)
     }
 }

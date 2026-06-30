@@ -68,7 +68,7 @@ class CommentListingUseCase(
             pageId = pageId,
             authorId = authorId,
             authorHandle = authorHandle,
-            body = body,
+            content = content.raw,
             canEdit = canEdit,
             createdAt = createdAt,
             updatedAt = updatedAt

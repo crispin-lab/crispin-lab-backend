@@ -32,5 +32,7 @@ include(
     ":lab-space:app",
     ":lab-user:domain",
     ":lab-user:app",
+    ":lab-notification:domain",
+    ":lab-notification:app",
     ":app"
 )

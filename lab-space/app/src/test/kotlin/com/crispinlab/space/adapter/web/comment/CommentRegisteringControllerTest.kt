@@ -28,7 +28,7 @@ class CommentRegisteringControllerTest :
                     useCase.perform(
                         match {
                             it.pageId.value == 10L &&
-                                it.body == "첫 댓글" &&
+                                it.content.raw == "첫 댓글" &&
                                 it.viewer.userId.value == 100L
                         }
                     )
@@ -42,7 +42,7 @@ class CommentRegisteringControllerTest :
                     .`when`(
                         post("/v1/pages/{pageId}/comments", 10)
                             .withAuth()
-                            .body(mapOf("body" to "첫 댓글"))
+                            .body(mapOf("content" to "첫 댓글"))
                     ).then(
                         status().isCreated,
                         jsonPath("$.commentId").value("42"),
@@ -50,7 +50,7 @@ class CommentRegisteringControllerTest :
                     ).document(
                         authHeader(required = true),
                         requestFields {
-                            "body".string("댓글 본문")
+                            "content".string("댓글 본문 (TipTap JSON)")
                         },
                         responseFields {
                             "commentId".string("생성된 댓글 식별자")
@@ -67,7 +67,7 @@ class CommentRegisteringControllerTest :
                 controller
                     .`when`(
                         post("/v1/pages/{pageId}/comments", 10)
-                            .body(mapOf("body" to "첫 댓글"))
+                            .body(mapOf("content" to "첫 댓글"))
                     ).then(
                         status().isUnauthorized,
                         jsonPath("$.code").value("INVALID_SESSION")
@@ -80,7 +80,7 @@ class CommentRegisteringControllerTest :
                     .`when`(
                         post("/v1/pages/{pageId}/comments", "not-a-number")
                             .withAuth()
-                            .body(mapOf("body" to "첫 댓글"))
+                            .body(mapOf("content" to "첫 댓글"))
                     ).then(status().isBadRequest)
                 verify(exactly = 0) { useCase.perform(any()) }
             }

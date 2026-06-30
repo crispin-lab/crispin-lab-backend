@@ -30,7 +30,7 @@ class CommentEditingControllerTest :
                         match {
                             it.pageId.value == 10L &&
                                 it.commentId.value == 7L &&
-                                it.body == "수정된 댓글" &&
+                                it.content.raw == "수정된 댓글" &&
                                 it.viewer.userId.value == 100L
                         }
                     )
@@ -38,7 +38,7 @@ class CommentEditingControllerTest :
                     Result(
                         commentId = CommentId(7L),
                         authorHandle = "test_user",
-                        body = "수정된 댓글",
+                        content = "수정된 댓글",
                         updatedAt = DUMMY_INSTANT
                     )
 
@@ -46,23 +46,23 @@ class CommentEditingControllerTest :
                     .`when`(
                         put("/v1/pages/{pageId}/comments/{commentId}", 10, 7)
                             .withAuth()
-                            .body(mapOf("body" to "수정된 댓글"))
+                            .body(mapOf("content" to "수정된 댓글"))
                     ).then(
                         status().isOk,
                         jsonPath("$.commentId").value("7"),
-                        jsonPath("$.body").value("수정된 댓글"),
+                        jsonPath("$.content").value("수정된 댓글"),
                         jsonPath("$.authorHandle").value("test_user")
                     ).document(
                         authHeader(required = true),
                         requestFields {
-                            "body".string("수정된 본문")
+                            "content".string("수정된 본문 (TipTap JSON)")
                         },
                         responseFields {
                             "commentId".string("댓글 식별자")
                             "authorHandle".string(
                                 "작성자 사용자 이름 (삭제된 사용자의 경우 빈 문자열)"
                             )
-                            "body".string("갱신된 본문")
+                            "content".string("갱신된 본문 (TipTap JSON)")
                             "updatedAt".datetime("갱신 시각")
                         },
                         requestSchema = "CommentEditRequest",
@@ -74,7 +74,7 @@ class CommentEditingControllerTest :
                         match {
                             it.pageId.value == 10L &&
                                 it.commentId.value == 7L &&
-                                it.body == "수정된 댓글" &&
+                                it.content.raw == "수정된 댓글" &&
                                 it.viewer.userId.value == 100L
                         }
                     )
@@ -85,7 +85,7 @@ class CommentEditingControllerTest :
                 controller
                     .`when`(
                         put("/v1/pages/{pageId}/comments/{commentId}", 10, 7)
-                            .body(mapOf("body" to "수정된 댓글"))
+                            .body(mapOf("content" to "수정된 댓글"))
                     ).then(
                         status().isUnauthorized,
                         jsonPath("$.code").value("INVALID_SESSION")
@@ -98,7 +98,7 @@ class CommentEditingControllerTest :
                     .`when`(
                         put("/v1/pages/{pageId}/comments/{commentId}", 10, "not-a-number")
                             .withAuth()
-                            .body(mapOf("body" to "수정된 댓글"))
+                            .body(mapOf("content" to "수정된 댓글"))
                     ).then(status().isBadRequest)
                 verify(exactly = 0) { useCase.perform(any()) }
             }

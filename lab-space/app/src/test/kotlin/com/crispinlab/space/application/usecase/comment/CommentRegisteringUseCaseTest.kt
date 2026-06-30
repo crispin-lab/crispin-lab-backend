@@ -8,6 +8,7 @@ import com.crispinlab.space.application.port.outgoing.comment.CommentRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
+import com.crispinlab.space.application.usecase.mention.MentionDispatcher
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.comment.Comment
 import com.crispinlab.space.domain.comment.CommentId
@@ -18,6 +19,7 @@ import com.crispinlab.space.testsupport.Fixtures.basicPage
 import com.crispinlab.user.application.port.outgoing.user.UserHandleQuery
 import com.crispinlab.user.domain.user.Handle
 import com.crispinlab.user.domain.user.UserId
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
@@ -34,6 +36,7 @@ class CommentRegisteringUseCaseTest :
         val spaceRepository = mockk<SpaceRepository>()
         val spaceMemberRepository = mockk<SpaceMemberRepository>()
         val userHandleQuery = mockk<UserHandleQuery>()
+        val mentionDispatcher = mockk<MentionDispatcher>(relaxed = true)
         val idGenerator = mockk<IdGenerator>()
         val useCase =
             CommentRegisteringUseCase(
@@ -42,8 +45,10 @@ class CommentRegisteringUseCaseTest :
                 spaceRepository = spaceRepository,
                 spaceMemberRepository = spaceMemberRepository,
                 userHandleQuery = userHandleQuery,
+                mentionDispatcher = mentionDispatcher,
                 idGenerator = idGenerator,
-                transactionProvider = DummyTransactionProvider()
+                transactionProvider = DummyTransactionProvider(),
+                objectMapper = ObjectMapper()
             )
 
         beforeEach {
@@ -53,6 +58,7 @@ class CommentRegisteringUseCaseTest :
                 spaceRepository,
                 spaceMemberRepository,
                 userHandleQuery,
+                mentionDispatcher,
                 idGenerator
             )
             every { pageRepository.findBy(any()) } returns basicPage()
@@ -73,13 +79,13 @@ class CommentRegisteringUseCaseTest :
                     useCase.perform(
                         basicRequest(
                             pageId = "10",
-                            body = "첫 댓글"
+                            content = "첫 댓글"
                         )
                     )
 
                 result.commentId shouldBe CommentId(42L)
                 result.authorHandle shouldBe "test_user"
-                saved.captured.body shouldBe "첫 댓글"
+                saved.captured.content.raw shouldBe "첫 댓글"
                 saved.captured.pageId.value shouldBe 10L
                 saved.captured.authorId.value shouldBe 100L
                 verify(exactly = 1) { userHandleQuery.handlesOf(setOf(UserId(100L))) }
@@ -166,11 +172,9 @@ class CommentRegisteringUseCaseTest :
                 verify(exactly = 1) { commentRepository.save(any()) }
             }
 
-            it("body 가 비어 있으면 entity 생성에서 실패한다") {
-                every { idGenerator.next() } returns 1L
-
+            it("content 가 비어 있으면 Request 생성에서 실패한다") {
                 shouldThrow<IllegalArgumentException> {
-                    useCase.perform(basicRequest(body = ""))
+                    basicRequest(content = "")
                 }
                 verify(exactly = 0) { commentRepository.save(any()) }
             }
@@ -207,13 +211,13 @@ class CommentRegisteringUseCaseTest :
     companion object {
         fun basicRequest(
             pageId: String = "10",
-            body: String = "댓글 내용",
+            content: String = "댓글 내용",
             userId: UserId = UserId(100L),
             isAdmin: Boolean = false
         ): Request =
             Request(
                 pageId = pageId,
-                body = body,
+                content = content,
                 viewer = Viewer.Member(userId = userId, isAdmin = isAdmin)
             )
     }

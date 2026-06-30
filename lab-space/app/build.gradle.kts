@@ -15,6 +15,7 @@ dependencies {
     implementation(projects.labCommonPersistence)
     implementation(projects.labSpace.domain)
     implementation(projects.labUser.app)
+    implementation(projects.labNotification.domain)
 
     testImplementation(testFixtures(projects.labSpace.domain))
     testImplementation(testFixtures(projects.labCommon))

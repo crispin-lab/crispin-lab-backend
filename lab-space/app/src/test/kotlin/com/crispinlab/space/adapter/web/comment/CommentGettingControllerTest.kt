@@ -42,7 +42,7 @@ class CommentGettingControllerTest :
                         pageId = PageId(10L),
                         authorId = UserId(100L),
                         authorHandle = "test_user",
-                        body = "안녕하세요",
+                        content = "안녕하세요",
                         canEdit = true,
                         createdAt = DUMMY_INSTANT,
                         updatedAt = DUMMY_INSTANT
@@ -54,7 +54,7 @@ class CommentGettingControllerTest :
                     ).then(
                         status().isOk,
                         jsonPath("$.commentId").value("7"),
-                        jsonPath("$.body").value("안녕하세요"),
+                        jsonPath("$.content").value("안녕하세요"),
                         jsonPath("$.authorHandle").value("test_user"),
                         jsonPath("$.canEdit").value(true)
                     ).document(
@@ -66,7 +66,7 @@ class CommentGettingControllerTest :
                             "authorHandle".string(
                                 "작성자 사용자 이름 (삭제된 사용자의 경우 빈 문자열)"
                             )
-                            "body".string("본문")
+                            "content".string("본문 (TipTap JSON)")
                             "canEdit".boolean(
                                 "현재 viewer 가 이 댓글을 수정할 수 있는지. " +
                                     "ADMIN 글로벌 권한 또는 (author 본인 && 스페이스 쓰기 권한) 일 때 true."

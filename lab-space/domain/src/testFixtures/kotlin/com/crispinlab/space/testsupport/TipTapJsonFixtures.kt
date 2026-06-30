@@ -33,6 +33,10 @@ object TipTapJsonFixtures {
     fun pageLinkWithRawAttrs(rawAttrs: String): String =
         """{"type":"pageLink","attrs":{$rawAttrs}}"""
 
+    fun mention(userId: Long): String = """{"type":"mention","attrs":{"userId":"$userId"}}"""
+
+    fun mentionWithRawAttrs(rawAttrs: String): String = """{"type":"mention","attrs":{$rawAttrs}}"""
+
     private fun String.escape(): String =
         buildString(length) {
             for (c in this@escape) {

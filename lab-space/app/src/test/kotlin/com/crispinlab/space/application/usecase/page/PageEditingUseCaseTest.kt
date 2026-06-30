@@ -11,6 +11,7 @@ import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRevisionRepository
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
+import com.crispinlab.space.application.usecase.mention.MentionDispatcher
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageErrorCode
@@ -48,6 +49,7 @@ class PageEditingUseCaseTest :
         val pageLinkRepository = mockk<PageLinkRepository>()
         val spaceRepository = mockk<SpaceRepository>()
         val spaceMemberRepository = mockk<SpaceMemberRepository>()
+        val mentionDispatcher = mockk<MentionDispatcher>(relaxed = true)
         val idGenerator = mockk<IdGenerator>()
         val useCase =
             PageEditingUseCase(
@@ -56,6 +58,7 @@ class PageEditingUseCaseTest :
                 pageLinkRepository = pageLinkRepository,
                 spaceRepository = spaceRepository,
                 spaceMemberRepository = spaceMemberRepository,
+                mentionDispatcher = mentionDispatcher,
                 idGenerator = idGenerator,
                 transactionProvider = DummyTransactionProvider(),
                 objectMapper = ObjectMapper()
@@ -68,6 +71,7 @@ class PageEditingUseCaseTest :
                 pageLinkRepository,
                 spaceRepository,
                 spaceMemberRepository,
+                mentionDispatcher,
                 idGenerator
             )
             every {
@@ -340,7 +344,6 @@ class PageEditingUseCaseTest :
 
                 savedPage.captured.visibility shouldBe Visibility.PUBLIC
                 savedPage.captured.title shouldBe "복구 수정"
-                verify(exactly = 0) { spaceRepository.findVisibility(any()) }
             }
         }
     }) {

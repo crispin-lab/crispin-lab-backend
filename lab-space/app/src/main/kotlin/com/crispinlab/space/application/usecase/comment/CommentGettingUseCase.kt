@@ -62,7 +62,7 @@ class CommentGettingUseCase(
             pageId = pageId,
             authorId = authorId,
             authorHandle = userHandleQuery.handleOrEmpty(authorId),
-            body = body,
+            content = content.raw,
             canEdit = canEdit,
             createdAt = createdAt,
             updatedAt = updatedAt

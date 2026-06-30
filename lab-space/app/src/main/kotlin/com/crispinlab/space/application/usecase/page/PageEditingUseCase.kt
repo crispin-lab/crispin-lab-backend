@@ -13,6 +13,9 @@ import com.crispinlab.space.application.port.outgoing.page.PageRevisionRepositor
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.application.usecase.access.requireWritePermission
+import com.crispinlab.space.application.usecase.mention.MentionDispatcher
+import com.crispinlab.space.application.usecase.mention.extractMentions
+import com.crispinlab.space.domain.mention.Mention
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageErrorCode
 import com.crispinlab.space.domain.page.PageLink
@@ -21,6 +24,7 @@ import com.crispinlab.space.domain.page.PageRevision
 import com.crispinlab.space.domain.page.PageRevisionId
 import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.space.SpaceId
+import com.crispinlab.space.domain.space.SpaceVisibility
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.stereotype.Service
 
@@ -31,6 +35,7 @@ class PageEditingUseCase(
     private val pageLinkRepository: PageLinkRepository,
     private val spaceRepository: SpaceRepository,
     private val spaceMemberRepository: SpaceMemberRepository,
+    private val mentionDispatcher: MentionDispatcher,
     private val idGenerator: IdGenerator,
     private val transactionProvider: TransactionProvider,
     private val objectMapper: ObjectMapper
@@ -68,7 +73,10 @@ class PageEditingUseCase(
             if (visibilityChanged || editResult != null) {
                 pageRepository.save(this)
             }
-            editResult?.let { saveRevisionAndLinksWith(it) }
+            editResult?.let {
+                saveRevisionAndLinksWith(it)
+                dispatchMentionsAfterEdit()
+            }
         }
 
     private fun requireVisibilityWithinSpaceCeiling(
@@ -121,6 +129,26 @@ class PageEditingUseCase(
             }.let {
                 pageLinkRepository.saveAll(it)
             }
+    }
+
+    private fun Page.dispatchMentionsAfterEdit() {
+        val spaceVisibility =
+            spaceRepository.findVisibility(spaceId)
+                ?: throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
+        mentionDispatcher.dispatch(
+            sourceType = Mention.SourceType.PAGE,
+            sourceId = id.value,
+            actorUserId = authorId,
+            extracted = content.extractMentions(objectMapper),
+            subject =
+                MentionDispatcher.MentionSubject(
+                    spaceId = spaceId,
+                    spaceVisibility = spaceVisibility,
+                    pageVisibility = visibility,
+                    pageAuthorId = authorId
+                ),
+            occurredAt = updatedAt
+        )
     }
 
     private fun Page.toResult(): Result =

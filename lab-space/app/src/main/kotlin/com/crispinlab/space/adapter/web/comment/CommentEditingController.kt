@@ -34,7 +34,7 @@ class CommentEditingController(
             }
 
     data class Body(
-        val body: String
+        val content: String
     ) {
         fun toRequestWith(
             pageId: String,
@@ -44,7 +44,7 @@ class CommentEditingController(
             Request(
                 pageId = pageId,
                 commentId = commentId,
-                body = body,
+                content = content,
                 viewer = viewer
             )
     }

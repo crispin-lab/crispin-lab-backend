@@ -6,6 +6,7 @@ import com.crispinlab.common.persistence.ExposedEntityRepository
 import com.crispinlab.space.adapter.persistence.toPageResult
 import com.crispinlab.space.application.port.outgoing.comment.CommentRepository
 import com.crispinlab.space.domain.comment.Comment
+import com.crispinlab.space.domain.comment.CommentContent
 import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.user.domain.user.UserId
@@ -38,7 +39,7 @@ class ExposedCommentRepository :
             id = CommentId(this[Comments.id]),
             pageId = PageId(this[Comments.pageId]),
             authorId = UserId(this[Comments.authorId]),
-            body = this[Comments.body],
+            content = CommentContent(this[Comments.content]),
             createdAt = this[Comments.createdAt],
             updatedAt = this[Comments.updatedAt],
             deletedAt = this[Comments.deletedAt]
@@ -54,7 +55,7 @@ class ExposedCommentRepository :
         builder[Comments.id] = entity.id.value
         builder[Comments.pageId] = entity.pageId.value
         builder[Comments.authorId] = entity.authorId.value
-        builder[Comments.body] = entity.body
+        builder[Comments.content] = entity.content.raw
         builder[Comments.createdAt] = entity.createdAt
         builder[Comments.updatedAt] = entity.updatedAt
         builder[Comments.deletedAt] = entity.deletedAt

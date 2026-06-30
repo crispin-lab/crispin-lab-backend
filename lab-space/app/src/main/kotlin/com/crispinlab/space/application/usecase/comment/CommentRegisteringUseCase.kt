@@ -1,5 +1,6 @@
 package com.crispinlab.space.application.usecase.comment
 
+import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.common.id.IdGenerator
 import com.crispinlab.common.transaction.TransactionProvider
 import com.crispinlab.space.application.port.incoming.comment.CommentRegistering
@@ -12,9 +13,16 @@ import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRep
 import com.crispinlab.space.application.usecase.access.handleOrEmpty
 import com.crispinlab.space.application.usecase.access.requireCommentPermission
 import com.crispinlab.space.application.usecase.access.requireReadablePage
+import com.crispinlab.space.application.usecase.mention.MentionDispatcher
+import com.crispinlab.space.application.usecase.mention.extractMentions
 import com.crispinlab.space.domain.comment.Comment
 import com.crispinlab.space.domain.comment.CommentId
+import com.crispinlab.space.domain.mention.Mention
+import com.crispinlab.space.domain.page.Page
+import com.crispinlab.space.domain.page.PageErrorCode
+import com.crispinlab.space.domain.space.SpaceErrorCode
 import com.crispinlab.user.application.port.outgoing.user.UserHandleQuery
+import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.stereotype.Service
 
 @Service
@@ -24,18 +32,19 @@ class CommentRegisteringUseCase(
     private val spaceRepository: SpaceRepository,
     private val spaceMemberRepository: SpaceMemberRepository,
     private val userHandleQuery: UserHandleQuery,
+    private val mentionDispatcher: MentionDispatcher,
     private val idGenerator: IdGenerator,
-    private val transactionProvider: TransactionProvider
+    private val transactionProvider: TransactionProvider,
+    private val objectMapper: ObjectMapper
 ) : CommentRegistering {
     override fun perform(request: Request): Result =
         transactionProvider.transactional {
             request
-                .also {
-                    it.validate()
-                }.toEntity()
-                .let {
-                    commentRepository.save(it)
-                }.toResult()
+                .also { it.validate() }
+                .toEntity()
+                .let { commentRepository.save(it) }
+                .also { it.dispatchMentions() }
+                .toResult()
         }
 
     private fun Request.validate() {
@@ -54,8 +63,31 @@ class CommentRegisteringUseCase(
             id = CommentId(idGenerator.next()),
             pageId = pageId,
             authorId = viewer.userId,
-            body = body
+            content = content
         )
+
+    private fun Comment.dispatchMentions() {
+        val page: Page =
+            pageRepository.findBy(pageId)
+                ?: throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
+        val spaceVisibility =
+            spaceRepository.findVisibility(page.spaceId)
+                ?: throw NotFoundException(SpaceErrorCode.SPACE_NOT_FOUND)
+        mentionDispatcher.dispatch(
+            sourceType = Mention.SourceType.COMMENT,
+            sourceId = id.value,
+            actorUserId = authorId,
+            extracted = content.extractMentions(objectMapper),
+            subject =
+                MentionDispatcher.MentionSubject(
+                    spaceId = page.spaceId,
+                    spaceVisibility = spaceVisibility,
+                    pageVisibility = page.visibility,
+                    pageAuthorId = page.authorId
+                ),
+            occurredAt = createdAt
+        )
+    }
 
     private fun Comment.toResult(): Result =
         Result(

@@ -1,0 +1,2 @@
+ALTER TABLE comments RENAME COLUMN body TO content;
+ALTER TABLE comments ALTER COLUMN content TYPE TEXT;

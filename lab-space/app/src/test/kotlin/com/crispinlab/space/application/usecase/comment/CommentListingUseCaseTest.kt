@@ -12,6 +12,7 @@ import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.comment.Comment
+import com.crispinlab.space.domain.comment.CommentContent
 import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.Visibility
@@ -75,12 +76,12 @@ class CommentListingUseCaseTest :
                         basicComment(
                             id = CommentId(1L),
                             authorId = UserId(100L),
-                            body = "첫 댓글"
+                            content = CommentContent("첫 댓글")
                         ),
                         basicComment(
                             id = CommentId(2L),
                             authorId = UserId(101L),
-                            body = "두 번째"
+                            content = CommentContent("두 번째")
                         )
                     )
                 val capturedPageId = slot<PageId>()
@@ -108,7 +109,7 @@ class CommentListingUseCaseTest :
                     )
 
                 result.items.map { it.commentId } shouldBe listOf(CommentId(1L), CommentId(2L))
-                result.items.map { it.body } shouldBe listOf("첫 댓글", "두 번째")
+                result.items.map { it.content } shouldBe listOf("첫 댓글", "두 번째")
                 result.items.map { it.authorHandle } shouldBe listOf("alice", "bob")
                 result.totalElements shouldBe 7L
                 result.page shouldBe 1

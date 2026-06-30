@@ -1,7 +1,10 @@
 package com.crispinlab.space.testsupport
 
 import com.crispinlab.space.domain.comment.Comment
+import com.crispinlab.space.domain.comment.CommentContent
 import com.crispinlab.space.domain.comment.CommentId
+import com.crispinlab.space.domain.mention.Mention
+import com.crispinlab.space.domain.mention.MentionId
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageContent
 import com.crispinlab.space.domain.page.PageId
@@ -108,7 +111,7 @@ object Fixtures {
         id: CommentId = CommentId(1L),
         pageId: PageId = PageId(10L),
         authorId: UserId = UserId(100L),
-        body: String = "댓글",
+        content: CommentContent = CommentContent("댓글"),
         createdAt: Instant = DUMMY_INSTANT,
         deletedAt: Instant? = null
     ): Comment =
@@ -116,9 +119,26 @@ object Fixtures {
             id = id,
             pageId = pageId,
             authorId = authorId,
-            body = body,
+            content = content,
             createdAt = createdAt,
             deletedAt = deletedAt
+        )
+
+    fun basicMention(
+        id: MentionId = MentionId(1L),
+        sourceType: Mention.SourceType = Mention.SourceType.PAGE,
+        sourceId: Long = 10L,
+        mentionedUserId: UserId = UserId(200L),
+        mentionedByUserId: UserId = UserId(100L),
+        createdAt: Instant = DUMMY_INSTANT
+    ): Mention =
+        Mention(
+            id = id,
+            sourceType = sourceType,
+            sourceId = sourceId,
+            mentionedUserId = mentionedUserId,
+            mentionedByUserId = mentionedByUserId,
+            createdAt = createdAt
         )
 
     fun basicTag(

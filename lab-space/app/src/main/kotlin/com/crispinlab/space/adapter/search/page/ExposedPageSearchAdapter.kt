@@ -2,6 +2,7 @@ package com.crispinlab.space.adapter.search.page
 
 import com.crispinlab.common.pagination.PageRequest
 import com.crispinlab.common.pagination.PageResult
+import com.crispinlab.common.persistence.escapeLike
 import com.crispinlab.space.adapter.persistence.page.Pages
 import com.crispinlab.space.adapter.persistence.page.decodeVisibility
 import com.crispinlab.space.adapter.persistence.page.toPagesCondition
@@ -159,11 +160,6 @@ class ExposedPageSearchAdapter : PageSearchPort {
             ).selectAll()
             .where { combined }
     }
-
-    private fun String.escapeLike(): String =
-        replace("\\", "\\\\")
-            .replace("%", "\\%")
-            .replace("_", "\\_")
 
     private fun ResultRow.toSummary(): PageSummary =
         PageSummary(

@@ -30,7 +30,8 @@ class ExposedNotificationRepositoryTest :
             sourceId: Long = 10L,
             actorUserId: Long = 999L,
             isRead: Boolean = false,
-            readAt: Instant? = null
+            readAt: Instant? = null,
+            createdAt: Instant = occurredAt
         ): Notification =
             Notification(
                 id = NotificationId(id),
@@ -41,7 +42,7 @@ class ExposedNotificationRepositoryTest :
                 actorUserId = UserId(actorUserId),
                 isRead = isRead,
                 readAt = readAt,
-                createdAt = occurredAt
+                createdAt = createdAt
             )
 
         describe("ExposedNotificationRepository") {
@@ -103,8 +104,18 @@ class ExposedNotificationRepositoryTest :
                 transaction(database) {
                     repository.saveAll(
                         listOf(
-                            mentionFor(id = 1L, userId = 100L, sourceId = 11L),
-                            mentionFor(id = 2L, userId = 100L, sourceId = 12L),
+                            mentionFor(
+                                id = 1L,
+                                userId = 100L,
+                                sourceId = 11L,
+                                createdAt = occurredAt
+                            ),
+                            mentionFor(
+                                id = 2L,
+                                userId = 100L,
+                                sourceId = 12L,
+                                createdAt = occurredAt.plusSeconds(1)
+                            ),
                             mentionFor(id = 3L, userId = 200L, sourceId = 13L)
                         )
                     )
@@ -177,6 +188,37 @@ class ExposedNotificationRepositoryTest :
                         sourceType = SourceType.PAGE,
                         sourceId = 10L
                     ) shouldBe false
+                }
+            }
+
+            it("existingUserIdsAmong 은 이미 알림 받은 user 집합만 반환한다 (batch)") {
+                transaction(database) {
+                    repository.saveAll(
+                        listOf(
+                            mentionFor(id = 1L, userId = 100L, sourceId = 10L),
+                            mentionFor(id = 2L, userId = 101L, sourceId = 10L)
+                        )
+                    )
+                }
+
+                transaction(database) {
+                    repository.existingUserIdsAmong(
+                        userIds = listOf(UserId(100L), UserId(101L), UserId(102L)),
+                        type = NotificationType.MENTION,
+                        sourceType = SourceType.PAGE,
+                        sourceId = 10L
+                    ) shouldBe setOf(UserId(100L), UserId(101L))
+                }
+            }
+
+            it("existingUserIdsAmong 은 빈 userIds 에 대해 빈 set 반환 (query skip)") {
+                transaction(database) {
+                    repository.existingUserIdsAmong(
+                        userIds = emptyList(),
+                        type = NotificationType.MENTION,
+                        sourceType = SourceType.PAGE,
+                        sourceId = 10L
+                    ) shouldBe emptySet()
                 }
             }
         }

@@ -12,6 +12,7 @@ import com.crispinlab.notification.domain.notification.SourceType
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
 import io.mockk.every
@@ -62,7 +63,7 @@ class NotificationReadingUseCaseTest :
                 useCase.perform(basicRequest(notificationId = "1", userId = UserId(100L)))
 
                 saved.captured.isRead shouldBe true
-                saved.captured.readAt shouldBe saved.captured.readAt
+                saved.captured.readAt.shouldNotBeNull()
             }
 
             it("이미 읽음 처리된 알림에 read 호출은 멱등 (noop)") {

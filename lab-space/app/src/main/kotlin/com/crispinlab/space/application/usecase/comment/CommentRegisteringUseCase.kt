@@ -19,8 +19,8 @@ import com.crispinlab.space.domain.comment.Comment
 import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.domain.mention.Mention
 import com.crispinlab.space.domain.page.Page
-import com.crispinlab.space.domain.page.PageErrorCode
 import com.crispinlab.space.domain.space.SpaceErrorCode
+import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.user.application.port.outgoing.user.UserHandleQuery
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.stereotype.Service
@@ -39,24 +39,31 @@ class CommentRegisteringUseCase(
 ) : CommentRegistering {
     override fun perform(request: Request): Result =
         transactionProvider.transactional {
+            val page = request.validateAndResolvePage()
+            val spaceVisibility = page.spaceVisibility()
             request
-                .also { it.validate() }
                 .toEntity()
                 .let { commentRepository.save(it) }
-                .also { it.dispatchMentions() }
+                .also { it.dispatchMentions(page, spaceVisibility) }
                 .toResult()
         }
 
-    private fun Request.validate() {
-        requireReadablePage(
-            pageRepository,
-            spaceRepository,
-            spaceMemberRepository,
-            viewer,
-            pageId
-        )
+    private fun Request.validateAndResolvePage(): Page {
+        val page =
+            requireReadablePage(
+                pageRepository,
+                spaceRepository,
+                spaceMemberRepository,
+                viewer,
+                pageId
+            )
         viewer.requireCommentPermission()
+        return page
     }
+
+    private fun Page.spaceVisibility(): SpaceVisibility =
+        spaceRepository.findVisibility(spaceId)
+            ?: throw NotFoundException(SpaceErrorCode.SPACE_NOT_FOUND)
 
     private fun Request.toEntity(): Comment =
         Comment(
@@ -66,13 +73,10 @@ class CommentRegisteringUseCase(
             content = content
         )
 
-    private fun Comment.dispatchMentions() {
-        val page: Page =
-            pageRepository.findBy(pageId)
-                ?: throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
-        val spaceVisibility =
-            spaceRepository.findVisibility(page.spaceId)
-                ?: throw NotFoundException(SpaceErrorCode.SPACE_NOT_FOUND)
+    private fun Comment.dispatchMentions(
+        page: Page,
+        spaceVisibility: SpaceVisibility
+    ) {
         mentionDispatcher.dispatch(
             sourceType = Mention.SourceType.COMMENT,
             sourceId = id.value,

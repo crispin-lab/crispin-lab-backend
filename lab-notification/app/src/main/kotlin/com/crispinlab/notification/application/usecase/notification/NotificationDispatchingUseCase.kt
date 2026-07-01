@@ -19,20 +19,19 @@ class NotificationDispatchingUseCase(
     override fun perform(request: Request) {
         if (request.targetUserIds.isEmpty()) return
         transactionProvider.transactional {
+            val alreadyNotified =
+                notificationRepository.existingUserIdsAmong(
+                    userIds = request.targetUserIds,
+                    type = request.type,
+                    sourceType = request.sourceType,
+                    sourceId = request.sourceId
+                )
             request.targetUserIds
-                .filterNot { it.alreadyNotifiedFor(request) }
+                .filterNot { it in alreadyNotified }
                 .map { it.toNotification(request) }
                 .let { notificationRepository.saveAll(it) }
         }
     }
-
-    private fun UserId.alreadyNotifiedFor(request: Request): Boolean =
-        notificationRepository.existsBy(
-            userId = this,
-            type = request.type,
-            sourceType = request.sourceType,
-            sourceId = request.sourceId
-        )
 
     private fun UserId.toNotification(request: Request): Notification =
         Notification(

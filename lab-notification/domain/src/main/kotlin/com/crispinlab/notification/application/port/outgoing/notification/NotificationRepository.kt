@@ -27,4 +27,11 @@ interface NotificationRepository {
         sourceType: SourceType,
         sourceId: Long
     ): Boolean
+
+    fun existingUserIdsAmong(
+        userIds: Collection<UserId>,
+        type: NotificationType,
+        sourceType: SourceType,
+        sourceId: Long
+    ): Set<UserId>
 }

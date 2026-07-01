@@ -24,7 +24,7 @@ BEGIN
                 WHERE node->>'type' = 'mention'
             LOOP
                 user_id_text := mention_node->'attrs'->>'userId';
-                CONTINUE WHEN user_id_text !~ '^-?[0-9]+$';
+                CONTINUE WHEN user_id_text IS NULL OR user_id_text !~ '^[0-9]+$';
                 user_id_value := user_id_text::bigint;
                 CONTINUE WHEN user_id_value = page_record.author_id;
                 INSERT INTO mentions (
@@ -36,7 +36,7 @@ BEGIN
                 ON CONFLICT (source_type, source_id, mentioned_user_id) DO NOTHING;
                 next_id := next_id + 1;
             END LOOP;
-        EXCEPTION WHEN invalid_text_representation OR datatype_mismatch THEN
+        EXCEPTION WHEN invalid_text_representation OR datatype_mismatch OR numeric_value_out_of_range THEN
             CONTINUE;
         END;
     END LOOP;
@@ -51,7 +51,7 @@ BEGIN
                 WHERE node->>'type' = 'mention'
             LOOP
                 user_id_text := mention_node->'attrs'->>'userId';
-                CONTINUE WHEN user_id_text !~ '^-?[0-9]+$';
+                CONTINUE WHEN user_id_text IS NULL OR user_id_text !~ '^[0-9]+$';
                 user_id_value := user_id_text::bigint;
                 CONTINUE WHEN user_id_value = comment_record.author_id;
                 INSERT INTO mentions (
@@ -63,7 +63,7 @@ BEGIN
                 ON CONFLICT (source_type, source_id, mentioned_user_id) DO NOTHING;
                 next_id := next_id + 1;
             END LOOP;
-        EXCEPTION WHEN invalid_text_representation OR datatype_mismatch THEN
+        EXCEPTION WHEN invalid_text_representation OR datatype_mismatch OR numeric_value_out_of_range THEN
             CONTINUE;
         END;
     END LOOP;

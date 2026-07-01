@@ -23,6 +23,7 @@ import com.crispinlab.space.domain.page.PageLinkId
 import com.crispinlab.space.domain.page.PageRevision
 import com.crispinlab.space.domain.page.PageRevisionId
 import com.crispinlab.space.domain.page.Visibility
+import com.crispinlab.space.domain.space.SpaceErrorCode
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.space.SpaceVisibility
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -64,6 +65,7 @@ class PageEditingUseCase(
                     ?.takeIf { it != visibility }
                     ?.also { requireVisibilityWithinSpaceCeiling(it, spaceId) }
                     ?.also { changeVisibility(it) } != null
+            val contentChanged: Boolean = content.raw != request.content
             val editResult: Page.EditResult? =
                 takeIf { it.needsNewRevision(request) }
                     ?.edit(
@@ -75,7 +77,7 @@ class PageEditingUseCase(
             }
             editResult?.let {
                 saveRevisionAndLinksWith(it)
-                dispatchMentionsAfterEdit()
+                if (contentChanged) dispatchMentionsAfterEdit()
             }
         }
 
@@ -134,7 +136,7 @@ class PageEditingUseCase(
     private fun Page.dispatchMentionsAfterEdit() {
         val spaceVisibility =
             spaceRepository.findVisibility(spaceId)
-                ?: throw NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
+                ?: throw NotFoundException(SpaceErrorCode.SPACE_NOT_FOUND)
         mentionDispatcher.dispatch(
             sourceType = Mention.SourceType.PAGE,
             sourceId = id.value,

@@ -67,7 +67,8 @@ class NotificationListingControllerTest :
                         jsonPath("$.totalElements").value(1)
                     ).document(
                         authHeader(required = true),
-                        pagingParameters(),
+                        pagingParameters()
+                            .and("unreadOnly" isParameterFor "미독 알림만 필터" isOptional true),
                         responseFields {
                             "items".array("알림 목록") {
                                 "notificationId".string("알림 식별자")

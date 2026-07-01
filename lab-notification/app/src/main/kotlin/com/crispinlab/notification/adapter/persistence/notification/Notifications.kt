@@ -5,7 +5,7 @@ import org.jetbrains.exposed.v1.javatime.timestamp
 
 object Notifications : Table("notifications") {
     val id = long("id")
-    val userId = long("user_id").index()
+    val userId = long("user_id")
     val type = varchar("type", length = 20)
     val sourceType = varchar("source_type", length = 20)
     val sourceId = long("source_id")
@@ -17,6 +17,7 @@ object Notifications : Table("notifications") {
     override val primaryKey = PrimaryKey(id)
 
     init {
+        index("notifications_user_created_at_idx", isUnique = false, userId, createdAt)
         uniqueIndex(
             "notifications_user_type_source_uidx",
             userId,

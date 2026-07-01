@@ -260,9 +260,19 @@ class PageEditingUseCaseTest :
                 verify(exactly = 0) { pageRepository.save(any()) }
                 verify(exactly = 0) { pageRevisionRepository.save(any()) }
                 verify(exactly = 0) { pageLinkRepository.saveAll(any()) }
+                verify(exactly = 0) {
+                    mentionDispatcher.dispatch(
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any()
+                    )
+                }
             }
 
-            it("본문 변경 없이 공개 범위만 바뀌면 새 리비전을 만들지 않는다") {
+            it("본문 변경 없이 공개 범위만 바뀌면 새 리비전을 만들지 않고 mention dispatch 도 skip 한다") {
                 val page = basicPage(visibility = Visibility.DRAFT, currentVersion = 3)
                 every { pageRepository.findBy(page.id) } returns page
                 val savedPage = slot<Page>()
@@ -281,6 +291,47 @@ class PageEditingUseCaseTest :
                 savedPage.captured.currentVersion shouldBe 3
                 verify(exactly = 0) { pageRevisionRepository.save(any()) }
                 verify(exactly = 0) { pageLinkRepository.saveAll(any()) }
+                verify(exactly = 0) {
+                    mentionDispatcher.dispatch(
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any()
+                    )
+                }
+            }
+
+            it("제목만 바뀐 편집은 새 리비전을 만들지만 mention dispatch 는 skip 한다") {
+                val page =
+                    basicPage(
+                        visibility = Visibility.PUBLIC,
+                        currentVersion = 1
+                    )
+                every { pageRepository.findBy(page.id) } returns page
+                every { idGenerator.next() } returnsMany listOf(101L)
+
+                useCase.perform(
+                    basicRequest(
+                        pageId = page.id.value.toString(),
+                        title = "새 제목만",
+                        content = page.content.raw,
+                        visibility = null
+                    )
+                )
+
+                verify(exactly = 1) { pageRevisionRepository.save(any()) }
+                verify(exactly = 0) {
+                    mentionDispatcher.dispatch(
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any()
+                    )
+                }
             }
 
             it("INTERNAL space 의 page 를 PUBLIC 으로 바꾸려 하면 ConflictException (cascade)") {

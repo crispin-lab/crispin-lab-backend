@@ -178,6 +178,32 @@ class CommentEditingUseCaseTest :
                 }
                 verify(exactly = 0) { commentRepository.save(any()) }
             }
+
+            it("content 가 변경되지 않으면 save 와 mention dispatch 를 모두 skip 한다") {
+                val comment =
+                    basicComment(pageId = PageId(10L), content = CommentContent("동일 내용"))
+                every { commentRepository.findBy(comment.id) } returns comment
+
+                useCase.perform(
+                    basicRequest(
+                        pageId = "10",
+                        commentId = comment.id.value.toString(),
+                        content = "동일 내용"
+                    )
+                )
+
+                verify(exactly = 0) { commentRepository.save(any()) }
+                verify(exactly = 0) {
+                    mentionDispatcher.dispatch(
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any()
+                    )
+                }
+            }
         }
     }) {
     companion object {

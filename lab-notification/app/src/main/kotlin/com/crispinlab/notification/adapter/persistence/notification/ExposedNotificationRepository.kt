@@ -16,6 +16,7 @@ import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.statements.UpsertStatement
 import org.jetbrains.exposed.v1.jdbc.batchInsert
 import org.jetbrains.exposed.v1.jdbc.select
@@ -115,6 +116,25 @@ class ExposedNotificationRepository :
                     (Notifications.sourceId eq sourceId)
             }.limit(1)
             .any()
+
+    override fun existingUserIdsAmong(
+        userIds: Collection<UserId>,
+        type: NotificationType,
+        sourceType: SourceType,
+        sourceId: Long
+    ): Set<UserId> {
+        if (userIds.isEmpty()) return emptySet()
+        val rawIds = userIds.map { it.value }.distinct()
+        return Notifications
+            .select(Notifications.userId)
+            .where {
+                (Notifications.userId inList rawIds) and
+                    (Notifications.type eq type.name) and
+                    (Notifications.sourceType eq sourceType.name) and
+                    (Notifications.sourceId eq sourceId)
+            }.map { UserId(it[Notifications.userId]) }
+            .toSet()
+    }
 
     private fun decodeType(stored: String): NotificationType =
         runCatching { stored.asNotificationType() }

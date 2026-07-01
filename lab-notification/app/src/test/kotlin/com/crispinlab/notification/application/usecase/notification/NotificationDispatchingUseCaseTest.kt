@@ -29,7 +29,9 @@ class NotificationDispatchingUseCaseTest :
 
         beforeEach {
             clearMocks(notificationRepository, idGenerator)
-            every { notificationRepository.existsBy(any(), any(), any(), any()) } returns false
+            every {
+                notificationRepository.existingUserIdsAmong(any(), any(), any(), any())
+            } returns emptySet()
             every { notificationRepository.saveAll(any()) } answers { firstArg() }
             every { idGenerator.next() } returnsMany (1L..1000L).toList()
         }
@@ -54,10 +56,10 @@ class NotificationDispatchingUseCaseTest :
                 saved.captured.all { it.sourceType == SourceType.PAGE } shouldBe true
             }
 
-            it("existsBy 가 true 인 target 은 발사 대상에서 제외된다 (재발사 차단)") {
+            it("existingUserIdsAmong 에 포함된 target 은 발사 대상에서 제외된다 (재발사 차단)") {
                 every {
-                    notificationRepository.existsBy(UserId(200L), any(), any(), any())
-                } returns true
+                    notificationRepository.existingUserIdsAmong(any(), any(), any(), any())
+                } returns setOf(UserId(200L))
                 val saved = slot<List<Notification>>()
                 every { notificationRepository.saveAll(capture(saved)) } answers { saved.captured }
 
@@ -70,8 +72,8 @@ class NotificationDispatchingUseCaseTest :
 
             it("모든 target 이 이미 알림 받았으면 saveAll 은 빈 리스트로 호출된다") {
                 every {
-                    notificationRepository.existsBy(any(), any(), any(), any())
-                } returns true
+                    notificationRepository.existingUserIdsAmong(any(), any(), any(), any())
+                } returns setOf(UserId(200L), UserId(201L))
                 val saved = slot<List<Notification>>()
                 every { notificationRepository.saveAll(capture(saved)) } answers { saved.captured }
 
@@ -80,6 +82,18 @@ class NotificationDispatchingUseCaseTest :
                 )
 
                 saved.captured shouldBe emptyList()
+            }
+
+            it("batch lookup — existingUserIdsAmong 은 targetUserIds 당 1회만 호출된다 (N+1 방지)") {
+                useCase.perform(
+                    basicRequest(
+                        targetUserIds = listOf(UserId(200L), UserId(201L), UserId(202L))
+                    )
+                )
+
+                verify(exactly = 1) {
+                    notificationRepository.existingUserIdsAmong(any(), any(), any(), any())
+                }
             }
         }
     }) {

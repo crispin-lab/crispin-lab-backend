@@ -20,12 +20,13 @@ class ExposedMentionRepository : MentionRepository {
         sourceId: Long,
         mentions: List<Mention>
     ): List<Mention> {
+        val deduped: List<Mention> = mentions.distinctBy { it.mentionedUserId }
         val prior: Set<UserId> = findBy(sourceType, sourceId).map { it.mentionedUserId }.toSet()
         Mentions.deleteWhere {
             (Mentions.sourceType eq sourceType.name) and (Mentions.sourceId eq sourceId)
         }
-        if (mentions.isNotEmpty()) {
-            Mentions.batchInsert(mentions) { mention ->
+        if (deduped.isNotEmpty()) {
+            Mentions.batchInsert(deduped) { mention ->
                 this[Mentions.id] = mention.id.value
                 this[Mentions.sourceType] = mention.sourceType.name
                 this[Mentions.sourceId] = mention.sourceId
@@ -34,7 +35,7 @@ class ExposedMentionRepository : MentionRepository {
                 this[Mentions.createdAt] = mention.createdAt
             }
         }
-        return mentions.filterNot { it.mentionedUserId in prior }
+        return deduped.filterNot { it.mentionedUserId in prior }
     }
 
     override fun findBy(

@@ -9,6 +9,6 @@ CREATE TABLE notifications (
     read_at TIMESTAMP NULL,
     created_at TIMESTAMP NOT NULL
 );
-CREATE INDEX notifications_user_id_idx ON notifications (user_id);
+CREATE INDEX notifications_user_created_at_idx ON notifications (user_id, created_at);
 CREATE UNIQUE INDEX notifications_user_type_source_uidx
     ON notifications (user_id, type, source_type, source_id);

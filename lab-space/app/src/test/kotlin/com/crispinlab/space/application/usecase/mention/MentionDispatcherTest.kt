@@ -184,6 +184,11 @@ class MentionDispatcherTest :
                 )
 
                 replaced.captured.map { it.mentionedUserId } shouldBe listOf(UserId(200L))
+                verify(exactly = 1) {
+                    notificationDispatching.perform(
+                        match { it.targetUserIds == listOf(UserId(200L)) }
+                    )
+                }
             }
 
             it("newlyAdded 가 비면 notification 미발사 (idempotent 재발사 차단)") {

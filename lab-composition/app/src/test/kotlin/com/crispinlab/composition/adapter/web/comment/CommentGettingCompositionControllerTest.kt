@@ -93,6 +93,28 @@ class CommentGettingCompositionControllerTest :
                 }
             }
 
+            it("author 가 삭제된 사용자이면 authorHandle 은 빈 문자열로 응답한다") {
+                every { userHandleLookup.handlesOf(any()) } returns emptyMap()
+                every { useCase.perform(any()) } returns
+                    Result(
+                        commentId = CommentId(7L),
+                        pageId = PageId(10L),
+                        authorId = UserId(999L),
+                        content = "안녕하세요",
+                        canEdit = false,
+                        createdAt = DUMMY_INSTANT,
+                        updatedAt = DUMMY_INSTANT
+                    )
+
+                controller
+                    .`when`(
+                        get("/v1/pages/{pageId}/comments/{commentId}", 10, 7).withAuth()
+                    ).then(
+                        status().isOk,
+                        jsonPath("$.authorHandle").value("")
+                    )
+            }
+
             it("없으면 404 를 반환한다") {
                 every { useCase.perform(any()) } throws
                     NotFoundException(CommentErrorCode.COMMENT_NOT_FOUND)

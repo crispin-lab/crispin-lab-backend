@@ -159,6 +159,55 @@ class PageSearchingCompositionControllerTest :
                     )
             }
 
+            it("distinct authorIds 에 대해 handlesOf 를 정확히 1회 batch 호출한다") {
+                every { useCase.perform(any()) } returns
+                    PageResult(
+                        items =
+                            listOf(
+                                Summary(
+                                    pageId = PageId(1L),
+                                    spaceId = SpaceId(10L),
+                                    parentPageId = null,
+                                    authorId = UserId(100L),
+                                    title = "a",
+                                    visibility = Visibility.PUBLIC,
+                                    displayOrder = 0,
+                                    updatedAt = DUMMY_INSTANT
+                                ),
+                                Summary(
+                                    pageId = PageId(2L),
+                                    spaceId = SpaceId(10L),
+                                    parentPageId = null,
+                                    authorId = UserId(100L),
+                                    title = "b",
+                                    visibility = Visibility.PUBLIC,
+                                    displayOrder = 1,
+                                    updatedAt = DUMMY_INSTANT
+                                ),
+                                Summary(
+                                    pageId = PageId(3L),
+                                    spaceId = SpaceId(10L),
+                                    parentPageId = null,
+                                    authorId = UserId(200L),
+                                    title = "c",
+                                    visibility = Visibility.PUBLIC,
+                                    displayOrder = 2,
+                                    updatedAt = DUMMY_INSTANT
+                                )
+                            ),
+                        page = 0,
+                        size = 20,
+                        totalElements = 3L
+                    )
+
+                controller
+                    .`when`(get("/v1/pages").withAuth())
+                    .then(status().isOk)
+                verify(exactly = 1) {
+                    userHandleLookup.handlesOf(setOf(UserId(100L), UserId(200L)))
+                }
+            }
+
             it("author 가 삭제된 사용자이면 authorHandle 은 빈 문자열로 응답한다") {
                 every { userHandleLookup.handlesOf(any()) } returns emptyMap()
                 every { useCase.perform(any()) } returns

@@ -41,7 +41,7 @@ class CommentRegisteringCompositionController(
     private fun Result.toPayload(): CommentRegisterPayload =
         CommentRegisterPayload(
             commentId = commentId,
-            authorHandle = userHandleLookup.handleOf(authorId)
+            authorHandle = runCatching { userHandleLookup.handleOf(authorId) }.getOrElse { "" }
         )
 
     data class Body(

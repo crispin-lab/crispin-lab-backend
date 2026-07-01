@@ -41,7 +41,7 @@ class CommentEditingCompositionController(
     private fun Result.toPayload(): CommentEditPayload =
         CommentEditPayload(
             commentId = commentId,
-            authorHandle = userHandleLookup.handleOf(authorId),
+            authorHandle = runCatching { userHandleLookup.handleOf(authorId) }.getOrElse { "" },
             content = content,
             updatedAt = updatedAt
         )

@@ -108,6 +108,81 @@ class CommentListingCompositionControllerTest :
                     )
             }
 
+            it("distinct authorIds 에 대해 handlesOf 를 정확히 1회 batch 호출한다") {
+                every { useCase.perform(any()) } returns
+                    PageResult(
+                        items =
+                            listOf(
+                                Summary(
+                                    commentId = CommentId(1L),
+                                    pageId = PageId(10L),
+                                    authorId = UserId(100L),
+                                    content = "a",
+                                    canEdit = true,
+                                    createdAt = DUMMY_INSTANT,
+                                    updatedAt = DUMMY_INSTANT
+                                ),
+                                Summary(
+                                    commentId = CommentId(2L),
+                                    pageId = PageId(10L),
+                                    authorId = UserId(100L),
+                                    content = "b",
+                                    canEdit = true,
+                                    createdAt = DUMMY_INSTANT,
+                                    updatedAt = DUMMY_INSTANT
+                                ),
+                                Summary(
+                                    commentId = CommentId(3L),
+                                    pageId = PageId(10L),
+                                    authorId = UserId(101L),
+                                    content = "c",
+                                    canEdit = false,
+                                    createdAt = DUMMY_INSTANT,
+                                    updatedAt = DUMMY_INSTANT
+                                )
+                            ),
+                        page = 0,
+                        size = 20,
+                        totalElements = 3L
+                    )
+
+                controller
+                    .`when`(get("/v1/pages/{pageId}/comments", 10).withAuth())
+                    .then(status().isOk)
+                verify(exactly = 1) {
+                    userHandleLookup.handlesOf(setOf(UserId(100L), UserId(101L)))
+                }
+            }
+
+            it("author 가 삭제된 사용자이면 authorHandle 은 빈 문자열로 응답한다") {
+                every { userHandleLookup.handlesOf(any()) } returns emptyMap()
+                every { useCase.perform(any()) } returns
+                    PageResult(
+                        items =
+                            listOf(
+                                Summary(
+                                    commentId = CommentId(1L),
+                                    pageId = PageId(10L),
+                                    authorId = UserId(999L),
+                                    content = "삭제된 사용자가 남긴 댓글",
+                                    canEdit = false,
+                                    createdAt = DUMMY_INSTANT,
+                                    updatedAt = DUMMY_INSTANT
+                                )
+                            ),
+                        page = 0,
+                        size = 20,
+                        totalElements = 1L
+                    )
+
+                controller
+                    .`when`(get("/v1/pages/{pageId}/comments", 10).withAuth())
+                    .then(
+                        status().isOk,
+                        jsonPath("$.items[0].authorHandle").value("")
+                    )
+            }
+
             it("page/size 파라미터가 없어도 기본값으로 200 을 반환한다") {
                 every { useCase.perform(any()) } returns
                     PageResult(

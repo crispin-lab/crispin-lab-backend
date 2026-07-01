@@ -88,6 +88,50 @@ class CommentEditingCompositionControllerTest :
                 }
             }
 
+            it("author 가 삭제된 사용자이면 authorHandle 은 빈 문자열로 응답한다") {
+                every { userHandleLookup.handlesOf(any()) } returns emptyMap()
+                every { useCase.perform(any()) } returns
+                    Result(
+                        commentId = CommentId(7L),
+                        authorId = UserId(999L),
+                        content = "수정된 댓글",
+                        updatedAt = DUMMY_INSTANT
+                    )
+
+                controller
+                    .`when`(
+                        put("/v1/pages/{pageId}/comments/{commentId}", 10, 7)
+                            .withAuth()
+                            .body(mapOf("content" to "수정된 댓글"))
+                    ).then(
+                        status().isOk,
+                        jsonPath("$.authorHandle").value("")
+                    )
+            }
+
+            it("handle 조회가 실패해도 쓰기 성공 응답을 반환한다 (authorHandle 빈 문자열)") {
+                every { userHandleLookup.handlesOf(any()) } throws
+                    RuntimeException("lookup failure")
+                every { useCase.perform(any()) } returns
+                    Result(
+                        commentId = CommentId(7L),
+                        authorId = UserId(100L),
+                        content = "수정된 댓글",
+                        updatedAt = DUMMY_INSTANT
+                    )
+
+                controller
+                    .`when`(
+                        put("/v1/pages/{pageId}/comments/{commentId}", 10, 7)
+                            .withAuth()
+                            .body(mapOf("content" to "수정된 댓글"))
+                    ).then(
+                        status().isOk,
+                        jsonPath("$.commentId").value("7"),
+                        jsonPath("$.authorHandle").value("")
+                    )
+            }
+
             it("Authorization 토큰이 없으면 401 을 반환한다") {
                 controller
                     .`when`(

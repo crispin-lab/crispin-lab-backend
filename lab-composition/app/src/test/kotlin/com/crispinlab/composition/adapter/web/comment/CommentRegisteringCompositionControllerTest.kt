@@ -70,6 +70,27 @@ class CommentRegisteringCompositionControllerTest :
                     )
             }
 
+            it("handle 조회가 실패해도 쓰기 성공 응답을 반환한다 (authorHandle 빈 문자열)") {
+                every { userHandleLookup.handlesOf(any()) } throws
+                    RuntimeException("lookup failure")
+                every { useCase.perform(any()) } returns
+                    Result(
+                        commentId = CommentId(42L),
+                        authorId = UserId(100L)
+                    )
+
+                controller
+                    .`when`(
+                        post("/v1/pages/{pageId}/comments", 10)
+                            .withAuth()
+                            .body(mapOf("content" to "첫 댓글"))
+                    ).then(
+                        status().isCreated,
+                        jsonPath("$.commentId").value("42"),
+                        jsonPath("$.authorHandle").value("")
+                    )
+            }
+
             it("Authorization 토큰이 없으면 401 을 반환한다") {
                 controller
                     .`when`(

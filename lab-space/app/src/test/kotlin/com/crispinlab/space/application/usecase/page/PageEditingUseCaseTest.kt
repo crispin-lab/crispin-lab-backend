@@ -11,6 +11,7 @@ import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRevisionRepository
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
+import com.crispinlab.space.application.usecase.mention.MentionDispatcher
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageErrorCode
@@ -48,6 +49,7 @@ class PageEditingUseCaseTest :
         val pageLinkRepository = mockk<PageLinkRepository>()
         val spaceRepository = mockk<SpaceRepository>()
         val spaceMemberRepository = mockk<SpaceMemberRepository>()
+        val mentionDispatcher = mockk<MentionDispatcher>(relaxed = true)
         val idGenerator = mockk<IdGenerator>()
         val useCase =
             PageEditingUseCase(
@@ -56,6 +58,7 @@ class PageEditingUseCaseTest :
                 pageLinkRepository = pageLinkRepository,
                 spaceRepository = spaceRepository,
                 spaceMemberRepository = spaceMemberRepository,
+                mentionDispatcher = mentionDispatcher,
                 idGenerator = idGenerator,
                 transactionProvider = DummyTransactionProvider(),
                 objectMapper = ObjectMapper()
@@ -68,6 +71,7 @@ class PageEditingUseCaseTest :
                 pageLinkRepository,
                 spaceRepository,
                 spaceMemberRepository,
+                mentionDispatcher,
                 idGenerator
             )
             every {
@@ -256,9 +260,19 @@ class PageEditingUseCaseTest :
                 verify(exactly = 0) { pageRepository.save(any()) }
                 verify(exactly = 0) { pageRevisionRepository.save(any()) }
                 verify(exactly = 0) { pageLinkRepository.saveAll(any()) }
+                verify(exactly = 0) {
+                    mentionDispatcher.dispatch(
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any()
+                    )
+                }
             }
 
-            it("본문 변경 없이 공개 범위만 바뀌면 새 리비전을 만들지 않는다") {
+            it("본문 변경 없이 공개 범위만 바뀌면 새 리비전을 만들지 않고 mention dispatch 도 skip 한다") {
                 val page = basicPage(visibility = Visibility.DRAFT, currentVersion = 3)
                 every { pageRepository.findBy(page.id) } returns page
                 val savedPage = slot<Page>()
@@ -277,6 +291,47 @@ class PageEditingUseCaseTest :
                 savedPage.captured.currentVersion shouldBe 3
                 verify(exactly = 0) { pageRevisionRepository.save(any()) }
                 verify(exactly = 0) { pageLinkRepository.saveAll(any()) }
+                verify(exactly = 0) {
+                    mentionDispatcher.dispatch(
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any()
+                    )
+                }
+            }
+
+            it("제목만 바뀐 편집은 새 리비전을 만들지만 mention dispatch 는 skip 한다") {
+                val page =
+                    basicPage(
+                        visibility = Visibility.PUBLIC,
+                        currentVersion = 1
+                    )
+                every { pageRepository.findBy(page.id) } returns page
+                every { idGenerator.next() } returnsMany listOf(101L)
+
+                useCase.perform(
+                    basicRequest(
+                        pageId = page.id.value.toString(),
+                        title = "새 제목만",
+                        content = page.content.raw,
+                        visibility = null
+                    )
+                )
+
+                verify(exactly = 1) { pageRevisionRepository.save(any()) }
+                verify(exactly = 0) {
+                    mentionDispatcher.dispatch(
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any()
+                    )
+                }
             }
 
             it("INTERNAL space 의 page 를 PUBLIC 으로 바꾸려 하면 ConflictException (cascade)") {
@@ -340,7 +395,6 @@ class PageEditingUseCaseTest :
 
                 savedPage.captured.visibility shouldBe Visibility.PUBLIC
                 savedPage.captured.title shouldBe "복구 수정"
-                verify(exactly = 0) { spaceRepository.findVisibility(any()) }
             }
         }
     }) {

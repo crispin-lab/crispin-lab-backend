@@ -8,6 +8,7 @@ import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.domain.access.Viewer
+import com.crispinlab.space.domain.comment.CommentContent
 import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.Visibility
@@ -66,7 +67,7 @@ class CommentGettingUseCaseTest :
                     basicComment(
                         id = CommentId(7L),
                         pageId = page.id,
-                        body = "안녕하세요"
+                        content = CommentContent("안녕하세요")
                     )
                 every { pageRepository.findBy(page.id) } returns page
                 every { commentRepository.findBy(comment.id) } returns comment
@@ -80,7 +81,7 @@ class CommentGettingUseCaseTest :
                     )
 
                 result.commentId shouldBe CommentId(7L)
-                result.body shouldBe "안녕하세요"
+                result.content shouldBe "안녕하세요"
                 result.authorId shouldBe UserId(100L)
                 result.authorHandle shouldBe "test_user"
                 verify(exactly = 1) { userHandleQuery.handlesOf(setOf(UserId(100L))) }

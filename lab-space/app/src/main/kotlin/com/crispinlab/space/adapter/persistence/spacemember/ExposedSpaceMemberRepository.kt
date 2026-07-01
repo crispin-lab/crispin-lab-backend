@@ -17,6 +17,7 @@ import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.statements.UpsertStatement
 import org.jetbrains.exposed.v1.exceptions.ExposedSQLException
 import org.jetbrains.exposed.v1.jdbc.select
@@ -103,6 +104,17 @@ class ExposedSpaceMemberRepository :
             .where { SpaceMembers.userId eq userId.value }
             .map { SpaceId(it[SpaceMembers.spaceId]) }
             .toSet()
+
+    override fun findSpaceIdsByUserIds(userIds: Collection<UserId>): Map<UserId, Set<SpaceId>> {
+        if (userIds.isEmpty()) return emptyMap()
+        val rawIds = userIds.map { it.value }.distinct()
+        return SpaceMembers
+            .select(SpaceMembers.userId, SpaceMembers.spaceId)
+            .where { SpaceMembers.userId inList rawIds }
+            .groupBy({ UserId(it[SpaceMembers.userId]) }) {
+                SpaceId(it[SpaceMembers.spaceId])
+            }.mapValues { it.value.toSet() }
+    }
 
     override fun countOwnersBy(spaceId: SpaceId): Long =
         SpaceMembers

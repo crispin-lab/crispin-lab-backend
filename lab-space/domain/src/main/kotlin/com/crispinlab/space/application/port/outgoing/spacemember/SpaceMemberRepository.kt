@@ -24,6 +24,8 @@ interface SpaceMemberRepository {
 
     fun findSpaceIdsByUserId(userId: UserId): Set<SpaceId>
 
+    fun findSpaceIdsByUserIds(userIds: Collection<UserId>): Map<UserId, Set<SpaceId>>
+
     fun countOwnersBy(spaceId: SpaceId): Long
 
     fun delete(id: SpaceMemberId)

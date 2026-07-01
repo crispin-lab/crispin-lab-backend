@@ -4,13 +4,20 @@ import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.common.transaction.DummyTransactionProvider
 import com.crispinlab.space.application.port.incoming.comment.CommentEditing.Request
 import com.crispinlab.space.application.port.outgoing.comment.CommentRepository
+import com.crispinlab.space.application.port.outgoing.page.PageRepository
+import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
+import com.crispinlab.space.application.usecase.mention.MentionDispatcher
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.comment.Comment
+import com.crispinlab.space.domain.comment.CommentContent
 import com.crispinlab.space.domain.page.PageId
+import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.testsupport.Fixtures.basicComment
+import com.crispinlab.space.testsupport.Fixtures.basicPage
 import com.crispinlab.user.application.port.outgoing.user.UserHandleQuery
 import com.crispinlab.user.domain.user.Handle
 import com.crispinlab.user.domain.user.UserId
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
@@ -23,16 +30,31 @@ import io.mockk.verify
 class CommentEditingUseCaseTest :
     DescribeSpec({
         val commentRepository = mockk<CommentRepository>()
+        val pageRepository = mockk<PageRepository>()
+        val spaceRepository = mockk<SpaceRepository>()
         val userHandleQuery = mockk<UserHandleQuery>()
+        val mentionDispatcher = mockk<MentionDispatcher>(relaxed = true)
         val useCase =
             CommentEditingUseCase(
                 commentRepository = commentRepository,
+                pageRepository = pageRepository,
+                spaceRepository = spaceRepository,
                 userHandleQuery = userHandleQuery,
-                transactionProvider = DummyTransactionProvider()
+                mentionDispatcher = mentionDispatcher,
+                transactionProvider = DummyTransactionProvider(),
+                objectMapper = ObjectMapper()
             )
 
         beforeEach {
-            clearMocks(commentRepository, userHandleQuery)
+            clearMocks(
+                commentRepository,
+                pageRepository,
+                spaceRepository,
+                userHandleQuery,
+                mentionDispatcher
+            )
+            every { pageRepository.findBy(any()) } returns basicPage()
+            every { spaceRepository.findVisibility(any()) } returns SpaceVisibility.PUBLIC
             every { commentRepository.save(any()) } answers { firstArg() }
             every { userHandleQuery.handlesOf(any()) } returns
                 mapOf(
@@ -42,8 +64,8 @@ class CommentEditingUseCaseTest :
         }
 
         describe("댓글 수정") {
-            it("body 를 갱신하고 Result 를 반환한다") {
-                val comment = basicComment(pageId = PageId(10L), body = "이전")
+            it("content 를 갱신하고 Result 를 반환한다") {
+                val comment = basicComment(pageId = PageId(10L), content = CommentContent("이전"))
                 every { commentRepository.findBy(comment.id) } returns comment
                 val saved = slot<Comment>()
                 every { commentRepository.save(capture(saved)) } answers { saved.captured }
@@ -53,13 +75,13 @@ class CommentEditingUseCaseTest :
                         basicRequest(
                             pageId = "10",
                             commentId = comment.id.value.toString(),
-                            body = "수정됨"
+                            content = "수정됨"
                         )
                     )
 
-                result.body shouldBe "수정됨"
+                result.content shouldBe "수정됨"
                 result.authorHandle shouldBe "alice"
-                saved.captured.body shouldBe "수정됨"
+                saved.captured.content.raw shouldBe "수정됨"
                 verify(exactly = 1) { userHandleQuery.handlesOf(setOf(UserId(100L))) }
             }
 
@@ -115,7 +137,11 @@ class CommentEditingUseCaseTest :
 
             it("ADMIN 은 작성자가 아니어도 수정 가능하다") {
                 val comment =
-                    basicComment(pageId = PageId(10L), authorId = UserId(200L), body = "이전")
+                    basicComment(
+                        pageId = PageId(10L),
+                        authorId = UserId(200L),
+                        content = CommentContent("이전")
+                    )
                 every { commentRepository.findBy(comment.id) } returns comment
                 val saved = slot<Comment>()
                 every { commentRepository.save(capture(saved)) } answers { saved.captured }
@@ -125,15 +151,15 @@ class CommentEditingUseCaseTest :
                         basicRequest(
                             pageId = "10",
                             commentId = comment.id.value.toString(),
-                            body = "수정됨",
+                            content = "수정됨",
                             userId = UserId(100L),
                             isAdmin = true
                         )
                     )
 
-                result.body shouldBe "수정됨"
+                result.content shouldBe "수정됨"
                 result.authorHandle shouldBe "bob"
-                saved.captured.body shouldBe "수정됨"
+                saved.captured.content.raw shouldBe "수정됨"
                 verify(exactly = 1) { userHandleQuery.handlesOf(setOf(UserId(200L))) }
             }
 
@@ -152,20 +178,46 @@ class CommentEditingUseCaseTest :
                 }
                 verify(exactly = 0) { commentRepository.save(any()) }
             }
+
+            it("content 가 변경되지 않으면 save 와 mention dispatch 를 모두 skip 한다") {
+                val comment =
+                    basicComment(pageId = PageId(10L), content = CommentContent("동일 내용"))
+                every { commentRepository.findBy(comment.id) } returns comment
+
+                useCase.perform(
+                    basicRequest(
+                        pageId = "10",
+                        commentId = comment.id.value.toString(),
+                        content = "동일 내용"
+                    )
+                )
+
+                verify(exactly = 0) { commentRepository.save(any()) }
+                verify(exactly = 0) {
+                    mentionDispatcher.dispatch(
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any()
+                    )
+                }
+            }
         }
     }) {
     companion object {
         fun basicRequest(
             pageId: String = "10",
             commentId: String = "1",
-            body: String = "수정된 댓글",
+            content: String = "수정된 댓글",
             userId: UserId = UserId(100L),
             isAdmin: Boolean = false
         ): Request =
             Request(
                 pageId = pageId,
                 commentId = commentId,
-                body = body,
+                content = content,
                 viewer = Viewer.Member(userId = userId, isAdmin = isAdmin)
             )
     }

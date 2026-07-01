@@ -2,6 +2,7 @@ package com.crispinlab.space.adapter.persistence.comment
 
 import com.crispinlab.common.pagination.PageRequest
 import com.crispinlab.common.persistence.PostgresTestContext
+import com.crispinlab.space.domain.comment.CommentContent
 import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
@@ -33,7 +34,7 @@ class ExposedCommentRepositoryTest :
                         basicComment(
                             id = CommentId(1L),
                             pageId = PageId(10L),
-                            body = "안녕하세요"
+                            content = CommentContent("안녕하세요")
                         )
                     )
                 }
@@ -44,20 +45,20 @@ class ExposedCommentRepositoryTest :
                     found.shouldNotBeNull()
                     found.id shouldBe CommentId(1L)
                     found.pageId shouldBe PageId(10L)
-                    found.body shouldBe "안녕하세요"
+                    found.content.raw shouldBe "안녕하세요"
                     found.deletedAt.shouldBeNull()
                     found.isDeleted shouldBe false
                 }
             }
 
-            it("같은 ID 로 다시 save 하면 body·updatedAt 만 갱신되고 pageId·authorId·createdAt 은 보존된다") {
+            it("같은 ID 로 다시 save 하면 content·updatedAt 만 갱신되고 pageId·authorId·createdAt 은 보존된다") {
                 transaction(database) {
                     repository.save(
                         basicComment(
                             id = CommentId(2L),
                             pageId = PageId(50L),
                             authorId = UserId(500L),
-                            body = "이전"
+                            content = CommentContent("이전")
                         )
                     )
                 }
@@ -66,14 +67,14 @@ class ExposedCommentRepositoryTest :
                     transaction(database) {
                         val original = repository.findBy(CommentId(2L)).shouldNotBeNull()
                         val capturedUpdatedAt = original.updatedAt
-                        original.edit(body = "수정됨")
+                        original.edit(content = CommentContent("수정됨"))
                         repository.save(original)
                         capturedUpdatedAt
                     }
 
                 transaction(database) {
                     val updated = repository.findBy(CommentId(2L)).shouldNotBeNull()
-                    updated.body shouldBe "수정됨"
+                    updated.content.raw shouldBe "수정됨"
                     updated.pageId shouldBe PageId(50L)
                     updated.authorId shouldBe UserId(500L)
                     updated.createdAt shouldBe DUMMY_INSTANT
@@ -198,7 +199,11 @@ class ExposedCommentRepositoryTest :
 
                 transaction(database) {
                     repository.save(
-                        basicComment(id = CommentId(100L), body = "복구 시도", deletedAt = null)
+                        basicComment(
+                            id = CommentId(100L),
+                            content = CommentContent("복구 시도"),
+                            deletedAt = null
+                        )
                     )
                 }
 

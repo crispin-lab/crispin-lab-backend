@@ -36,7 +36,7 @@ class CommentListingControllerTest :
                                     pageId = PageId(10L),
                                     authorId = UserId(100L),
                                     authorHandle = "alice",
-                                    body = "첫 댓글",
+                                    content = "첫 댓글",
                                     canEdit = true,
                                     createdAt = DUMMY_INSTANT,
                                     updatedAt = DUMMY_INSTANT
@@ -46,7 +46,7 @@ class CommentListingControllerTest :
                                     pageId = PageId(10L),
                                     authorId = UserId(101L),
                                     authorHandle = "bob",
-                                    body = "두 번째",
+                                    content = "두 번째",
                                     canEdit = false,
                                     createdAt = DUMMY_INSTANT,
                                     updatedAt = DUMMY_INSTANT
@@ -67,7 +67,7 @@ class CommentListingControllerTest :
                         status().isOk,
                         jsonPath("$.items.length()").value(2),
                         jsonPath("$.items[0].commentId").value("1"),
-                        jsonPath("$.items[0].body").value("첫 댓글"),
+                        jsonPath("$.items[0].content").value("첫 댓글"),
                         jsonPath("$.items[0].authorHandle").value("alice"),
                         jsonPath("$.items[0].canEdit").value(true),
                         jsonPath("$.items[1].authorHandle").value("bob"),
@@ -85,7 +85,7 @@ class CommentListingControllerTest :
                                 "authorHandle".string(
                                     "작성자 사용자 이름 (삭제된 사용자의 경우 빈 문자열)"
                                 )
-                                "body".string("본문")
+                                "content".string("본문 (TipTap JSON)")
                                 "canEdit".boolean(
                                     "현재 viewer 가 이 댓글을 수정할 수 있는지. " +
                                         "ADMIN 글로벌 권한 또는 (author 본인 && 스페이스 쓰기 권한) 일 때 true."

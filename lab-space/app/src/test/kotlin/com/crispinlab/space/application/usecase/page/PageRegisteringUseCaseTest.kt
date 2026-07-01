@@ -11,6 +11,7 @@ import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRevisionRepository
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
+import com.crispinlab.space.application.usecase.mention.MentionDispatcher
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageErrorCode
@@ -47,6 +48,7 @@ class PageRegisteringUseCaseTest :
         val pageLinkRepository = mockk<PageLinkRepository>()
         val spaceRepository = mockk<SpaceRepository>()
         val spaceMemberRepository = mockk<SpaceMemberRepository>()
+        val mentionDispatcher = mockk<MentionDispatcher>(relaxed = true)
         val idGenerator = mockk<IdGenerator>()
         val useCase =
             PageRegisteringUseCase(
@@ -55,6 +57,7 @@ class PageRegisteringUseCaseTest :
                 pageLinkRepository = pageLinkRepository,
                 spaceRepository = spaceRepository,
                 spaceMemberRepository = spaceMemberRepository,
+                mentionDispatcher = mentionDispatcher,
                 idGenerator = idGenerator,
                 transactionProvider = DummyTransactionProvider(),
                 objectMapper = ObjectMapper()
@@ -67,6 +70,7 @@ class PageRegisteringUseCaseTest :
                 pageLinkRepository,
                 spaceRepository,
                 spaceMemberRepository,
+                mentionDispatcher,
                 idGenerator
             )
             every { spaceRepository.findVisibility(any()) } returns SpaceVisibility.PUBLIC

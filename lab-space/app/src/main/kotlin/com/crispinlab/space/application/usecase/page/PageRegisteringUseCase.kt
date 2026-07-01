@@ -13,6 +13,9 @@ import com.crispinlab.space.application.port.outgoing.page.PageRevisionRepositor
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.application.usecase.access.requireWritePermission
+import com.crispinlab.space.application.usecase.mention.MentionDispatcher
+import com.crispinlab.space.application.usecase.mention.extractMentions
+import com.crispinlab.space.domain.mention.Mention
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageContent
 import com.crispinlab.space.domain.page.PageErrorCode
@@ -22,6 +25,7 @@ import com.crispinlab.space.domain.page.PageLinkId
 import com.crispinlab.space.domain.page.PageRevision
 import com.crispinlab.space.domain.page.PageRevisionId
 import com.crispinlab.space.domain.space.SpaceErrorCode
+import com.crispinlab.space.domain.space.SpaceVisibility
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.stereotype.Service
 
@@ -32,23 +36,24 @@ class PageRegisteringUseCase(
     private val pageLinkRepository: PageLinkRepository,
     private val spaceRepository: SpaceRepository,
     private val spaceMemberRepository: SpaceMemberRepository,
+    private val mentionDispatcher: MentionDispatcher,
     private val idGenerator: IdGenerator,
     private val transactionProvider: TransactionProvider,
     private val objectMapper: ObjectMapper
 ) : PageRegistering {
     override fun perform(request: Request): Result =
         transactionProvider.transactional {
+            val spaceVisibility = request.validateAndResolveSpaceVisibility()
             request
-                .also {
-                    it.validate()
-                }.toEntity()
+                .toEntity()
                 .let {
                     pageRepository.save(it)
                 }.saveInitialRevisionAndLinks()
+                .dispatchInitialMentions(spaceVisibility)
                 .toResult()
         }
 
-    private fun Request.validate() {
+    private fun Request.validateAndResolveSpaceVisibility(): SpaceVisibility {
         val spaceVisibility =
             spaceRepository.findVisibility(spaceId)
                 ?: throw NotFoundException(SpaceErrorCode.SPACE_NOT_FOUND)
@@ -63,6 +68,7 @@ class PageRegisteringUseCase(
                     it.spaceId == spaceId
                 } ?: throw NotFoundException(PageErrorCode.PARENT_PAGE_NOT_FOUND)
         }
+        return spaceVisibility
     }
 
     private fun Request.toEntity(): Page =
@@ -112,6 +118,24 @@ class PageRegisteringUseCase(
                 pageLinkRepository.saveAll(it)
             }
     }
+
+    private fun Page.dispatchInitialMentions(spaceVisibility: SpaceVisibility): Page =
+        apply {
+            mentionDispatcher.dispatch(
+                sourceType = Mention.SourceType.PAGE,
+                sourceId = id.value,
+                actorUserId = authorId,
+                extracted = content.extractMentions(objectMapper),
+                subject =
+                    MentionDispatcher.MentionSubject(
+                        spaceId = spaceId,
+                        spaceVisibility = spaceVisibility,
+                        pageVisibility = visibility,
+                        pageAuthorId = authorId
+                    ),
+                occurredAt = createdAt
+            )
+        }
 
     private fun Page.toResult(): Result = Result(pageId = id)
 }

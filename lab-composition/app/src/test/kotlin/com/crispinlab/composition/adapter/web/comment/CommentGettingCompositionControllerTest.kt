@@ -1,14 +1,15 @@
-package com.crispinlab.space.adapter.web.comment
+package com.crispinlab.composition.adapter.web.comment
 
 import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder.Companion.responseFields
 import com.crispinlab.common.exception.NotFoundException
+import com.crispinlab.composition.application.port.outgoing.user.UserHandleLookup
+import com.crispinlab.composition.testsupport.CompositionAppControllerDescribeSpec
 import com.crispinlab.space.application.port.incoming.comment.CommentGetting
 import com.crispinlab.space.application.port.incoming.comment.CommentGetting.Result
 import com.crispinlab.space.domain.comment.CommentErrorCode
 import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
-import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
 import com.crispinlab.user.domain.user.UserId
 import com.crispinlab.user.testsupport.withAuth
 import io.mockk.clearMocks
@@ -19,12 +20,17 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
-class CommentGettingControllerTest :
-    SpaceAppControllerDescribeSpec(tag = "Comment", body = {
+class CommentGettingCompositionControllerTest :
+    CompositionAppControllerDescribeSpec(tag = "Comment", body = {
         val useCase = mockk<CommentGetting>()
-        val controller = CommentGettingController(useCase)
+        val userHandleLookup = mockk<UserHandleLookup>()
+        val controller = CommentGettingCompositionController(useCase, userHandleLookup)
 
-        beforeEach { clearMocks(useCase) }
+        beforeEach {
+            clearMocks(useCase, userHandleLookup)
+            every { userHandleLookup.handlesOf(any()) } returns
+                mapOf(UserId(100L) to "test_user")
+        }
 
         describe("댓글 단건 조회") {
             it("존재하면 200 과 정보를 반환한다") {
@@ -41,7 +47,6 @@ class CommentGettingControllerTest :
                         commentId = CommentId(7L),
                         pageId = PageId(10L),
                         authorId = UserId(100L),
-                        authorHandle = "test_user",
                         content = "안녕하세요",
                         canEdit = true,
                         createdAt = DUMMY_INSTANT,
@@ -86,6 +91,28 @@ class CommentGettingControllerTest :
                         }
                     )
                 }
+            }
+
+            it("author 가 삭제된 사용자이면 authorHandle 은 빈 문자열로 응답한다") {
+                every { userHandleLookup.handlesOf(any()) } returns emptyMap()
+                every { useCase.perform(any()) } returns
+                    Result(
+                        commentId = CommentId(7L),
+                        pageId = PageId(10L),
+                        authorId = UserId(999L),
+                        content = "안녕하세요",
+                        canEdit = false,
+                        createdAt = DUMMY_INSTANT,
+                        updatedAt = DUMMY_INSTANT
+                    )
+
+                controller
+                    .`when`(
+                        get("/v1/pages/{pageId}/comments/{commentId}", 10, 7).withAuth()
+                    ).then(
+                        status().isOk,
+                        jsonPath("$.authorHandle").value("")
+                    )
             }
 
             it("없으면 404 를 반환한다") {

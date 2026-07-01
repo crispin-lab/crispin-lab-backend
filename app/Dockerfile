@@ -20,6 +20,7 @@ COPY lab-user/domain/build.gradle.kts lab-user/domain/build.gradle.kts
 COPY lab-user/app/build.gradle.kts lab-user/app/build.gradle.kts
 COPY lab-notification/domain/build.gradle.kts lab-notification/domain/build.gradle.kts
 COPY lab-notification/app/build.gradle.kts lab-notification/app/build.gradle.kts
+COPY lab-composition/app/build.gradle.kts lab-composition/app/build.gradle.kts
 
 RUN --mount=type=cache,target=/root/.gradle \
     ./gradlew --no-daemon :app:dependencies -q

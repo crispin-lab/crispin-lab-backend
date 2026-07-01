@@ -12,9 +12,6 @@ import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRep
 import com.crispinlab.space.application.port.outgoing.tag.TagRepository
 import com.crispinlab.space.application.usecase.access.memberSpaceIdsOf
 import com.crispinlab.space.domain.tag.TagId
-import com.crispinlab.user.application.port.outgoing.user.UserHandleQuery
-import com.crispinlab.user.domain.user.Handle
-import com.crispinlab.user.domain.user.UserId
 import org.springframework.stereotype.Service
 
 @Service
@@ -22,14 +19,13 @@ class PageSearchingUseCase(
     private val pageSearchPort: PageSearchPort,
     private val tagRepository: TagRepository,
     private val spaceMemberRepository: SpaceMemberRepository,
-    private val userHandleQuery: UserHandleQuery,
     private val transactionProvider: TransactionProvider
 ) : PageSearching {
     override fun perform(request: Request): PageResult<Summary> =
         transactionProvider.transactional(readOnly = true) {
             request
                 .search()
-                .toSummaries()
+                .map { it.toSummary() }
         }
 
     private fun Request.toScope(): VisibilityScope =
@@ -54,20 +50,12 @@ class PageSearchingUseCase(
         return tagRepository.findIdsByName(name).ifEmpty { null }
     }
 
-    private fun PageResult<PageSummary>.toSummaries(): PageResult<Summary> {
-        val authorIds = items.map { it.authorId }.toSet()
-        val handles =
-            if (authorIds.isEmpty()) emptyMap() else userHandleQuery.handlesOf(authorIds)
-        return map { it.toSummary(handles) }
-    }
-
-    private fun PageSummary.toSummary(handles: Map<UserId, Handle>): Summary =
+    private fun PageSummary.toSummary(): Summary =
         Summary(
             pageId = id,
             spaceId = spaceId,
             parentPageId = parentPageId,
             authorId = authorId,
-            authorHandle = handles[authorId]?.value ?: "",
             title = title,
             visibility = visibility,
             displayOrder = displayOrder,

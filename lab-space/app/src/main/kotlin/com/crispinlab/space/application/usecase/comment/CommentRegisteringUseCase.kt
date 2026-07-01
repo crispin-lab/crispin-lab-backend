@@ -10,7 +10,6 @@ import com.crispinlab.space.application.port.outgoing.comment.CommentRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
-import com.crispinlab.space.application.usecase.access.handleOrEmpty
 import com.crispinlab.space.application.usecase.access.requireCommentPermission
 import com.crispinlab.space.application.usecase.access.requireReadablePage
 import com.crispinlab.space.application.usecase.mention.MentionDispatcher
@@ -21,7 +20,6 @@ import com.crispinlab.space.domain.mention.Mention
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.space.SpaceErrorCode
 import com.crispinlab.space.domain.space.SpaceVisibility
-import com.crispinlab.user.application.port.outgoing.user.UserHandleQuery
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.stereotype.Service
 
@@ -31,7 +29,6 @@ class CommentRegisteringUseCase(
     private val pageRepository: PageRepository,
     private val spaceRepository: SpaceRepository,
     private val spaceMemberRepository: SpaceMemberRepository,
-    private val userHandleQuery: UserHandleQuery,
     private val mentionDispatcher: MentionDispatcher,
     private val idGenerator: IdGenerator,
     private val transactionProvider: TransactionProvider,
@@ -96,6 +93,6 @@ class CommentRegisteringUseCase(
     private fun Comment.toResult(): Result =
         Result(
             commentId = id,
-            authorHandle = userHandleQuery.handleOrEmpty(authorId)
+            authorId = authorId
         )
 }

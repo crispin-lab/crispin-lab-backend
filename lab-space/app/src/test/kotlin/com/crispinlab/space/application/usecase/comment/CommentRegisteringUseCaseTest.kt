@@ -16,8 +16,6 @@ import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.testsupport.Fixtures.basicPage
-import com.crispinlab.user.application.port.outgoing.user.UserHandleQuery
-import com.crispinlab.user.domain.user.Handle
 import com.crispinlab.user.domain.user.UserId
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.kotest.assertions.throwables.shouldThrow
@@ -35,7 +33,6 @@ class CommentRegisteringUseCaseTest :
         val pageRepository = mockk<PageRepository>()
         val spaceRepository = mockk<SpaceRepository>()
         val spaceMemberRepository = mockk<SpaceMemberRepository>()
-        val userHandleQuery = mockk<UserHandleQuery>()
         val mentionDispatcher = mockk<MentionDispatcher>(relaxed = true)
         val idGenerator = mockk<IdGenerator>()
         val useCase =
@@ -44,7 +41,6 @@ class CommentRegisteringUseCaseTest :
                 pageRepository = pageRepository,
                 spaceRepository = spaceRepository,
                 spaceMemberRepository = spaceMemberRepository,
-                userHandleQuery = userHandleQuery,
                 mentionDispatcher = mentionDispatcher,
                 idGenerator = idGenerator,
                 transactionProvider = DummyTransactionProvider(),
@@ -57,7 +53,6 @@ class CommentRegisteringUseCaseTest :
                 pageRepository,
                 spaceRepository,
                 spaceMemberRepository,
-                userHandleQuery,
                 mentionDispatcher,
                 idGenerator
             )
@@ -65,8 +60,6 @@ class CommentRegisteringUseCaseTest :
             every { spaceRepository.findVisibility(any()) } returns SpaceVisibility.PUBLIC
             every { spaceMemberRepository.findSpaceIdsByUserId(any()) } returns emptySet()
             every { commentRepository.save(any()) } answers { firstArg() }
-            every { userHandleQuery.handlesOf(any()) } returns
-                mapOf(UserId(100L) to Handle("test_user"))
         }
 
         describe("댓글 등록") {
@@ -84,20 +77,10 @@ class CommentRegisteringUseCaseTest :
                     )
 
                 result.commentId shouldBe CommentId(42L)
-                result.authorHandle shouldBe "test_user"
+                result.authorId shouldBe UserId(100L)
                 saved.captured.content.raw shouldBe "첫 댓글"
                 saved.captured.pageId.value shouldBe 10L
                 saved.captured.authorId.value shouldBe 100L
-                verify(exactly = 1) { userHandleQuery.handlesOf(setOf(UserId(100L))) }
-            }
-
-            it("handle 조회가 비면 authorHandle 은 빈 문자열로 응답한다") {
-                every { idGenerator.next() } returns 42L
-                every { userHandleQuery.handlesOf(any()) } returns emptyMap()
-
-                val result = useCase.perform(basicRequest())
-
-                result.authorHandle shouldBe ""
             }
 
             it("Page 가 없으면 NotFoundException") {

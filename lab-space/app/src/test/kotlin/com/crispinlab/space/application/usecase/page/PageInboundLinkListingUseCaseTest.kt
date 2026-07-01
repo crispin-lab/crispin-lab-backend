@@ -19,8 +19,6 @@ import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.Fixtures.basicPage
-import com.crispinlab.user.application.port.outgoing.user.UserHandleQuery
-import com.crispinlab.user.domain.user.Handle
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -37,14 +35,12 @@ class PageInboundLinkListingUseCaseTest :
         val pageInboundLinkPort = mockk<PageInboundLinkPort>()
         val spaceRepository = mockk<SpaceRepository>()
         val spaceMemberRepository = mockk<SpaceMemberRepository>()
-        val userHandleQuery = mockk<UserHandleQuery>()
         val useCase =
             PageInboundLinkListingUseCase(
                 pageRepository = pageRepository,
                 pageInboundLinkPort = pageInboundLinkPort,
                 spaceRepository = spaceRepository,
                 spaceMemberRepository = spaceMemberRepository,
-                userHandleQuery = userHandleQuery,
                 transactionProvider = DummyTransactionProvider()
             )
 
@@ -53,8 +49,7 @@ class PageInboundLinkListingUseCaseTest :
                 pageRepository,
                 pageInboundLinkPort,
                 spaceRepository,
-                spaceMemberRepository,
-                userHandleQuery
+                spaceMemberRepository
             )
             every { pageRepository.findBy(any()) } returns basicPage(visibility = Visibility.PUBLIC)
             every { spaceRepository.findVisibility(any()) } returns SpaceVisibility.PUBLIC
@@ -62,7 +57,7 @@ class PageInboundLinkListingUseCaseTest :
         }
 
         describe("페이지 인바운드 링크 목록 조회") {
-            it("어댑터가 반환한 PageSummary 를 authorHandle 을 채워 Summary 로 매핑한다") {
+            it("어댑터가 반환한 InboundLinkSummary 를 Summary 로 매핑한다") {
                 val capturedTargetPageId = slot<PageId>()
                 val capturedScope = slot<VisibilityScope>()
                 val capturedPageRequest = slot<PageRequest>()
@@ -91,16 +86,12 @@ class PageInboundLinkListingUseCaseTest :
                         size = DEFAULT_SIZE,
                         totalElements = 2L
                     )
-                every { userHandleQuery.handlesOf(any()) } returns
-                    mapOf(
-                        UserId(100L) to Handle("alice"),
-                        UserId(200L) to Handle("bob")
-                    )
 
                 val result = useCase.perform(basicRequest(pageId = "42"))
 
                 result.items.map { it.pageId } shouldBe listOf(PageId(11L), PageId(12L))
-                result.items.map { it.authorHandle } shouldBe listOf("alice", "bob")
+                result.items.map { it.authorId } shouldBe listOf(UserId(100L), UserId(200L))
+                result.items.map { it.title } shouldBe listOf("이전 회고", "분기 회고")
                 result.totalElements shouldBe 2L
                 capturedTargetPageId.captured.value shouldBe 42L
                 capturedPageRequest.captured.page shouldBe 0
@@ -154,29 +145,7 @@ class PageInboundLinkListingUseCaseTest :
                 capturedScope.captured shouldBe VisibilityScope.Privileged
             }
 
-            it("UserHandleQuery 에서 누락된 author 는 빈 문자열로 채운다") {
-                every {
-                    pageInboundLinkPort.findInboundLinksOf(any(), any(), any())
-                } returns
-                    PageResult(
-                        items =
-                            listOf(
-                                basicSummary(id = PageId(11L), authorId = UserId(100L)),
-                                basicSummary(id = PageId(12L), authorId = UserId(200L))
-                            ),
-                        page = 0,
-                        size = DEFAULT_SIZE,
-                        totalElements = 2L
-                    )
-                every { userHandleQuery.handlesOf(any()) } returns
-                    mapOf(UserId(100L) to Handle("alice"))
-
-                val result = useCase.perform(basicRequest())
-
-                result.items.map { it.authorHandle } shouldBe listOf("alice", "")
-            }
-
-            it("어댑터가 빈 결과를 돌려주면 UserHandleQuery 를 호출하지 않는다") {
+            it("어댑터가 빈 결과를 돌려주면 그대로 빈 페이지를 반환한다") {
                 every {
                     pageInboundLinkPort.findInboundLinksOf(any(), any(), any())
                 } returns PageResult.empty(PageRequest.firstPage())
@@ -184,7 +153,6 @@ class PageInboundLinkListingUseCaseTest :
                 val result = useCase.perform(basicRequest())
 
                 result.items shouldBe emptyList()
-                verify(exactly = 0) { userHandleQuery.handlesOf(any()) }
             }
 
             it("cascade — INTERNAL space 의 PUBLIC target 은 anonymous 에게 NotFoundException") {

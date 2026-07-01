@@ -25,7 +25,6 @@ interface CommentGetting : UseCase<Request, Result> {
         val commentId: CommentId,
         val pageId: PageId,
         val authorId: UserId,
-        val authorHandle: String,
         val content: String,
         val canEdit: Boolean,
         val createdAt: Instant,

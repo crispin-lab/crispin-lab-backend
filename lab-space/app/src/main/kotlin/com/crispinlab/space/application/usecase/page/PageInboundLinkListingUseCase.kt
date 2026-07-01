@@ -13,9 +13,6 @@ import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.application.usecase.access.memberSpaceIdsOf
 import com.crispinlab.space.application.usecase.access.requireReadablePage
-import com.crispinlab.user.application.port.outgoing.user.UserHandleQuery
-import com.crispinlab.user.domain.user.Handle
-import com.crispinlab.user.domain.user.UserId
 import org.springframework.stereotype.Service
 
 @Service
@@ -24,7 +21,6 @@ class PageInboundLinkListingUseCase(
     private val pageInboundLinkPort: PageInboundLinkPort,
     private val spaceRepository: SpaceRepository,
     private val spaceMemberRepository: SpaceMemberRepository,
-    private val userHandleQuery: UserHandleQuery,
     private val transactionProvider: TransactionProvider
 ) : PageInboundLinkListing {
     override fun perform(request: Request): PageResult<Summary> =
@@ -35,26 +31,18 @@ class PageInboundLinkListingUseCase(
                     requireReadablePage(pageRepository, spaceRepository, scope, request.pageId)
                     pageInboundLinkPort
                         .findInboundLinksOf(request.pageId, scope, request.pageRequest)
-                }.toSummaries()
+                }.map { it.toSummary() }
         }
 
     private fun Request.toScope(): VisibilityScope =
         VisibilityScope.of(viewer, spaceMemberRepository.memberSpaceIdsOf(viewer))
 
-    private fun PageResult<InboundLinkSummary>.toSummaries(): PageResult<Summary> {
-        val authorIds = items.map { it.authorId }.toSet()
-        val handles =
-            if (authorIds.isEmpty()) emptyMap() else userHandleQuery.handlesOf(authorIds)
-        return map { it.toSummary(handles) }
-    }
-
-    private fun InboundLinkSummary.toSummary(handles: Map<UserId, Handle>): Summary =
+    private fun InboundLinkSummary.toSummary(): Summary =
         Summary(
             pageId = pageId,
             spaceId = spaceId,
             parentPageId = parentPageId,
             authorId = authorId,
-            authorHandle = handles[authorId]?.value ?: "",
             title = title,
             visibility = visibility,
             displayOrder = displayOrder,

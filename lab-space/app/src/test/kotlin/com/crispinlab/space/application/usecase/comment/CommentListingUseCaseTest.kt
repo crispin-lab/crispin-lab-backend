@@ -21,8 +21,6 @@ import com.crispinlab.space.domain.spacemember.SpaceMemberRole
 import com.crispinlab.space.testsupport.Fixtures.basicComment
 import com.crispinlab.space.testsupport.Fixtures.basicPage
 import com.crispinlab.space.testsupport.Fixtures.basicSpaceMember
-import com.crispinlab.user.application.port.outgoing.user.UserHandleQuery
-import com.crispinlab.user.domain.user.Handle
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -39,14 +37,12 @@ class CommentListingUseCaseTest :
         val pageRepository = mockk<PageRepository>()
         val spaceRepository = mockk<SpaceRepository>()
         val spaceMemberRepository = mockk<SpaceMemberRepository>()
-        val userHandleQuery = mockk<UserHandleQuery>()
         val useCase =
             CommentListingUseCase(
                 commentRepository = commentRepository,
                 pageRepository = pageRepository,
                 spaceRepository = spaceRepository,
                 spaceMemberRepository = spaceMemberRepository,
-                userHandleQuery = userHandleQuery,
                 transactionProvider = DummyTransactionProvider()
             )
 
@@ -55,18 +51,12 @@ class CommentListingUseCaseTest :
                 commentRepository,
                 pageRepository,
                 spaceRepository,
-                spaceMemberRepository,
-                userHandleQuery
+                spaceMemberRepository
             )
             every { pageRepository.findBy(any()) } returns basicPage()
             every { spaceRepository.findVisibility(any()) } returns SpaceVisibility.PUBLIC
             every { spaceMemberRepository.findSpaceIdsByUserId(any()) } returns emptySet()
             every { spaceMemberRepository.findBySpaceIdAndUserId(any(), any()) } returns null
-            every { userHandleQuery.handlesOf(any()) } returns
-                mapOf(
-                    UserId(100L) to Handle("alice"),
-                    UserId(101L) to Handle("bob")
-                )
         }
 
         describe("댓글 목록 조회") {
@@ -109,35 +99,17 @@ class CommentListingUseCaseTest :
                     )
 
                 result.items.map { it.commentId } shouldBe listOf(CommentId(1L), CommentId(2L))
+                result.items.map { it.authorId } shouldBe listOf(UserId(100L), UserId(101L))
                 result.items.map { it.content } shouldBe listOf("첫 댓글", "두 번째")
-                result.items.map { it.authorHandle } shouldBe listOf("alice", "bob")
                 result.totalElements shouldBe 7L
                 result.page shouldBe 1
                 result.size shouldBe 5
                 capturedPageId.captured.value shouldBe 10L
                 capturedPageRequest.captured.page shouldBe 1
                 capturedPageRequest.captured.size shouldBe 5
-                verify(exactly = 1) {
-                    userHandleQuery.handlesOf(setOf(UserId(100L), UserId(101L)))
-                }
             }
 
-            it("handle 조회가 비면 authorHandle 은 빈 문자열로 응답한다") {
-                every { commentRepository.findByPageId(any(), any()) } returns
-                    PageResult(
-                        items = listOf(basicComment(authorId = UserId(100L))),
-                        page = 0,
-                        size = 20,
-                        totalElements = 1L
-                    )
-                every { userHandleQuery.handlesOf(any()) } returns emptyMap()
-
-                val result = useCase.perform(basicRequest())
-
-                result.items.single().authorHandle shouldBe ""
-            }
-
-            it("결과가 비어 있어도 빈 페이지를 반환한다 — handle/membership lookup 도 호출되지 않음") {
+            it("결과가 비어 있어도 빈 페이지를 반환한다 — membership lookup 도 호출되지 않음") {
                 every { commentRepository.findByPageId(any(), any()) } returns
                     PageResult(
                         items = emptyList(),
@@ -150,7 +122,6 @@ class CommentListingUseCaseTest :
 
                 result.items shouldBe emptyList()
                 result.totalElements shouldBe 0L
-                verify(exactly = 1) { userHandleQuery.handlesOf(emptySet()) }
                 verify(exactly = 0) {
                     spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
                 }

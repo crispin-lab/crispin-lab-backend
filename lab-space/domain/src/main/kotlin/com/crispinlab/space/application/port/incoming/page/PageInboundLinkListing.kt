@@ -34,7 +34,6 @@ interface PageInboundLinkListing : UseCase<Request, PageResult<Summary>> {
         val spaceId: SpaceId,
         val parentPageId: PageId?,
         val authorId: UserId,
-        val authorHandle: String,
         val title: String,
         val visibility: Visibility,
         val displayOrder: Int,

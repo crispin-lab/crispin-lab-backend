@@ -12,12 +12,10 @@ import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.application.usecase.access.canComment
 import com.crispinlab.space.application.usecase.access.canEdit
-import com.crispinlab.space.application.usecase.access.handleOrEmpty
 import com.crispinlab.space.application.usecase.access.memberSpaceIdsOf
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageContent
 import com.crispinlab.space.domain.page.PageErrorCode
-import com.crispinlab.user.application.port.outgoing.user.UserHandleQuery
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.stereotype.Service
 
@@ -27,7 +25,6 @@ class PageGettingUseCase(
     private val pageAncestorPort: PageAncestorPort,
     private val spaceRepository: SpaceRepository,
     private val spaceMemberRepository: SpaceMemberRepository,
-    private val userHandleQuery: UserHandleQuery,
     private val transactionProvider: TransactionProvider,
     private val objectMapper: ObjectMapper
 ) : PageGetting {
@@ -97,7 +94,6 @@ class PageGettingUseCase(
             spaceId = spaceId,
             parentPageId = parentPageId,
             authorId = authorId,
-            authorHandle = userHandleQuery.handleOrEmpty(authorId),
             title = title,
             content = maskedContent(scope).raw,
             visibility = visibility,

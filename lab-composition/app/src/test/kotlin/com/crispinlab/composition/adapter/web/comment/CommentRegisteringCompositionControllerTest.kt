@@ -1,11 +1,13 @@
-package com.crispinlab.space.adapter.web.comment
+package com.crispinlab.composition.adapter.web.comment
 
 import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder.Companion.requestFields
 import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder.Companion.responseFields
+import com.crispinlab.composition.application.port.outgoing.user.UserHandleLookup
+import com.crispinlab.composition.testsupport.CompositionAppControllerDescribeSpec
 import com.crispinlab.space.application.port.incoming.comment.CommentRegistering
 import com.crispinlab.space.application.port.incoming.comment.CommentRegistering.Result
 import com.crispinlab.space.domain.comment.CommentId
-import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
+import com.crispinlab.user.domain.user.UserId
 import com.crispinlab.user.testsupport.withAuth
 import io.mockk.clearMocks
 import io.mockk.every
@@ -15,12 +17,17 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
-class CommentRegisteringControllerTest :
-    SpaceAppControllerDescribeSpec(tag = "Comment", body = {
+class CommentRegisteringCompositionControllerTest :
+    CompositionAppControllerDescribeSpec(tag = "Comment", body = {
         val useCase = mockk<CommentRegistering>()
-        val controller = CommentRegisteringController(useCase)
+        val userHandleLookup = mockk<UserHandleLookup>()
+        val controller = CommentRegisteringCompositionController(useCase, userHandleLookup)
 
-        beforeEach { clearMocks(useCase) }
+        beforeEach {
+            clearMocks(useCase, userHandleLookup)
+            every { userHandleLookup.handlesOf(any()) } returns
+                mapOf(UserId(100L) to "test_user")
+        }
 
         describe("댓글 등록") {
             it("정상 생성 시 201 과 commentId 를 반환한다") {
@@ -35,7 +42,7 @@ class CommentRegisteringControllerTest :
                 } returns
                     Result(
                         commentId = CommentId(42L),
-                        authorHandle = "test_user"
+                        authorId = UserId(100L)
                     )
 
                 controller
@@ -60,6 +67,27 @@ class CommentRegisteringControllerTest :
                         },
                         requestSchema = "CommentRegisterRequest",
                         responseSchema = "CommentRegisterResponse"
+                    )
+            }
+
+            it("handle 조회가 실패해도 쓰기 성공 응답을 반환한다 (authorHandle 빈 문자열)") {
+                every { userHandleLookup.handlesOf(any()) } throws
+                    RuntimeException("lookup failure")
+                every { useCase.perform(any()) } returns
+                    Result(
+                        commentId = CommentId(42L),
+                        authorId = UserId(100L)
+                    )
+
+                controller
+                    .`when`(
+                        post("/v1/pages/{pageId}/comments", 10)
+                            .withAuth()
+                            .body(mapOf("content" to "첫 댓글"))
+                    ).then(
+                        status().isCreated,
+                        jsonPath("$.commentId").value("42"),
+                        jsonPath("$.authorHandle").value("")
                     )
             }
 

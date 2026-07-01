@@ -1,7 +1,9 @@
-package com.crispinlab.space.adapter.web.page
+package com.crispinlab.composition.adapter.web.page
 
 import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder.Companion.responseFields
 import com.crispinlab.common.pagination.PageResult
+import com.crispinlab.composition.application.port.outgoing.user.UserHandleLookup
+import com.crispinlab.composition.testsupport.CompositionAppControllerDescribeSpec
 import com.crispinlab.space.application.port.incoming.page.PageSearching
 import com.crispinlab.space.application.port.incoming.page.PageSearching.Summary
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.SortOption
@@ -10,7 +12,6 @@ import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
-import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
 import com.crispinlab.user.domain.user.UserId
 import com.crispinlab.user.testsupport.withAuth
 import io.kotest.matchers.shouldBe
@@ -26,12 +27,17 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
-class PageSearchingControllerTest :
-    SpaceAppControllerDescribeSpec(tag = "Page", body = {
+class PageSearchingCompositionControllerTest :
+    CompositionAppControllerDescribeSpec(tag = "Page", body = {
         val useCase = mockk<PageSearching>()
-        val controller = PageSearchingController(useCase)
+        val userHandleLookup = mockk<UserHandleLookup>()
+        val controller = PageSearchingCompositionController(useCase, userHandleLookup)
 
-        beforeEach { clearMocks(useCase) }
+        beforeEach {
+            clearMocks(useCase, userHandleLookup)
+            every { userHandleLookup.handlesOf(any()) } returns
+                mapOf(UserId(100L) to "test_user", UserId(200L) to "other_user")
+        }
 
         describe("페이지 검색") {
             it("정상 검색 시 200 과 페이지를 반환한다") {
@@ -44,7 +50,6 @@ class PageSearchingControllerTest :
                                     spaceId = SpaceId(10L),
                                     parentPageId = PageId(1L),
                                     authorId = UserId(100L),
-                                    authorHandle = "test_user",
                                     title = "오늘의 회고",
                                     visibility = Visibility.PUBLIC,
                                     displayOrder = 1,
@@ -55,7 +60,6 @@ class PageSearchingControllerTest :
                                     spaceId = SpaceId(10L),
                                     parentPageId = null,
                                     authorId = UserId(200L),
-                                    authorHandle = "other_user",
                                     title = "어제의 회고",
                                     visibility = Visibility.INTERNAL,
                                     displayOrder = 0,
@@ -152,6 +156,85 @@ class PageSearchingControllerTest :
                         status().isOk,
                         jsonPath("$.items.length()").value(0),
                         jsonPath("$.totalElements").value(0)
+                    )
+            }
+
+            it("distinct authorIds 에 대해 handlesOf 를 정확히 1회 batch 호출한다") {
+                every { useCase.perform(any()) } returns
+                    PageResult(
+                        items =
+                            listOf(
+                                Summary(
+                                    pageId = PageId(1L),
+                                    spaceId = SpaceId(10L),
+                                    parentPageId = null,
+                                    authorId = UserId(100L),
+                                    title = "a",
+                                    visibility = Visibility.PUBLIC,
+                                    displayOrder = 0,
+                                    updatedAt = DUMMY_INSTANT
+                                ),
+                                Summary(
+                                    pageId = PageId(2L),
+                                    spaceId = SpaceId(10L),
+                                    parentPageId = null,
+                                    authorId = UserId(100L),
+                                    title = "b",
+                                    visibility = Visibility.PUBLIC,
+                                    displayOrder = 1,
+                                    updatedAt = DUMMY_INSTANT
+                                ),
+                                Summary(
+                                    pageId = PageId(3L),
+                                    spaceId = SpaceId(10L),
+                                    parentPageId = null,
+                                    authorId = UserId(200L),
+                                    title = "c",
+                                    visibility = Visibility.PUBLIC,
+                                    displayOrder = 2,
+                                    updatedAt = DUMMY_INSTANT
+                                )
+                            ),
+                        page = 0,
+                        size = 20,
+                        totalElements = 3L
+                    )
+
+                controller
+                    .`when`(get("/v1/pages").withAuth())
+                    .then(status().isOk)
+                verify(exactly = 1) {
+                    userHandleLookup.handlesOf(setOf(UserId(100L), UserId(200L)))
+                }
+            }
+
+            it("author 가 삭제된 사용자이면 authorHandle 은 빈 문자열로 응답한다") {
+                every { userHandleLookup.handlesOf(any()) } returns emptyMap()
+                every { useCase.perform(any()) } returns
+                    PageResult(
+                        items =
+                            listOf(
+                                Summary(
+                                    pageId = PageId(1L),
+                                    spaceId = SpaceId(10L),
+                                    parentPageId = null,
+                                    authorId = UserId(999L),
+                                    title = "삭제된 사용자가 쓴 글",
+                                    visibility = Visibility.PUBLIC,
+                                    displayOrder = 0,
+                                    updatedAt = DUMMY_INSTANT
+                                )
+                            ),
+                        page = 0,
+                        size = 20,
+                        totalElements = 1L
+                    )
+
+                controller
+                    .`when`(get("/v1/pages").withAuth())
+                    .then(
+                        status().isOk,
+                        jsonPath("$.items[0].authorHandle").value("")
                     )
             }
 

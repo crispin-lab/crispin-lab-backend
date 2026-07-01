@@ -1,12 +1,14 @@
-package com.crispinlab.space.adapter.web.comment
+package com.crispinlab.composition.adapter.web.comment
 
 import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder.Companion.requestFields
 import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder.Companion.responseFields
+import com.crispinlab.composition.application.port.outgoing.user.UserHandleLookup
+import com.crispinlab.composition.testsupport.CompositionAppControllerDescribeSpec
 import com.crispinlab.space.application.port.incoming.comment.CommentEditing
 import com.crispinlab.space.application.port.incoming.comment.CommentEditing.Result
 import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
-import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
+import com.crispinlab.user.domain.user.UserId
 import com.crispinlab.user.testsupport.withAuth
 import io.mockk.clearMocks
 import io.mockk.every
@@ -16,12 +18,17 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
-class CommentEditingControllerTest :
-    SpaceAppControllerDescribeSpec(tag = "Comment", body = {
+class CommentEditingCompositionControllerTest :
+    CompositionAppControllerDescribeSpec(tag = "Comment", body = {
         val useCase = mockk<CommentEditing>()
-        val controller = CommentEditingController(useCase)
+        val userHandleLookup = mockk<UserHandleLookup>()
+        val controller = CommentEditingCompositionController(useCase, userHandleLookup)
 
-        beforeEach { clearMocks(useCase) }
+        beforeEach {
+            clearMocks(useCase, userHandleLookup)
+            every { userHandleLookup.handlesOf(any()) } returns
+                mapOf(UserId(100L) to "test_user")
+        }
 
         describe("댓글 수정") {
             it("본문 변경 시 200 과 갱신 결과를 반환한다") {
@@ -37,7 +44,7 @@ class CommentEditingControllerTest :
                 } returns
                     Result(
                         commentId = CommentId(7L),
-                        authorHandle = "test_user",
+                        authorId = UserId(100L),
                         content = "수정된 댓글",
                         updatedAt = DUMMY_INSTANT
                     )

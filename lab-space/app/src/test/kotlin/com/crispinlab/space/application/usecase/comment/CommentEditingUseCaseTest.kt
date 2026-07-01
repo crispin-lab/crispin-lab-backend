@@ -14,8 +14,6 @@ import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.testsupport.Fixtures.basicComment
 import com.crispinlab.space.testsupport.Fixtures.basicPage
-import com.crispinlab.user.application.port.outgoing.user.UserHandleQuery
-import com.crispinlab.user.domain.user.Handle
 import com.crispinlab.user.domain.user.UserId
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.kotest.assertions.throwables.shouldThrow
@@ -32,14 +30,12 @@ class CommentEditingUseCaseTest :
         val commentRepository = mockk<CommentRepository>()
         val pageRepository = mockk<PageRepository>()
         val spaceRepository = mockk<SpaceRepository>()
-        val userHandleQuery = mockk<UserHandleQuery>()
         val mentionDispatcher = mockk<MentionDispatcher>(relaxed = true)
         val useCase =
             CommentEditingUseCase(
                 commentRepository = commentRepository,
                 pageRepository = pageRepository,
                 spaceRepository = spaceRepository,
-                userHandleQuery = userHandleQuery,
                 mentionDispatcher = mentionDispatcher,
                 transactionProvider = DummyTransactionProvider(),
                 objectMapper = ObjectMapper()
@@ -50,17 +46,11 @@ class CommentEditingUseCaseTest :
                 commentRepository,
                 pageRepository,
                 spaceRepository,
-                userHandleQuery,
                 mentionDispatcher
             )
             every { pageRepository.findBy(any()) } returns basicPage()
             every { spaceRepository.findVisibility(any()) } returns SpaceVisibility.PUBLIC
             every { commentRepository.save(any()) } answers { firstArg() }
-            every { userHandleQuery.handlesOf(any()) } returns
-                mapOf(
-                    UserId(100L) to Handle("alice"),
-                    UserId(200L) to Handle("bob")
-                )
         }
 
         describe("댓글 수정") {
@@ -80,25 +70,8 @@ class CommentEditingUseCaseTest :
                     )
 
                 result.content shouldBe "수정됨"
-                result.authorHandle shouldBe "alice"
+                result.authorId shouldBe UserId(100L)
                 saved.captured.content.raw shouldBe "수정됨"
-                verify(exactly = 1) { userHandleQuery.handlesOf(setOf(UserId(100L))) }
-            }
-
-            it("handle 조회가 비면 authorHandle 은 빈 문자열로 응답한다") {
-                val comment = basicComment(pageId = PageId(10L))
-                every { commentRepository.findBy(comment.id) } returns comment
-                every { userHandleQuery.handlesOf(any()) } returns emptyMap()
-
-                val result =
-                    useCase.perform(
-                        basicRequest(
-                            pageId = "10",
-                            commentId = comment.id.value.toString()
-                        )
-                    )
-
-                result.authorHandle shouldBe ""
             }
 
             it("댓글이 없으면 NotFoundException") {
@@ -158,9 +131,8 @@ class CommentEditingUseCaseTest :
                     )
 
                 result.content shouldBe "수정됨"
-                result.authorHandle shouldBe "bob"
+                result.authorId shouldBe UserId(200L)
                 saved.captured.content.raw shouldBe "수정됨"
-                verify(exactly = 1) { userHandleQuery.handlesOf(setOf(UserId(200L))) }
             }
 
             it("ADMIN 이라도 URL 의 pageId 와 댓글의 pageId 가 다르면 NotFoundException") {

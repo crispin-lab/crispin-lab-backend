@@ -1,13 +1,14 @@
-package com.crispinlab.space.adapter.web.comment
+package com.crispinlab.composition.adapter.web.comment
 
 import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder.Companion.responseFields
 import com.crispinlab.common.pagination.PageResult
+import com.crispinlab.composition.application.port.outgoing.user.UserHandleLookup
+import com.crispinlab.composition.testsupport.CompositionAppControllerDescribeSpec
 import com.crispinlab.space.application.port.incoming.comment.CommentListing
 import com.crispinlab.space.application.port.incoming.comment.CommentListing.Summary
 import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
-import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
 import com.crispinlab.user.domain.user.UserId
 import com.crispinlab.user.testsupport.withAuth
 import io.mockk.clearMocks
@@ -18,12 +19,17 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
-class CommentListingControllerTest :
-    SpaceAppControllerDescribeSpec(tag = "Comment", body = {
+class CommentListingCompositionControllerTest :
+    CompositionAppControllerDescribeSpec(tag = "Comment", body = {
         val useCase = mockk<CommentListing>()
-        val controller = CommentListingController(useCase)
+        val userHandleLookup = mockk<UserHandleLookup>()
+        val controller = CommentListingCompositionController(useCase, userHandleLookup)
 
-        beforeEach { clearMocks(useCase) }
+        beforeEach {
+            clearMocks(useCase, userHandleLookup)
+            every { userHandleLookup.handlesOf(any()) } returns
+                mapOf(UserId(100L) to "alice", UserId(101L) to "bob")
+        }
 
         describe("댓글 목록 조회") {
             it("정상 응답 시 200 과 페이지를 반환한다") {
@@ -35,7 +41,6 @@ class CommentListingControllerTest :
                                     commentId = CommentId(1L),
                                     pageId = PageId(10L),
                                     authorId = UserId(100L),
-                                    authorHandle = "alice",
                                     content = "첫 댓글",
                                     canEdit = true,
                                     createdAt = DUMMY_INSTANT,
@@ -45,7 +50,6 @@ class CommentListingControllerTest :
                                     commentId = CommentId(2L),
                                     pageId = PageId(10L),
                                     authorId = UserId(101L),
-                                    authorHandle = "bob",
                                     content = "두 번째",
                                     canEdit = false,
                                     createdAt = DUMMY_INSTANT,

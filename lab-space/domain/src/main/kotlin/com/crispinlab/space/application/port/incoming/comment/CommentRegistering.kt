@@ -8,6 +8,7 @@ import com.crispinlab.space.domain.comment.CommentContent
 import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.PageId.Companion.asPageId
+import com.crispinlab.user.domain.user.UserId
 
 interface CommentRegistering : UseCase<Request, Result> {
     class Request(
@@ -21,6 +22,6 @@ interface CommentRegistering : UseCase<Request, Result> {
 
     data class Result(
         val commentId: CommentId,
-        val authorHandle: String
+        val authorId: UserId
     )
 }

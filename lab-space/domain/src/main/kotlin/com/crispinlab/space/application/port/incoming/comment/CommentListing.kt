@@ -38,7 +38,6 @@ interface CommentListing : UseCase<Request, PageResult<Summary>> {
         val commentId: CommentId,
         val pageId: PageId,
         val authorId: UserId,
-        val authorHandle: String,
         val content: String,
         val canEdit: Boolean,
         val createdAt: Instant,

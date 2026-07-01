@@ -1,11 +1,15 @@
-package com.crispinlab.space.adapter.web.comment
+package com.crispinlab.composition.adapter.web.comment
 
+import com.crispinlab.composition.application.port.outgoing.user.UserHandleLookup
+import com.crispinlab.composition.application.port.outgoing.user.handleOf
 import com.crispinlab.space.adapter.web.auth.toMember
 import com.crispinlab.space.application.port.incoming.comment.CommentEditing
 import com.crispinlab.space.application.port.incoming.comment.CommentEditing.Request
 import com.crispinlab.space.application.port.incoming.comment.CommentEditing.Result
 import com.crispinlab.space.domain.access.Viewer
+import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.user.adapter.web.auth.Auth
+import java.time.Instant
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -14,8 +18,9 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/v1/pages/{pageId}/comments/{commentId}")
-class CommentEditingController(
-    private val useCase: CommentEditing
+class CommentEditingCompositionController(
+    private val useCase: CommentEditing,
+    private val userHandleLookup: UserHandleLookup
 ) {
     @PutMapping
     fun edit(
@@ -23,7 +28,7 @@ class CommentEditingController(
         @PathVariable commentId: String,
         @RequestBody body: Body,
         auth: Auth
-    ): Result =
+    ): CommentEditPayload =
         body
             .toRequestWith(
                 pageId = pageId,
@@ -31,7 +36,15 @@ class CommentEditingController(
                 viewer = auth.toMember()
             ).let {
                 useCase.perform(it)
-            }
+            }.toPayload()
+
+    private fun Result.toPayload(): CommentEditPayload =
+        CommentEditPayload(
+            commentId = commentId,
+            authorHandle = userHandleLookup.handleOf(authorId),
+            content = content,
+            updatedAt = updatedAt
+        )
 
     data class Body(
         val content: String
@@ -48,4 +61,11 @@ class CommentEditingController(
                 viewer = viewer
             )
     }
+
+    data class CommentEditPayload(
+        val commentId: CommentId,
+        val authorHandle: String,
+        val content: String,
+        val updatedAt: Instant
+    )
 }

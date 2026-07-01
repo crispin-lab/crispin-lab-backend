@@ -9,6 +9,7 @@ import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.domain.comment.CommentId.Companion.asCommentId
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.PageId.Companion.asPageId
+import com.crispinlab.user.domain.user.UserId
 import java.time.Instant
 
 interface CommentEditing : UseCase<Request, Result> {
@@ -25,7 +26,7 @@ interface CommentEditing : UseCase<Request, Result> {
 
     data class Result(
         val commentId: CommentId,
-        val authorHandle: String,
+        val authorId: UserId,
         val content: String,
         val updatedAt: Instant
     )

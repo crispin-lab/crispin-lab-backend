@@ -23,8 +23,6 @@ import com.crispinlab.space.testsupport.TipTapJsonFixtures.doc
 import com.crispinlab.space.testsupport.TipTapJsonFixtures.pageLink
 import com.crispinlab.space.testsupport.TipTapJsonFixtures.paragraph
 import com.crispinlab.space.testsupport.TipTapJsonFixtures.text
-import com.crispinlab.user.application.port.outgoing.user.UserHandleQuery
-import com.crispinlab.user.domain.user.Handle
 import com.crispinlab.user.domain.user.UserId
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -43,7 +41,6 @@ class PageGettingUseCaseTest :
         val pageAncestorPort = mockk<PageAncestorPort>()
         val spaceRepository = mockk<SpaceRepository>()
         val spaceMemberRepository = mockk<SpaceMemberRepository>()
-        val userHandleQuery = mockk<UserHandleQuery>()
         val objectMapper = ObjectMapper()
         val useCase =
             PageGettingUseCase(
@@ -51,7 +48,6 @@ class PageGettingUseCaseTest :
                 pageAncestorPort = pageAncestorPort,
                 spaceRepository = spaceRepository,
                 spaceMemberRepository = spaceMemberRepository,
-                userHandleQuery = userHandleQuery,
                 transactionProvider = DummyTransactionProvider(),
                 objectMapper = objectMapper
             )
@@ -61,16 +57,13 @@ class PageGettingUseCaseTest :
                 pageRepository,
                 pageAncestorPort,
                 spaceRepository,
-                spaceMemberRepository,
-                userHandleQuery
+                spaceMemberRepository
             )
             every { spaceMemberRepository.findSpaceIdsByUserId(any()) } returns emptySet()
             every { spaceMemberRepository.findBySpaceIdAndUserId(any(), any()) } returns null
             every { spaceRepository.findVisibility(any()) } returns SpaceVisibility.PUBLIC
             every { pageAncestorPort.findAncestorsOf(any()) } returns emptyList()
             every { pageRepository.findVisibilitiesByIds(any()) } returns emptyMap()
-            every { userHandleQuery.handlesOf(any()) } returns
-                mapOf(UserId(100L) to Handle("test_user"))
         }
 
         describe("페이지 단건 조회") {
@@ -84,20 +77,7 @@ class PageGettingUseCaseTest :
                 result.title shouldBe "오늘의 회고"
                 result.visibility shouldBe Visibility.DRAFT
                 result.authorId shouldBe UserId(100L)
-                result.authorHandle shouldBe "test_user"
                 result.ancestors shouldBe emptyList()
-                verify(exactly = 1) { userHandleQuery.handlesOf(setOf(UserId(100L))) }
-            }
-
-            it("author 가 삭제된 사용자라 handle 조회가 비면 authorHandle 은 빈 문자열로 응답한다") {
-                val page = basicPage()
-                every { pageRepository.findBy(page.id) } returns page
-                every { userHandleQuery.handlesOf(any()) } returns emptyMap()
-
-                val result = useCase.perform(basicRequest(pageId = page.id.value.toString()))
-
-                result.authorId shouldBe UserId(100L)
-                result.authorHandle shouldBe ""
             }
 
             it("페이지가 없으면 NotFoundException") {

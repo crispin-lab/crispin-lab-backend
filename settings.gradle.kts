@@ -34,5 +34,6 @@ include(
     ":lab-user:app",
     ":lab-notification:domain",
     ":lab-notification:app",
+    ":lab-composition:app",
     ":app"
 )

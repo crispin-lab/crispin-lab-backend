@@ -12,6 +12,7 @@ dependencies {
     implementation(projects.labUser.app)
     implementation(projects.labUser.domain)
     implementation(projects.labNotification.app)
+    implementation(projects.labComposition.app)
 
     runtimeOnly(libs.postgresql)
     runtimeOnly(libs.flyway.core)

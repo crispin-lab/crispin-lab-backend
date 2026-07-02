@@ -17,6 +17,99 @@
 
 controller 가 **얇게** 유지되어야 UseCase 가 진짜 비즈니스 단위로 남는다.
 
+## 크로스도메인 조립 응답은 BFF 계층에서
+
+도메인 controller (`lab-{domain}/app/adapter/web/`) 는 **자기 도메인 필드 + 다른 도메인의 identifier (EntityId) 만** 응답한다. **다른 도메인의 파생 스칼라 (handle, name 등) 가 응답 계약에 포함되는 순간** 그 endpoint 는 `lab-composition/app` 의 BFF controller 로 이관한다. 배경·의존 방향은 `architecture.md` "BFF/Composition 계층" 참조.
+
+### 컨트롤러가 어느 모듈에 사는가
+
+| 응답 계약 | 위치 | 이름 |
+|-----------|------|------|
+| 자기 도메인 필드 + 다른 도메인의 identifier 만 (write 포함) | `lab-{domain}/app/adapter/web/{aggregate}/` | `XxxController` |
+| 다른 도메인의 파생 스칼라 (handle, name 등) 가 응답에 포함 (read/write 무관) | `lab-composition/app/adapter/web/{aggregate}/` | `XxxCompositionController` |
+
+- `XxxCompositionController` 서픽스는 도메인 `XxxController` 와의 구분자. endpoint 이관 시 이름은 바뀌지만 URL / OpenAPI schema name 은 유지 (클라이언트 계약 불변).
+- write endpoint 도 응답 조립만 크로스도메인이면 BFF 로 옮긴다 — 쓰기 로직은 도메인 UseCase 에 남고, controller 는 도메인 UseCase 호출 후 응답 조립만 한다 (예: `CommentRegisteringCompositionController` 가 `CommentRegistering.perform()` 후 `UserHandleLookup` 으로 authorHandle 조립).
+
+### Payload / 조립 패턴
+
+BFF controller 는 도메인 UseCase Result 의 identifier (`authorId: UserId`) 를 받아 BFF outbound port 로 크로스도메인 스칼라를 조회한 뒤 Payload data class 로 조립한다.
+
+**단건 조립 — `handleOf(id)` extension**
+
+```kotlin
+private fun Result.toPayload(): PagePayload =
+    PagePayload(
+        pageId = pageId,
+        authorId = authorId,
+        authorHandle = userHandleLookup.handleOf(authorId),
+        title = title,
+    )
+```
+
+**리스트 조립 — batch 강제 (N+1 방지)**
+
+```kotlin
+private fun PageResult<Summary>.toPayloads(): PageResult<CommentSummary> {
+    val handles = userHandleLookup.handlesOf(items.map { it.authorId }.toSet())
+    return map { it.toSummary(handles) }
+}
+
+private fun Summary.toSummary(handles: Map<UserId, String>): CommentSummary =
+    CommentSummary(
+        authorId = authorId,
+        authorHandle = handles[authorId] ?: "",
+    )
+```
+
+리스트에서 개별 `handleOf(...)` 반복은 **N+1 회귀 신호** — port 시그니처를 `handlesOf(Collection<UserId>)` 로 두고 controller 에서 items 의 distinct id set 을 한 번에 넘긴다.
+
+### lookup 실패 격리 — `runCatching + fallback`
+
+BFF 조립은 도메인 UseCase 가 이미 성공한 뒤 실행된다. 이 단계에서 lookup 실패로 500 이 나가는 것은 두 시나리오에서 응답의 시맨틱을 왜곡한다.
+
+| 시나리오 | 문제 | 해결 |
+|----------|------|------|
+| write endpoint (register/edit) | `useCase.perform()` 이 이미 도메인 상태 변경을 커밋한 뒤 응답 조립에서 500 → 클라이언트는 "생성 실패" 로 오해, 재시도 시 중복 write 위험 | **개별 lookup 호출 한 줄** (`userHandleLookup.handleOf(...)`) 을 `runCatching { ... }.getOrElse { "" }` 로 격리 |
+| read endpoint 의 optional 부수 lookup (예: `UserSearchingCompositionController` 의 `SpaceMembershipLookup`) | 핵심 응답 (user 검색 결과) 은 살아있는데 부가 필드 (memberSpaceIds) lookup 실패로 전체 500 → 사용자가 검색조차 못 함 | **개별 lookup 호출 한 줄** (`spaceMembershipLookup.membershipsOf(...)`) 을 `runCatching { ... }.getOrElse { emptyMap() }` 로 격리 |
+
+**write 예시**
+
+```kotlin
+private fun Result.toPayload(): CommentRegisterPayload =
+    CommentRegisterPayload(
+        commentId = commentId,
+        authorHandle = runCatching { userHandleLookup.handleOf(authorId) }.getOrElse { "" }
+    )
+```
+
+**read + optional 부수 lookup 예시**
+
+```kotlin
+private fun Result.toPayloadFor(viewer: Viewer.Member): UserSearchPayload {
+    val memberships =
+        runCatching {
+            spaceMembershipLookup.membershipsOf(userIds = items.map { it.userId }.toSet(), viewer = viewer)
+        }.getOrElse { emptyMap() }
+    return UserSearchPayload(items = items.map { it.toItem(memberships) })
+}
+```
+
+**정책 판정 — 격리해야 하는 lookup**
+
+- **응답의 핵심 필드가 아닐 것** — 실패 시 빈 문자열 / 빈 컬렉션으로 fallback 해도 응답의 시맨틱이 무너지지 않아야 한다. `PageGetting` 의 `title` 처럼 응답 계약의 핵심이면 격리 대상이 아니라 그대로 실패 전파 (실패면 사용자가 페이지 자체를 못 봐야 정합).
+- **write 뒤 응답 조립** 또는 **read 의 optional 부수 필드** — 두 가지가 격리 대상. 단건 read 의 필수 필드 (예: `PageGettingCompositionController` 의 `authorHandle` — page 응답의 표시 이름이므로 여기선 격리하지 않는다) 는 격리하지 않아 실패가 사용자에게 명시적으로 나타난다.
+- 격리 시 fallback 값은 sentinel (빈 문자열 / 빈 Map / 빈 컬렉션) — null 을 payload 에 흘리지 않는다.
+- **`runCatching` 범위는 lookup 호출 한 줄만** — `runCatching { userHandleLookup.handleOf(id) }` 처럼 lookup 호출 자체만 감싸고, `toPayload` / `toPayloadFor` 조립 흐름 전체를 감싸지 않는다. 조립 전체를 감싸면 lookup 실패뿐 아니라 mapping 로직의 예기치 못한 버그 (NPE / index 초과 / 도메인 매핑 미처리 케이스) 까지 sentinel 로 흡수되어, 장애가 성공 응답으로 숨고 클라이언트가 잘못된 payload 를 정상으로 오인한다.
+
+### 도메인 UseCase Result 는 identifier 만
+
+BFF 조립이 성립하려면 도메인 UseCase Result 가 파생 스칼라 (`authorHandle`) 대신 identifier (`authorId: UserId`) 를 노출해야 한다. 자세한 원칙과 이유는 `usecase-implementation.md` "Result 축소 원칙" 참조.
+
+### 예외 케이스
+
+응답 조립이 아니라 **write 흐름의 도메인 사이드 이펙트** (예: `MentionDispatcher`) 나 **기술 어댑터** (예: `Auth` / `AuthArgumentResolver`) 는 크로스도메인 read 를 쓰더라도 BFF 가 아니라 해당 정책·identity 를 소유하는 도메인 module 에 남는다 (`architecture.md` "BFF/Composition 계층 — 예외 케이스").
+
 ## REST 매핑
 
 | 동작 | 메서드 | 경로 |

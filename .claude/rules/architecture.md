@@ -9,9 +9,36 @@
 - `lab-api-support` — 컨트롤러 테스트 공용 도구 (`ControllerDescribeSpec` + `FieldBuilder` DSL, restdocs-api-spec wrapper). 다른 도메인 `app` 모듈이 `testImplementation(projects.labApiSupport)` 로 받는다. main source 가 테스트 도구라서 외부 `kotest`, `mockk`, `spring-restdocs`, `restdocs-api-spec` 의존을 `api(...)` 로 노출한다.
 - `lab-space/domain` — 순수 도메인. **Spring / Exposed / HTTP import 금지.** `api(labCommonDomain) + api(labCommonPort)` 만 — 인프라성 코드 (`TransactionProvider`, `LogContext` 등) 가 consumer 에게 transitive 노출되지 않게.
 - `lab-space/app` — Spring + Exposed 어댑터: controller, repository 구현, search 어댑터. `lab-common-persistence` 의 `ExposedEntityRepository<E, I>` base 를 상속해 어댑터 보일러플레이트를 통합 (`repository.md` 참조).
+- `lab-composition/app` — **BFF (Backend For Frontend) / Composition 계층.** 여러 도메인의 UseCase 결과 + BFF 소유 outbound port (`UserHandleLookup`, `SpaceMembershipLookup`) 를 조립해 프론트 응답을 만든다. controller 만 노출, 자기 UseCase / entity 없음. 자세한 책임 경계·의존 방향·예외 케이스는 아래 "BFF/Composition 계층" 절.
 - `app` — `@SpringBootApplication`이 있는 실행 가능 모듈. 이 모듈만 `bootJar`를 활성화한다. 진입 클래스는 `com.crispinlab.app.Application` (루트 `com.crispinlab` 에 두면 default scan 이 `lab-common-infra` 의 auto-config 패스와 같은 패키지를 이중으로 훑게 된다).
 
 향후 도메인도 같은 패턴: `lab-<domain>/domain` + `lab-<domain>/app`.
+
+## BFF/Composition 계층
+
+### 도입 배경
+
+도메인 모듈 (`lab-space/domain`) 은 다른 도메인의 identity reference (`UserId` 등) 를 `api(projects.labUser.domain)` 으로 노출해도 무방하다 (`identity reference 의 cross-domain api 의존 허용` 절 참조). 다만 **다른 도메인의 파생 스칼라 (`authorHandle`, `authorSpaceMemberships`)** 를 도메인 UseCase Result 에 실으려는 순간 이야기가 달라진다 — `PageGettingUseCase` 가 `UserHandleQuery` 를 주입받아 조회하는 형태가 되면서 `lab-space/app → lab-user/domain` 의 read-side 의존이 늘고, 필드 확장이 반복되면 `lab-space/domain → api(lab-user/domain)` 축의 반대 방향 (`lab-user` 가 `lab-space` 를 읽는 케이스) 이 필요해질 때 gradle module cycle 로 이어진다. 크로스도메인 응답 조립을 별도 계층 (`lab-composition/app`) 이 담당하게 해서 도메인 modules 는 자기 identifier 만 노출 + BFF 가 identifier → 파생 스칼라 조립을 책임지는 방향으로 순환 여지를 원천 차단.
+
+### 책임 경계
+
+BFF 는 controller + BFF 소유 outbound port 만 가진다. 자기 UseCase / port incoming / entity / domain 패키지 **없다**.
+
+- **controller** — 도메인 UseCase 를 재사용 (`useCase.perform(request)`) + BFF 소유 outbound port 로 부족한 크로스도메인 필드 보충 + payload data class 로 조립. controller 이름은 `XxxCompositionController` (도메인 controller `XxxController` 와 구분).
+- **BFF outbound port** — `application/port/outgoing/{domain}/XxxLookup.kt`. read-only 조회 시그니처만 (`handlesOf(ids): Map<UserId, String>` 같은 batch 형태 우선 — 리스트 endpoint 의 N+1 회귀 방지). 어댑터는 다른 도메인의 outbound port (`UserHandleQuery`, `SpaceMemberRepository`) 를 주입해 소비한다. **도메인 UseCase 를 직접 호출하지 않는다** — 도메인 쓰기 UseCase 는 자기 트랜잭션·검증·부수효과를 자기 흐름 안에서 완결시켜야 하므로, BFF 는 read-only lookup 만 부른다.
+- **payload data class** — controller 내부 (`data class PagePayload(...)`). 도메인 UseCase Result 의 identifier + BFF outbound port 로 조회한 크로스도메인 필드가 섞인다. 조립 세부는 `controller.md` "크로스도메인 조립 응답은 BFF 계층에서" 절.
+
+### 의존 방향 (cycle 방지)
+
+`lab-composition/app` 은 도메인 modules (`labUser.domain` + `labUser.app`, `labSpace.domain` + `labSpace.app`, `labNotification.domain` + `labNotification.app`) 을 `implementation(...)` 으로 소비만 하고, **어떤 도메인 module 도 `lab-composition/app` 을 참조하지 않는다.** cycle 발생 여지 원천 차단. 새 도메인 module 추가 시에도 `lab-composition/app/build.gradle.kts` 에 domain / app 두 줄 (`implementation(projects.labXxx.domain)` + `implementation(projects.labXxx.app)`) 만 추가.
+
+### 예외 케이스
+
+**`MentionDispatcher` (in `lab-space/app/.../application/usecase/mention/MentionDispatcher.kt`)** — 댓글/페이지 생성 write 흐름의 사이드 이펙트로 mention 대상 자격을 판정 (viewer 권한 + space visibility + page visibility) + 알림 발행. 크로스도메인 read (`UserAdminQuery`) 를 쓰지만 **정책 판단 자체가 space 도메인 소유** (누가 mention 될 수 있는지의 invariant 는 space 의 것). BFF 응답 조립과 결이 다르다 — BFF 는 write 완료 후의 **응답 조립 전용**.
+
+**`Auth` / `AuthArgumentResolver` (in `lab-user/app/.../adapter/web/auth/`)** — Spring web technical adapter 로 `Authorization: Bearer` 헤더를 세션 → user identity 로 변환. user 도메인이 identity + session 의 owner 이므로 자기 도메인 안에서 완결 (`lab-user/app — cross-cutting auth provider` 절 참조). 다른 도메인이 조립하는 대상이 아니다.
+
+**판정 기준** — BFF 로 이관 조건은 "여러 도메인의 데이터가 **응답에 조립**되는가". 도메인 사이드 이펙트·기술 어댑터·정책 판정은 그 정책을 소유하는 도메인 안에 남는다.
 
 ## lab-common 분리의 의도
 
@@ -45,11 +72,11 @@ aggregate 본체 (`User`, `Page` 등) 의 cross-domain import 는 여전히 금�
 
 ## component scan 범위
 
-`@SpringBootApplication(scanBasePackageClasses = [Application::class, SpaceModule::class, ...])` 로 type-safe 하게 명시한다. 도메인 모듈마다 `com.crispinlab.<domain>` 루트에 marker 인터페이스(`SpaceModule`, 향후 `UserModule` 등) 한 개를 두고, 진입 클래스의 `scanBasePackageClasses` 에 추가한다.
+`@SpringBootApplication(scanBasePackageClasses = [Application::class, SpaceModule::class, UserModule::class, NotificationModule::class, CompositionModule::class])` 로 type-safe 하게 명시한다. 도메인 모듈마다 `com.crispinlab.<domain>` 루트에 marker 인터페이스 (`SpaceModule`, `UserModule`, `NotificationModule`, `CompositionModule`) 한 개를 두고, 진입 클래스의 `scanBasePackageClasses` 에 추가한다.
 
 - **문자열 `scanBasePackages` 금지** — 패키지 리네임·이동을 컴파일러가 못 잡는다. marker 클래스 참조로 통일.
 - **default scan (좁힘 안 함) 금지** — `com.crispinlab.common.*` 까지 스캔되어 auto-config 노출 모듈과 충돌 가능.
-- 새 도메인 모듈을 추가하면 marker 클래스 신설 + `scanBasePackageClasses` 에 한 줄 추가가 PR 체크리스트.
+- 새 도메인 모듈 또는 BFF 모듈을 추가하면 marker 클래스 신설 + `scanBasePackageClasses` 에 한 줄 추가가 PR 체크리스트.
 - **marker 1 모듈 1 개** — 같은 도메인에 marker 를 둘 이상 만들지 않는다. 한 marker 의 패키지(`com.crispinlab.<domain>`) 가 그 도메인의 component scan 루트라, 같은 패키지에 marker 가 2 개여도 scan 결과는 같지만 의미 분산. 그리고 다른 도메인의 marker 를 잘못 import 해 `scanBasePackageClasses` 에 두 번 들어가지 않게 주의 — 같은 marker 가 중복 등록되면 Spring 이 한 번만 처리하지만 의도가 흐려진다.
 
 ## auto-config ordering

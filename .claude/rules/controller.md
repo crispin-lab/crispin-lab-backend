@@ -70,8 +70,8 @@ BFF 조립은 도메인 UseCase 가 이미 성공한 뒤 실행된다. 이 단�
 
 | 시나리오 | 문제 | 해결 |
 |----------|------|------|
-| write endpoint (register/edit) | `useCase.perform()` 이 이미 도메인 상태 변경을 커밋한 뒤 응답 조립에서 500 → 클라이언트는 "생성 실패" 로 오해, 재시도 시 중복 write 위험 | 조립 lookup 을 `runCatching { ... }.getOrElse { "" }` 로 격리 |
-| read endpoint 의 optional 부수 lookup (예: `UserSearchingCompositionController` 의 `SpaceMembershipLookup`) | 핵심 응답 (user 검색 결과) 은 살아있는데 부가 필드 (memberSpaceIds) lookup 실패로 전체 500 → 사용자가 검색조차 못 함 | 조립 lookup 을 `runCatching { ... }.getOrElse { emptyMap() }` 로 격리 |
+| write endpoint (register/edit) | `useCase.perform()` 이 이미 도메인 상태 변경을 커밋한 뒤 응답 조립에서 500 → 클라이언트는 "생성 실패" 로 오해, 재시도 시 중복 write 위험 | **개별 lookup 호출 한 줄** (`userHandleLookup.handleOf(...)`) 을 `runCatching { ... }.getOrElse { "" }` 로 격리 |
+| read endpoint 의 optional 부수 lookup (예: `UserSearchingCompositionController` 의 `SpaceMembershipLookup`) | 핵심 응답 (user 검색 결과) 은 살아있는데 부가 필드 (memberSpaceIds) lookup 실패로 전체 500 → 사용자가 검색조차 못 함 | **개별 lookup 호출 한 줄** (`spaceMembershipLookup.membershipsOf(...)`) 을 `runCatching { ... }.getOrElse { emptyMap() }` 로 격리 |
 
 **write 예시**
 
@@ -100,6 +100,7 @@ private fun Result.toPayloadFor(viewer: Viewer.Member): UserSearchPayload {
 - **응답의 핵심 필드가 아닐 것** — 실패 시 빈 문자열 / 빈 컬렉션으로 fallback 해도 응답의 시맨틱이 무너지지 않아야 한다. `PageGetting` 의 `title` 처럼 응답 계약의 핵심이면 격리 대상이 아니라 그대로 실패 전파 (실패면 사용자가 페이지 자체를 못 봐야 정합).
 - **write 뒤 응답 조립** 또는 **read 의 optional 부수 필드** — 두 가지가 격리 대상. 단건 read 의 필수 필드 (예: `PageGettingCompositionController` 의 `authorHandle` — page 응답의 표시 이름이므로 여기선 격리하지 않는다) 는 격리하지 않아 실패가 사용자에게 명시적으로 나타난다.
 - 격리 시 fallback 값은 sentinel (빈 문자열 / 빈 Map / 빈 컬렉션) — null 을 payload 에 흘리지 않는다.
+- **`runCatching` 범위는 lookup 호출 한 줄만** — `runCatching { userHandleLookup.handleOf(id) }` 처럼 lookup 호출 자체만 감싸고, `toPayload` / `toPayloadFor` 조립 흐름 전체를 감싸지 않는다. 조립 전체를 감싸면 lookup 실패뿐 아니라 mapping 로직의 예기치 못한 버그 (NPE / index 초과 / 도메인 매핑 미처리 케이스) 까지 sentinel 로 흡수되어, 장애가 성공 응답으로 숨고 클라이언트가 잘못된 payload 를 정상으로 오인한다.
 
 ### 도메인 UseCase Result 는 identifier 만
 

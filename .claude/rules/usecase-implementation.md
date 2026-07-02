@@ -21,6 +21,64 @@
 
 엔티티 `init` 의 형식 검증, 엔티티 메서드의 상태 검증은 **이미 끝난 것** 으로 본다 (`conventions.md` 검증 책임 분리 참조). `validate` 는 외부 의존이 필요한 검증만.
 
+## Result 축소 원칙
+
+도메인 UseCase Result 는 **자기 도메인 데이터 + 크로스도메인 identifier (EntityId) 만** 노출한다. `authorHandle` (user 의 handle), `authorSpaceMemberships` (user × space 관계) 같은 **다른 도메인 파생 스칼라를 도메인 Result 에 넣지 않는다**. 조립은 `lab-composition/app` 의 BFF controller 가 담당 — 도메인 Result 의 `authorId` 를 받아 `UserHandleLookup.handleOf(authorId)` 로 조회해 Payload 에 실는다.
+
+| 도메인 Result 에 두는 것 | 도메인 Result 에 두지 않는 것 |
+|--------------------------|-------------------------------|
+| 자기 도메인 필드 (`title`, `visibility`, `createdAt`) | 다른 도메인의 파생 스칼라 (`authorHandle`) |
+| 자기 도메인 identifier (`pageId`, `spaceId`) | 다른 도메인의 파생 컬렉션 (`memberSpaceIds: Set<SpaceId>`) |
+| 다른 도메인의 identifier (`authorId: UserId`) | 자기 UseCase 로직에 필요 없는 재계산 값 |
+| 자기 도메인 안에서 viewer × entity 로 결정되는 파생 boolean (`canEdit`, `canComment`) | — |
+
+viewer 파생 boolean 은 cross-domain 데이터가 아니라 **자기 도메인의 access 정책** 이 만들어내는 값이라 도메인 Result 에 두는 것이 정합 — BFF 로 옮기면 access 정책이 도메인 밖으로 새어나가 계층 경계가 무너진다.
+
+### 이유 — cycle 차단
+
+`PageGettingUseCase` 가 `UserHandleQuery` 를 주입받아 `authorHandle` 을 채우는 형태로 두면 `lab-space/app → lab-user/domain` 의 read-side 의존이 늘고, 필드 확장이 반복되면 결국 반대 방향 (user 가 space 를 읽는 케이스) 이 필요해질 때 gradle module cycle 로 이어진다. 도메인 Result 를 identifier 만으로 축소하면 도메인 module 은 "handle 조회 무지" 상태를 유지하고, cycle 여지 자체가 없다. 자세한 배경은 `architecture.md` "BFF/Composition 계층 — 도입 배경".
+
+### 예시 대조
+
+```kotlin
+// BAD — 도메인 Result 에 다른 도메인 파생 스칼라
+interface PageGetting : UseCase<Request, Result> {
+    data class Result(
+        val pageId: PageId,
+        val title: String,
+        val authorId: UserId,
+        val authorHandle: String,
+    )
+}
+
+// GOOD — identifier 만. BFF 가 조립.
+interface PageGetting : UseCase<Request, Result> {
+    data class Result(
+        val pageId: PageId,
+        val title: String,
+        val authorId: UserId,
+    )
+}
+```
+
+BFF (`lab-composition/app`) 의 controller 가 Result 를 받아:
+
+```kotlin
+private fun Result.toPayload(): PagePayload =
+    PagePayload(
+        pageId = pageId,
+        authorId = authorId,
+        authorHandle = userHandleLookup.handleOf(authorId),
+        title = title,
+    )
+```
+
+조립 세부 (단건 / 리스트 / write) 는 `controller.md` "크로스도메인 조립 응답은 BFF 계층에서" 참조.
+
+### 예외 — write 흐름의 도메인 사이드 이펙트
+
+`MentionDispatcher` 처럼 write UseCase 안에서 다른 도메인의 read 를 쓰지만 **정책 판단 자체가 자기 도메인 소유** 인 경우는 이 원칙과 무관하다 — Result 를 축소하는 게 아니라 도메인 안의 부수효과라 그대로 도메인 module 에 남는다 (`architecture.md` "BFF/Composition 계층 — 예외 케이스").
+
 ## Getting (조회)
 
 ```kotlin

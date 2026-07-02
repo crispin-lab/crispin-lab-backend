@@ -42,6 +42,19 @@ com.crispinlab.space.config                                # Spring config, Bean
 
 `adapter.{기술}` 형태로, 어댑터 종류가 늘어도 같은 결로 추가 (예: `adapter.search`, `adapter.messaging`).
 
+### `lab-composition/app` (BFF / Composition)
+
+```
+com.crispinlab.composition                                     # CompositionModule marker (component scan 루트)
+com.crispinlab.composition.adapter.web.{aggregate}             # XxxCompositionController + Payload/Body data class
+com.crispinlab.composition.adapter.{domain}                    # 다른 도메인의 outbound port 를 소비하는 어댑터
+com.crispinlab.composition.application.port.outgoing.{domain}  # BFF 소유 outbound port (Lookup 류)
+```
+
+- `adapter.{domain}` 의 sub-directory 는 **target 도메인** 이름 (`adapter/user/`, `adapter/space/`) — 기술 스택이 아니다. 도메인 어댑터의 `adapter.{기술}` (persistence / web) 과 다른 축.
+- 한 target 도메인 안에 여러 lookup 어댑터가 필요해지면 **파일명** (`UserHandleLookupAdapter.kt`, `UserEmailLookupAdapter.kt`) 으로 구분하고 sub-package (`adapter/user/handle/`) 를 두지 않는다. 어댑터 수가 커져 파일 트리가 얇은 도메인이 붐비면 그때 재편.
+- `application.usecase.*` / `application.port.incoming.*` / `domain.*` 패키지는 **없다** — BFF 는 자기 UseCase / entity 를 두지 않고 도메인 UseCase 를 재사용한다 (`architecture.md` "BFF/Composition 계층" 참조).
+
 ## 새 aggregate 추가 체크리스트
 
 `Comment` 를 추가한다고 가정. 만들어야 하는 패키지·파일:
@@ -71,6 +84,34 @@ com.crispinlab.space.config                                # Spring config, Bean
 ### Bean 등록
 
 - [ ] `config/Beans.kt` (또는 동일 책임의 `@Configuration`) 에 UseCase 구현체를 빈으로 등록 (`@Service` 어노테이션이 있다면 component scan 으로 충분).
+
+## 새 크로스도메인 조립 endpoint 를 BFF 로 추가 체크리스트
+
+여러 도메인의 데이터가 응답에 조립되는 endpoint 를 새로 만들거나, 기존 도메인 controller 를 BFF 로 이관할 때. `Page` 조회 endpoint 를 BFF 로 옮긴다고 가정.
+
+### lab-composition/app
+
+- [ ] `adapter/web/{aggregate}/XxxCompositionController.kt` — 도메인 UseCase + BFF outbound port 를 주입해 Payload 조립.
+- [ ] BFF outbound port 가 없으면 `application/port/outgoing/{domain}/XxxLookup.kt` 신설. batch 시그니처 우선 (`handlesOf(ids): Map<UserId, String>`).
+- [ ] 어댑터가 없으면 `adapter/{domain}/XxxLookupAdapter.kt` 신설. `@Component` + 도메인의 outbound port (`UserHandleQuery`, `SpaceMemberRepository`) 를 주입해 소비.
+- [ ] controller 테스트는 `CompositionAppControllerDescribeSpec` 상속 (도메인 controller test 와 wiring 동일 — StubAuthArgumentResolver + GlobalExceptionHandler).
+
+### 도메인 module 축소
+
+- [ ] 도메인 UseCase Result 에서 크로스도메인 파생 스칼라 (`authorHandle` 등) 제거 → identifier (`authorId: UserId`) 만 남긴다.
+- [ ] 도메인 UseCase 구현에서 다른 도메인의 outbound port 주입 제거 (`UserHandleQuery` 등). 도메인은 handle 조회 무지 상태로.
+- [ ] 도메인 module 이관되는 endpoint 의 기존 controller 제거 (`lab-{domain}/app/adapter/web/{aggregate}/XxxController.kt`). 응답 URL / OpenAPI schema name 은 그대로 유지 (BFF 가 같은 URL 로 응답, 클라이언트 계약 불변).
+
+### N+1 방지
+
+- [ ] 리스트 endpoint 는 항상 batch lookup 한 번 — `lookup.handlesOf(items.map { it.authorId }.toSet())` 로 모아서 Map 을 받은 뒤 items 매핑에 재사용. 개별 lookup 반복 금지.
+- [ ] 단건 endpoint 는 `lookup.handleOf(id)` extension helper 한 줄 (`controller.md` "Payload / 조립 패턴" 참조).
+
+### 빌드 인프라
+
+- [ ] BFF 가 새 도메인 module 을 소비해야 하면 `lab-composition/app/build.gradle.kts` 에 `implementation(projects.labXxx.domain)` + `implementation(projects.labXxx.app)` 두 줄 추가. 기존 소비 도메인이면 추가 작업 없음.
+- [ ] **새 도메인 module 소비를 새로 추가한 경우엔 `app/Dockerfile` 의 builder 단계 COPY 두 줄** (`lab-<domain>/domain/build.gradle.kts` + `lab-<domain>/app/build.gradle.kts`) **도 함께 추가** — dependency cache 유지 (본 문서 "다른 도메인 모듈 추가 시" 절 정합).
+- [ ] 기존 소비 도메인의 endpoint 추가는 build 파일 변경 없이 파일 추가만이라 Docker 캐시 갱신 불필요.
 
 ## 결정 근거
 

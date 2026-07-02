@@ -1,6 +1,8 @@
 package com.crispinlab.composition.adapter.web.user
 
 import com.crispinlab.composition.application.port.outgoing.space.SpaceMembershipLookup
+import com.crispinlab.space.adapter.web.auth.toMember
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.user.adapter.web.auth.Auth
 import com.crispinlab.user.application.port.incoming.user.UserSearching
@@ -24,16 +26,19 @@ class UserSearchingCompositionController(
     fun search(
         @RequestParam query: String,
         @RequestParam(defaultValue = "$DEFAULT_SIZE") size: Int,
-        @Suppress("UNUSED_PARAMETER") auth: Auth
+        auth: Auth
     ): UserSearchPayload =
         Request(query = query, size = size)
             .let { useCase.perform(it) }
-            .toPayload()
+            .toPayloadFor(auth.toMember())
 
-    private fun Result.toPayload(): UserSearchPayload {
+    private fun Result.toPayloadFor(viewer: Viewer.Member): UserSearchPayload {
         val memberships =
             runCatching {
-                spaceMembershipLookup.membershipsOf(items.map { it.userId }.toSet())
+                spaceMembershipLookup.membershipsOf(
+                    userIds = items.map { it.userId }.toSet(),
+                    viewer = viewer
+                )
             }.getOrElse { emptyMap() }
         return UserSearchPayload(
             items = items.map { it.toItem(memberships) }

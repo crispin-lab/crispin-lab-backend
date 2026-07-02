@@ -3,11 +3,13 @@ package com.crispinlab.composition.adapter.web.user
 import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder.Companion.responseFields
 import com.crispinlab.composition.application.port.outgoing.space.SpaceMembershipLookup
 import com.crispinlab.composition.testsupport.CompositionAppControllerDescribeSpec
+import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.user.application.port.incoming.user.UserSearching
 import com.crispinlab.user.application.port.incoming.user.UserSearching.Request
 import com.crispinlab.user.application.port.incoming.user.UserSearching.Result
 import com.crispinlab.user.domain.user.Handle
+import com.crispinlab.user.domain.user.SystemRole
 import com.crispinlab.user.domain.user.UserId
 import com.crispinlab.user.testsupport.withAuth
 import io.kotest.matchers.shouldBe
@@ -29,7 +31,7 @@ class UserSearchingCompositionControllerTest :
 
         beforeEach {
             clearMocks(useCase, spaceMembershipLookup)
-            every { spaceMembershipLookup.membershipsOf(any()) } returns
+            every { spaceMembershipLookup.membershipsOf(any(), any()) } returns
                 mapOf(
                     UserId(1L) to setOf(SpaceId(20L), SpaceId(10L)),
                     UserId(2L) to setOf(SpaceId(10L))
@@ -77,7 +79,8 @@ class UserSearchingCompositionControllerTest :
                                 "userId".string("사용자 식별자")
                                 "handle".string("사용자 이름")
                                 "memberOfSpaceIds".array(
-                                    "사용자가 소속된 스페이스 식별자 목록 (SpaceId 오름차순, 소속 없으면 빈 배열)"
+                                    "사용자가 소속된 스페이스 식별자 목록 " +
+                                        "(검색자가 볼 수 있는 스페이스만 노출, SpaceId 오름차순, 없으면 빈 배열)"
                                 )
                             }
                         },
@@ -119,12 +122,62 @@ class UserSearchingCompositionControllerTest :
                     ).then(status().isOk)
 
                 verify(exactly = 1) {
-                    spaceMembershipLookup.membershipsOf(setOf(UserId(1L), UserId(2L)))
+                    spaceMembershipLookup.membershipsOf(
+                        userIds = setOf(UserId(1L), UserId(2L)),
+                        viewer = any()
+                    )
                 }
             }
 
+            it("검색자의 Viewer.Member 가 membershipsOf 에 전달된다") {
+                val viewerSlot = slot<Viewer>()
+                every {
+                    spaceMembershipLookup.membershipsOf(any(), capture(viewerSlot))
+                } returns emptyMap()
+                every { useCase.perform(any()) } returns
+                    Result(
+                        items =
+                            listOf(
+                                Result.Item(userId = UserId(1L), handle = Handle("alice"))
+                            )
+                    )
+
+                controller
+                    .`when`(
+                        get("/v1/users")
+                            .withAuth(userId = "500", role = SystemRole.USER)
+                            .param("query", "ali")
+                    ).then(status().isOk)
+
+                (viewerSlot.captured as Viewer.Member).userId shouldBe UserId(500L)
+                viewerSlot.captured.isAdmin shouldBe false
+            }
+
+            it("ADMIN 검색자는 isAdmin=true 로 Viewer.Member 가 전달된다") {
+                val viewerSlot = slot<Viewer>()
+                every {
+                    spaceMembershipLookup.membershipsOf(any(), capture(viewerSlot))
+                } returns emptyMap()
+                every { useCase.perform(any()) } returns
+                    Result(
+                        items =
+                            listOf(
+                                Result.Item(userId = UserId(1L), handle = Handle("alice"))
+                            )
+                    )
+
+                controller
+                    .`when`(
+                        get("/v1/users")
+                            .withAuth(userId = "500", role = SystemRole.ADMIN)
+                            .param("query", "ali")
+                    ).then(status().isOk)
+
+                viewerSlot.captured.isAdmin shouldBe true
+            }
+
             it("소속 스페이스가 없는 사용자는 memberOfSpaceIds 를 빈 배열로 응답한다") {
-                every { spaceMembershipLookup.membershipsOf(any()) } returns emptyMap()
+                every { spaceMembershipLookup.membershipsOf(any(), any()) } returns emptyMap()
                 every { useCase.perform(any()) } returns
                     Result(
                         items =
@@ -146,7 +199,7 @@ class UserSearchingCompositionControllerTest :
             }
 
             it("membershipsOf 가 예외를 던져도 검색 결과 자체는 반환하고 memberOfSpaceIds 는 빈 배열로 응답한다") {
-                every { spaceMembershipLookup.membershipsOf(any()) } throws
+                every { spaceMembershipLookup.membershipsOf(any(), any()) } throws
                     RuntimeException("lookup 실패")
                 every { useCase.perform(any()) } returns
                     Result(
@@ -192,7 +245,7 @@ class UserSearchingCompositionControllerTest :
                         jsonPath("$.code").value("INVALID_REQUEST")
                     )
                 verify(exactly = 0) { useCase.perform(any()) }
-                verify(exactly = 0) { spaceMembershipLookup.membershipsOf(any()) }
+                verify(exactly = 0) { spaceMembershipLookup.membershipsOf(any(), any()) }
             }
 
             it("query 가 빈 문자열이면 400 을 반환한다") {
@@ -206,7 +259,7 @@ class UserSearchingCompositionControllerTest :
                         jsonPath("$.code").value("INVALID_REQUEST")
                     )
                 verify(exactly = 0) { useCase.perform(any()) }
-                verify(exactly = 0) { spaceMembershipLookup.membershipsOf(any()) }
+                verify(exactly = 0) { spaceMembershipLookup.membershipsOf(any(), any()) }
             }
 
             it("size 가 21 이상이면 400 을 반환한다") {
@@ -221,7 +274,7 @@ class UserSearchingCompositionControllerTest :
                         jsonPath("$.code").value("INVALID_REQUEST")
                     )
                 verify(exactly = 0) { useCase.perform(any()) }
-                verify(exactly = 0) { spaceMembershipLookup.membershipsOf(any()) }
+                verify(exactly = 0) { spaceMembershipLookup.membershipsOf(any(), any()) }
             }
 
             it("Authorization 헤더가 없으면 401 을 반환하고 use case 를 호출하지 않는다") {
@@ -233,7 +286,7 @@ class UserSearchingCompositionControllerTest :
                         jsonPath("$.code").value("INVALID_SESSION")
                     )
                 verify(exactly = 0) { useCase.perform(any()) }
-                verify(exactly = 0) { spaceMembershipLookup.membershipsOf(any()) }
+                verify(exactly = 0) { spaceMembershipLookup.membershipsOf(any(), any()) }
             }
         }
     })

@@ -2,10 +2,9 @@ package com.crispinlab.composition.adapter.web.comment
 
 import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder.Companion.responseFields
 import com.crispinlab.common.exception.NotFoundException
-import com.crispinlab.composition.application.port.outgoing.user.UserHandleLookup
+import com.crispinlab.composition.application.port.incoming.comment.CommentGettingComposition
+import com.crispinlab.composition.application.port.incoming.comment.CommentGettingComposition.Result
 import com.crispinlab.composition.testsupport.CompositionAppControllerDescribeSpec
-import com.crispinlab.space.application.port.incoming.comment.CommentGetting
-import com.crispinlab.space.application.port.incoming.comment.CommentGetting.Result
 import com.crispinlab.space.domain.comment.CommentErrorCode
 import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.domain.page.PageId
@@ -22,23 +21,18 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
 class CommentGettingCompositionControllerTest :
     CompositionAppControllerDescribeSpec(tag = "Comment", body = {
-        val useCase = mockk<CommentGetting>()
-        val userHandleLookup = mockk<UserHandleLookup>()
-        val controller = CommentGettingCompositionController(useCase, userHandleLookup)
+        val useCase = mockk<CommentGettingComposition>()
+        val controller = CommentGettingCompositionController(useCase)
 
-        beforeEach {
-            clearMocks(useCase, userHandleLookup)
-            every { userHandleLookup.handlesOf(any()) } returns
-                mapOf(UserId(100L) to "test_user")
-        }
+        beforeEach { clearMocks(useCase) }
 
         describe("댓글 단건 조회") {
             it("존재하면 200 과 정보를 반환한다") {
                 every {
                     useCase.perform(
                         match {
-                            it.pageId.value == 10L &&
-                                it.commentId.value == 7L &&
+                            it.pageId == "10" &&
+                                it.commentId == "7" &&
                                 it.viewer.userId.value == 100L
                         }
                     )
@@ -47,6 +41,7 @@ class CommentGettingCompositionControllerTest :
                         commentId = CommentId(7L),
                         pageId = PageId(10L),
                         authorId = UserId(100L),
+                        authorHandle = "test_user",
                         content = "안녕하세요",
                         canEdit = true,
                         createdAt = DUMMY_INSTANT,
@@ -81,38 +76,6 @@ class CommentGettingCompositionControllerTest :
                         },
                         responseSchema = "CommentGetResponse"
                     )
-
-                verify(exactly = 1) {
-                    useCase.perform(
-                        match {
-                            it.pageId.value == 10L &&
-                                it.commentId.value == 7L &&
-                                it.viewer.userId.value == 100L
-                        }
-                    )
-                }
-            }
-
-            it("author 가 삭제된 사용자이면 authorHandle 은 빈 문자열로 응답한다") {
-                every { userHandleLookup.handlesOf(any()) } returns emptyMap()
-                every { useCase.perform(any()) } returns
-                    Result(
-                        commentId = CommentId(7L),
-                        pageId = PageId(10L),
-                        authorId = UserId(999L),
-                        content = "안녕하세요",
-                        canEdit = false,
-                        createdAt = DUMMY_INSTANT,
-                        updatedAt = DUMMY_INSTANT
-                    )
-
-                controller
-                    .`when`(
-                        get("/v1/pages/{pageId}/comments/{commentId}", 10, 7).withAuth()
-                    ).then(
-                        status().isOk,
-                        jsonPath("$.authorHandle").value("")
-                    )
             }
 
             it("없으면 404 를 반환한다") {
@@ -139,13 +102,19 @@ class CommentGettingCompositionControllerTest :
                 verify(exactly = 0) { useCase.perform(any()) }
             }
 
-            it("commentId 형식이 숫자가 아니면 400 을 반환한다") {
+            it("commentId 형식이 숫자가 아니면 UseCase 가 던진 IllegalArgumentException 이 400 으로 매핑된다") {
+                every { useCase.perform(any()) } throws
+                    IllegalArgumentException("댓글 ID 형식이 올바르지 않습니다.")
+
                 controller
                     .`when`(
                         get("/v1/pages/{pageId}/comments/{commentId}", 10, "not-a-number")
                             .withAuth()
-                    ).then(status().isBadRequest)
-                verify(exactly = 0) { useCase.perform(any()) }
+                    ).then(
+                        status().isBadRequest,
+                        jsonPath("$.code").value("INVALID_REQUEST"),
+                        jsonPath("$.message").value("댓글 ID 형식이 올바르지 않습니다.")
+                    )
             }
         }
     })

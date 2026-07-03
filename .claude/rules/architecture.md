@@ -9,7 +9,7 @@
 - `lab-api-support` — 컨트롤러 테스트 공용 도구 (`ControllerDescribeSpec` + `FieldBuilder` DSL, restdocs-api-spec wrapper). 다른 도메인 `app` 모듈이 `testImplementation(projects.labApiSupport)` 로 받는다. main source 가 테스트 도구라서 외부 `kotest`, `mockk`, `spring-restdocs`, `restdocs-api-spec` 의존을 `api(...)` 로 노출한다.
 - `lab-space/domain` — 순수 도메인. **Spring / Exposed / HTTP import 금지.** `api(labCommonDomain) + api(labCommonPort)` 만 — 인프라성 코드 (`TransactionProvider`, `LogContext` 등) 가 consumer 에게 transitive 노출되지 않게.
 - `lab-space/app` — Spring + Exposed 어댑터: controller, repository 구현, search 어댑터. `lab-common-persistence` 의 `ExposedEntityRepository<E, I>` base 를 상속해 어댑터 보일러플레이트를 통합 (`repository.md` 참조).
-- `lab-composition/app` — **BFF (Backend For Frontend) / Composition 계층.** 여러 도메인의 UseCase 결과 + BFF 소유 outbound port (`UserHandleLookup`, `SpaceMembershipLookup`) 를 조립해 프론트 응답을 만든다. controller 만 노출, 자기 UseCase / entity 없음. 자세한 책임 경계·의존 방향·예외 케이스는 아래 "BFF/Composition 계층" 절.
+- `lab-composition/app` — **BFF (Backend For Frontend) / Composition 계층.** 여러 도메인의 UseCase 결과 + BFF 소유 outbound port (`UserHandleLookup`, `SpaceMembershipLookup`) 를 조립해 프론트 응답을 만든다. controller + BFF 소유 inbound port (UseCase) + UseCase 구현체 + BFF 소유 outbound port + 어댑터. 자기 domain (entity) 은 없음. 자세한 책임 경계·의존 방향·예외 케이스는 아래 "BFF/Composition 계층" 절.
 - `app` — `@SpringBootApplication`이 있는 실행 가능 모듈. 이 모듈만 `bootJar`를 활성화한다. 진입 클래스는 `com.crispinlab.app.Application` (루트 `com.crispinlab` 에 두면 default scan 이 `lab-common-infra` 의 auto-config 패스와 같은 패키지를 이중으로 훑게 된다).
 
 향후 도메인도 같은 패턴: `lab-<domain>/domain` + `lab-<domain>/app`.
@@ -22,11 +22,20 @@
 
 ### 책임 경계
 
-BFF 는 controller + BFF 소유 outbound port 만 가진다. 자기 UseCase / port incoming / entity / domain 패키지 **없다**.
+BFF 는 도메인 module 과 동형으로 **inbound port (UseCase) + UseCase 구현체 + outbound port + 어댑터 + controller** 를 가진다. 자기 domain (entity / VO) 은 없다 — aggregate 는 도메인 module 소유.
 
-- **controller** — 도메인 UseCase 를 재사용 (`useCase.perform(request)`) + BFF 소유 outbound port 로 부족한 크로스도메인 필드 보충 + payload data class 로 조립. controller 이름은 `XxxCompositionController` (도메인 controller `XxxController` 와 구분).
+- **BFF inbound port (UseCase)** — `application/port/incoming/{aggregate}/XxxComposition.kt`. `UseCase<Request, Result>` 를 implement. Request 는 컨트롤러가 넘기는 raw 파라미터를 받고, Result 는 응답 payload 그대로 (도메인 UseCase Result identifier + BFF lookup 으로 채운 크로스도메인 스칼라). 이름은 `XxxComposition` (도메인 `XxxGetting` / `XxxSearching` 등과 대응, 뒤에 `Composition` 접미사).
+- **BFF UseCase 구현체** — `application/usecase/{aggregate}/XxxCompositionUseCase.kt`. `@Service` + read/write 에 따라 트랜잭션 경계를 다르게 둔다 (아래 "트랜잭션 경계" 절). 조립 로직 (batch lookup, `runCatching + fallback` 격리, viewer 파생 필드, error mapping) 을 여기에 둔다. 도메인 UseCase 를 재사용하고 (`pageSearching.perform(request.toDomainRequest())`) BFF outbound port 로 크로스도메인 스칼라를 조회. controller 에 조립 로직을 두지 않는다.
+- **controller** — request/response 매핑만. `XxxCompositionController` 이름 유지 (도메인 `XxxController` 와 구분). Query/Path/Body 를 BFF Request 로 변환 + `useCase.perform` 호출 + 결과 반환. Payload data class 도 두지 않는다 — UseCase Result 가 payload.
 - **BFF outbound port** — `application/port/outgoing/{domain}/XxxLookup.kt`. read-only 조회 시그니처만 (`handlesOf(ids): Map<UserId, String>` 같은 batch 형태 우선 — 리스트 endpoint 의 N+1 회귀 방지). 어댑터는 다른 도메인의 outbound port (`UserHandleQuery`, `SpaceMemberRepository`) 를 주입해 소비한다. **도메인 UseCase 를 직접 호출하지 않는다** — 도메인 쓰기 UseCase 는 자기 트랜잭션·검증·부수효과를 자기 흐름 안에서 완결시켜야 하므로, BFF 는 read-only lookup 만 부른다.
-- **payload data class** — controller 내부 (`data class PagePayload(...)`). 도메인 UseCase Result 의 identifier + BFF outbound port 로 조회한 크로스도메인 필드가 섞인다. 조립 세부는 `controller.md` "크로스도메인 조립 응답은 BFF 계층에서" 절.
+
+### 트랜잭션 경계
+
+**read composition (도메인 read UseCase 재사용)** — `perform` 진입에서 `transactionProvider.transactional(readOnly = true) { }` 로 한 번 감싼다. 도메인 UseCase 내부의 `transactional { }` 은 Spring `TransactionTemplate` 기본 propagation (`PROPAGATION_REQUIRED`) 로 outer tx 에 join 되어 nested 무해 (`DefaultTransactionProvider.kt` 참조). 감싸지 않으면 도메인 UseCase 반환 이후의 lookup adapter 호출이 tx 밖에서 Exposed `Query.iterator()` 를 쳐 `IllegalStateException: No transaction in context` 로 500 폭발 (LAB-156 회귀 사례).
+
+**write composition (도메인 write UseCase 재사용)** — `perform` 을 outer tx 로 감싸지 **않는다**. 도메인 write UseCase 가 자기 `transactional { }` 로 커밋을 완결하고, 응답 조립의 lookup 호출만 별도 `transactional(readOnly = true) { }` 로 감싼다. outer tx 로 통합하면 도메인 write 가 outer 에 join 되어 lookup 실행 시점에 아직 미커밋 — lookup 이 SQL 레벨로 실패하면 `runCatching` 이 예외를 삼켜도 DB 트랜잭션은 aborted 상태로 남아, write 까지 롤백되거나 (격리 의도 무산) 성공 응답 + write 미영속이라는 최악 조합이 가능하다. write 커밋 완결 후 lookup 만 격리하는 분리 구조가 `runCatching + fallback` 의 "write 는 성공, 응답만 degrade" 시맨틱을 보존한다 (`controller.md` "lookup 실패 격리" 정합).
+
+Spring `@Transactional` 은 도입하지 않는다 — 프로젝트 표준은 `TransactionProvider` 로 통일 (`usecase-implementation.md` "트랜잭션 경계" 정합).
 
 ### 의존 방향 (cycle 방지)
 

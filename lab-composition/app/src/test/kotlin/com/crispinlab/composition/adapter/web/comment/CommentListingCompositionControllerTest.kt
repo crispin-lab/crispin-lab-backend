@@ -2,10 +2,9 @@ package com.crispinlab.composition.adapter.web.comment
 
 import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder.Companion.responseFields
 import com.crispinlab.common.pagination.PageResult
-import com.crispinlab.composition.application.port.outgoing.user.UserHandleLookup
+import com.crispinlab.composition.application.port.incoming.comment.CommentListingComposition
+import com.crispinlab.composition.application.port.incoming.comment.CommentListingComposition.Result
 import com.crispinlab.composition.testsupport.CompositionAppControllerDescribeSpec
-import com.crispinlab.space.application.port.incoming.comment.CommentListing
-import com.crispinlab.space.application.port.incoming.comment.CommentListing.Summary
 import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
@@ -21,15 +20,10 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
 class CommentListingCompositionControllerTest :
     CompositionAppControllerDescribeSpec(tag = "Comment", body = {
-        val useCase = mockk<CommentListing>()
-        val userHandleLookup = mockk<UserHandleLookup>()
-        val controller = CommentListingCompositionController(useCase, userHandleLookup)
+        val useCase = mockk<CommentListingComposition>()
+        val controller = CommentListingCompositionController(useCase)
 
-        beforeEach {
-            clearMocks(useCase, userHandleLookup)
-            every { userHandleLookup.handlesOf(any()) } returns
-                mapOf(UserId(100L) to "alice", UserId(101L) to "bob")
-        }
+        beforeEach { clearMocks(useCase) }
 
         describe("댓글 목록 조회") {
             it("정상 응답 시 200 과 페이지를 반환한다") {
@@ -37,19 +31,21 @@ class CommentListingCompositionControllerTest :
                     PageResult(
                         items =
                             listOf(
-                                Summary(
+                                Result(
                                     commentId = CommentId(1L),
                                     pageId = PageId(10L),
                                     authorId = UserId(100L),
+                                    authorHandle = "alice",
                                     content = "첫 댓글",
                                     canEdit = true,
                                     createdAt = DUMMY_INSTANT,
                                     updatedAt = DUMMY_INSTANT
                                 ),
-                                Summary(
+                                Result(
                                     commentId = CommentId(2L),
                                     pageId = PageId(10L),
                                     authorId = UserId(101L),
+                                    authorHandle = "bob",
                                     content = "두 번째",
                                     canEdit = false,
                                     createdAt = DUMMY_INSTANT,
@@ -108,81 +104,6 @@ class CommentListingCompositionControllerTest :
                     )
             }
 
-            it("distinct authorIds 에 대해 handlesOf 를 정확히 1회 batch 호출한다") {
-                every { useCase.perform(any()) } returns
-                    PageResult(
-                        items =
-                            listOf(
-                                Summary(
-                                    commentId = CommentId(1L),
-                                    pageId = PageId(10L),
-                                    authorId = UserId(100L),
-                                    content = "a",
-                                    canEdit = true,
-                                    createdAt = DUMMY_INSTANT,
-                                    updatedAt = DUMMY_INSTANT
-                                ),
-                                Summary(
-                                    commentId = CommentId(2L),
-                                    pageId = PageId(10L),
-                                    authorId = UserId(100L),
-                                    content = "b",
-                                    canEdit = true,
-                                    createdAt = DUMMY_INSTANT,
-                                    updatedAt = DUMMY_INSTANT
-                                ),
-                                Summary(
-                                    commentId = CommentId(3L),
-                                    pageId = PageId(10L),
-                                    authorId = UserId(101L),
-                                    content = "c",
-                                    canEdit = false,
-                                    createdAt = DUMMY_INSTANT,
-                                    updatedAt = DUMMY_INSTANT
-                                )
-                            ),
-                        page = 0,
-                        size = 20,
-                        totalElements = 3L
-                    )
-
-                controller
-                    .`when`(get("/v1/pages/{pageId}/comments", 10).withAuth())
-                    .then(status().isOk)
-                verify(exactly = 1) {
-                    userHandleLookup.handlesOf(setOf(UserId(100L), UserId(101L)))
-                }
-            }
-
-            it("author 가 삭제된 사용자이면 authorHandle 은 빈 문자열로 응답한다") {
-                every { userHandleLookup.handlesOf(any()) } returns emptyMap()
-                every { useCase.perform(any()) } returns
-                    PageResult(
-                        items =
-                            listOf(
-                                Summary(
-                                    commentId = CommentId(1L),
-                                    pageId = PageId(10L),
-                                    authorId = UserId(999L),
-                                    content = "삭제된 사용자가 남긴 댓글",
-                                    canEdit = false,
-                                    createdAt = DUMMY_INSTANT,
-                                    updatedAt = DUMMY_INSTANT
-                                )
-                            ),
-                        page = 0,
-                        size = 20,
-                        totalElements = 1L
-                    )
-
-                controller
-                    .`when`(get("/v1/pages/{pageId}/comments", 10).withAuth())
-                    .then(
-                        status().isOk,
-                        jsonPath("$.items[0].authorHandle").value("")
-                    )
-            }
-
             it("page/size 파라미터가 없어도 기본값으로 200 을 반환한다") {
                 every { useCase.perform(any()) } returns
                     PageResult(
@@ -211,15 +132,24 @@ class CommentListingCompositionControllerTest :
                 verify(exactly = 0) { useCase.perform(any()) }
             }
 
-            it("pageId 형식이 숫자가 아니면 400 을 반환한다") {
+            it("pageId 형식이 숫자가 아니면 UseCase 가 던진 IllegalArgumentException 이 400 으로 매핑된다") {
+                every { useCase.perform(any()) } throws
+                    IllegalArgumentException("페이지 ID 형식이 올바르지 않습니다.")
+
                 controller
                     .`when`(
                         get("/v1/pages/{pageId}/comments", "not-a-number").withAuth()
-                    ).then(status().isBadRequest)
-                verify(exactly = 0) { useCase.perform(any()) }
+                    ).then(
+                        status().isBadRequest,
+                        jsonPath("$.code").value("INVALID_REQUEST"),
+                        jsonPath("$.message").value("페이지 ID 형식이 올바르지 않습니다.")
+                    )
             }
 
-            it("page 가 음수면 400 과 한국어 메시지를 반환한다") {
+            it("page 가 음수면 UseCase 가 던진 IllegalArgumentException 이 400 으로 매핑된다") {
+                every { useCase.perform(any()) } throws
+                    IllegalArgumentException("페이지 번호는 0 이상이어야 합니다.")
+
                 controller
                     .`when`(
                         get("/v1/pages/{pageId}/comments", 10)
@@ -230,7 +160,6 @@ class CommentListingCompositionControllerTest :
                         jsonPath("$.code").value("INVALID_REQUEST"),
                         jsonPath("$.message").value("페이지 번호는 0 이상이어야 합니다.")
                     )
-                verify(exactly = 0) { useCase.perform(any()) }
             }
         }
     })

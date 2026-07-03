@@ -1,13 +1,11 @@
 package com.crispinlab.composition.adapter.web.user
 
 import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder.Companion.responseFields
-import com.crispinlab.composition.application.port.outgoing.space.SpaceMembershipLookup
+import com.crispinlab.composition.application.port.incoming.user.UserSearchingComposition
+import com.crispinlab.composition.application.port.incoming.user.UserSearchingComposition.Request
+import com.crispinlab.composition.application.port.incoming.user.UserSearchingComposition.Result
 import com.crispinlab.composition.testsupport.CompositionAppControllerDescribeSpec
-import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.space.SpaceId
-import com.crispinlab.user.application.port.incoming.user.UserSearching
-import com.crispinlab.user.application.port.incoming.user.UserSearching.Request
-import com.crispinlab.user.application.port.incoming.user.UserSearching.Result
 import com.crispinlab.user.domain.user.Handle
 import com.crispinlab.user.domain.user.SystemRole
 import com.crispinlab.user.domain.user.UserId
@@ -25,18 +23,10 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
 class UserSearchingCompositionControllerTest :
     CompositionAppControllerDescribeSpec(tag = "User", body = {
-        val useCase = mockk<UserSearching>()
-        val spaceMembershipLookup = mockk<SpaceMembershipLookup>()
-        val controller = UserSearchingCompositionController(useCase, spaceMembershipLookup)
+        val useCase = mockk<UserSearchingComposition>()
+        val controller = UserSearchingCompositionController(useCase)
 
-        beforeEach {
-            clearMocks(useCase, spaceMembershipLookup)
-            every { spaceMembershipLookup.membershipsOf(any(), any()) } returns
-                mapOf(
-                    UserId(1L) to setOf(SpaceId(20L), SpaceId(10L)),
-                    UserId(2L) to setOf(SpaceId(10L))
-                )
-        }
+        beforeEach { clearMocks(useCase) }
 
         describe("사용자 검색") {
             it("정상 검색 시 200 과 매칭 결과 + 소속 스페이스 집합을 반환한다") {
@@ -44,8 +34,16 @@ class UserSearchingCompositionControllerTest :
                     Result(
                         items =
                             listOf(
-                                Result.Item(userId = UserId(1L), handle = Handle("alice")),
-                                Result.Item(userId = UserId(2L), handle = Handle("alice_kim"))
+                                Result.Item(
+                                    userId = UserId(1L),
+                                    handle = Handle("alice"),
+                                    memberOfSpaceIds = listOf(SpaceId(10L), SpaceId(20L))
+                                ),
+                                Result.Item(
+                                    userId = UserId(2L),
+                                    handle = Handle("alice_kim"),
+                                    memberOfSpaceIds = listOf(SpaceId(10L))
+                                )
                             )
                     )
 
@@ -103,44 +101,9 @@ class UserSearchingCompositionControllerTest :
                 captured.captured.size shouldBe 10
             }
 
-            it("distinct userIds 에 대해 membershipsOf 를 정확히 1회 batch 호출한다") {
-                every { useCase.perform(any()) } returns
-                    Result(
-                        items =
-                            listOf(
-                                Result.Item(userId = UserId(1L), handle = Handle("alice")),
-                                Result.Item(userId = UserId(1L), handle = Handle("alice")),
-                                Result.Item(userId = UserId(2L), handle = Handle("bob_kim"))
-                            )
-                    )
-
-                controller
-                    .`when`(
-                        get("/v1/users")
-                            .withAuth()
-                            .param("query", "a")
-                    ).then(status().isOk)
-
-                verify(exactly = 1) {
-                    spaceMembershipLookup.membershipsOf(
-                        userIds = setOf(UserId(1L), UserId(2L)),
-                        viewer = any()
-                    )
-                }
-            }
-
-            it("검색자의 Viewer.Member 가 membershipsOf 에 전달된다") {
-                val viewerSlot = slot<Viewer>()
-                every {
-                    spaceMembershipLookup.membershipsOf(any(), capture(viewerSlot))
-                } returns emptyMap()
-                every { useCase.perform(any()) } returns
-                    Result(
-                        items =
-                            listOf(
-                                Result.Item(userId = UserId(1L), handle = Handle("alice"))
-                            )
-                    )
+            it("검색자의 Viewer.Member 가 Request 에 담긴다") {
+                val requestSlot = slot<Request>()
+                every { useCase.perform(capture(requestSlot)) } returns Result(items = emptyList())
 
                 controller
                     .`when`(
@@ -149,22 +112,13 @@ class UserSearchingCompositionControllerTest :
                             .param("query", "ali")
                     ).then(status().isOk)
 
-                (viewerSlot.captured as Viewer.Member).userId shouldBe UserId(500L)
-                viewerSlot.captured.isAdmin shouldBe false
+                requestSlot.captured.viewer.userId shouldBe UserId(500L)
+                requestSlot.captured.viewer.isAdmin shouldBe false
             }
 
-            it("ADMIN 검색자는 isAdmin=true 로 Viewer.Member 가 전달된다") {
-                val viewerSlot = slot<Viewer>()
-                every {
-                    spaceMembershipLookup.membershipsOf(any(), capture(viewerSlot))
-                } returns emptyMap()
-                every { useCase.perform(any()) } returns
-                    Result(
-                        items =
-                            listOf(
-                                Result.Item(userId = UserId(1L), handle = Handle("alice"))
-                            )
-                    )
+            it("ADMIN 검색자는 isAdmin=true 로 Viewer.Member 가 담긴다") {
+                val requestSlot = slot<Request>()
+                every { useCase.perform(capture(requestSlot)) } returns Result(items = emptyList())
 
                 controller
                     .`when`(
@@ -173,54 +127,7 @@ class UserSearchingCompositionControllerTest :
                             .param("query", "ali")
                     ).then(status().isOk)
 
-                viewerSlot.captured.isAdmin shouldBe true
-            }
-
-            it("소속 스페이스가 없는 사용자는 memberOfSpaceIds 를 빈 배열로 응답한다") {
-                every { spaceMembershipLookup.membershipsOf(any(), any()) } returns emptyMap()
-                every { useCase.perform(any()) } returns
-                    Result(
-                        items =
-                            listOf(
-                                Result.Item(userId = UserId(999L), handle = Handle("loner"))
-                            )
-                    )
-
-                controller
-                    .`when`(
-                        get("/v1/users")
-                            .withAuth()
-                            .param("query", "loner")
-                    ).then(
-                        status().isOk,
-                        jsonPath("$.items[0].userId").value("999"),
-                        jsonPath("$.items[0].memberOfSpaceIds.length()").value(0)
-                    )
-            }
-
-            it("membershipsOf 가 예외를 던져도 검색 결과 자체는 반환하고 memberOfSpaceIds 는 빈 배열로 응답한다") {
-                every { spaceMembershipLookup.membershipsOf(any(), any()) } throws
-                    RuntimeException("lookup 실패")
-                every { useCase.perform(any()) } returns
-                    Result(
-                        items =
-                            listOf(
-                                Result.Item(userId = UserId(1L), handle = Handle("alice"))
-                            )
-                    )
-
-                controller
-                    .`when`(
-                        get("/v1/users")
-                            .withAuth()
-                            .param("query", "ali")
-                    ).then(
-                        status().isOk,
-                        jsonPath("$.items.length()").value(1),
-                        jsonPath("$.items[0].userId").value("1"),
-                        jsonPath("$.items[0].handle").value("alice"),
-                        jsonPath("$.items[0].memberOfSpaceIds.length()").value(0)
-                    )
+                requestSlot.captured.viewer.isAdmin shouldBe true
             }
 
             it("검색 결과가 비면 빈 items 를 반환한다") {
@@ -245,10 +152,12 @@ class UserSearchingCompositionControllerTest :
                         jsonPath("$.code").value("INVALID_REQUEST")
                     )
                 verify(exactly = 0) { useCase.perform(any()) }
-                verify(exactly = 0) { spaceMembershipLookup.membershipsOf(any(), any()) }
             }
 
-            it("query 가 빈 문자열이면 400 을 반환한다") {
+            it("query 가 빈 문자열이면 UseCase 가 던진 IllegalArgumentException 이 400 으로 매핑된다") {
+                every { useCase.perform(any()) } throws
+                    IllegalArgumentException("검색어는 1자 이상 30자 이하여야 합니다.")
+
                 controller
                     .`when`(
                         get("/v1/users")
@@ -258,11 +167,12 @@ class UserSearchingCompositionControllerTest :
                         status().isBadRequest,
                         jsonPath("$.code").value("INVALID_REQUEST")
                     )
-                verify(exactly = 0) { useCase.perform(any()) }
-                verify(exactly = 0) { spaceMembershipLookup.membershipsOf(any(), any()) }
             }
 
-            it("size 가 21 이상이면 400 을 반환한다") {
+            it("size 가 21 이상이면 UseCase 가 던진 IllegalArgumentException 이 400 으로 매핑된다") {
+                every { useCase.perform(any()) } throws
+                    IllegalArgumentException("결과 수는 1 이상 20 이하여야 합니다.")
+
                 controller
                     .`when`(
                         get("/v1/users")
@@ -273,8 +183,6 @@ class UserSearchingCompositionControllerTest :
                         status().isBadRequest,
                         jsonPath("$.code").value("INVALID_REQUEST")
                     )
-                verify(exactly = 0) { useCase.perform(any()) }
-                verify(exactly = 0) { spaceMembershipLookup.membershipsOf(any(), any()) }
             }
 
             it("Authorization 헤더가 없으면 401 을 반환하고 use case 를 호출하지 않는다") {
@@ -286,7 +194,6 @@ class UserSearchingCompositionControllerTest :
                         jsonPath("$.code").value("INVALID_SESSION")
                     )
                 verify(exactly = 0) { useCase.perform(any()) }
-                verify(exactly = 0) { spaceMembershipLookup.membershipsOf(any(), any()) }
             }
         }
     })

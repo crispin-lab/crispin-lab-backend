@@ -1,15 +1,11 @@
 package com.crispinlab.composition.adapter.web.comment
 
-import com.crispinlab.composition.application.port.outgoing.user.UserHandleLookup
-import com.crispinlab.composition.application.port.outgoing.user.handleOf
+import com.crispinlab.composition.application.port.incoming.comment.CommentEditingComposition
+import com.crispinlab.composition.application.port.incoming.comment.CommentEditingComposition.Request
+import com.crispinlab.composition.application.port.incoming.comment.CommentEditingComposition.Result
 import com.crispinlab.space.adapter.web.auth.toMember
-import com.crispinlab.space.application.port.incoming.comment.CommentEditing
-import com.crispinlab.space.application.port.incoming.comment.CommentEditing.Request
-import com.crispinlab.space.application.port.incoming.comment.CommentEditing.Result
 import com.crispinlab.space.domain.access.Viewer
-import com.crispinlab.space.domain.comment.CommentId
 import com.crispinlab.user.adapter.web.auth.Auth
-import java.time.Instant
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -19,8 +15,7 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping("/v1/pages/{pageId}/comments/{commentId}")
 class CommentEditingCompositionController(
-    private val useCase: CommentEditing,
-    private val userHandleLookup: UserHandleLookup
+    private val useCase: CommentEditingComposition
 ) {
     @PutMapping
     fun edit(
@@ -28,23 +23,13 @@ class CommentEditingCompositionController(
         @PathVariable commentId: String,
         @RequestBody body: Body,
         auth: Auth
-    ): CommentEditPayload =
+    ): Result =
         body
             .toRequestWith(
                 pageId = pageId,
                 commentId = commentId,
                 viewer = auth.toMember()
-            ).let {
-                useCase.perform(it)
-            }.toPayload()
-
-    private fun Result.toPayload(): CommentEditPayload =
-        CommentEditPayload(
-            commentId = commentId,
-            authorHandle = runCatching { userHandleLookup.handleOf(authorId) }.getOrElse { "" },
-            content = content,
-            updatedAt = updatedAt
-        )
+            ).let { useCase.perform(it) }
 
     data class Body(
         val content: String
@@ -61,11 +46,4 @@ class CommentEditingCompositionController(
                 viewer = viewer
             )
     }
-
-    data class CommentEditPayload(
-        val commentId: CommentId,
-        val authorHandle: String,
-        val content: String,
-        val updatedAt: Instant
-    )
 }

@@ -29,17 +29,25 @@ controller 가 **얇게** 유지되어야 UseCase 가 진짜 비즈니스 단위
 | 다른 도메인의 파생 스칼라 (handle, name 등) 가 응답에 포함 (read/write 무관) | `lab-composition/app/adapter/web/{aggregate}/` | `XxxCompositionController` |
 
 - `XxxCompositionController` 서픽스는 도메인 `XxxController` 와의 구분자. endpoint 이관 시 이름은 바뀌지만 URL / OpenAPI schema name 은 유지 (클라이언트 계약 불변).
-- write endpoint 도 응답 조립만 크로스도메인이면 BFF 로 옮긴다 — 쓰기 로직은 도메인 UseCase 에 남고, controller 는 도메인 UseCase 호출 후 응답 조립만 한다 (예: `CommentRegisteringCompositionController` 가 `CommentRegistering.perform()` 후 `UserHandleLookup` 으로 authorHandle 조립).
+- write endpoint 도 응답 조립만 크로스도메인이면 BFF 로 옮긴다 — 쓰기 로직은 도메인 UseCase 에 남고, BFF UseCase 는 도메인 UseCase 호출 후 응답 조립만 한다 (예: `CommentRegisteringCompositionUseCase` 가 `CommentRegistering.perform()` 후 `UserHandleLookup` 으로 authorHandle 조립).
 
-### Payload / 조립 패턴
+### BFF UseCase 가 조립을 담당한다 (controller 는 얇게)
 
-BFF controller 는 도메인 UseCase Result 의 identifier (`authorId: UserId`) 를 받아 BFF outbound port 로 크로스도메인 스칼라를 조회한 뒤 Payload data class 로 조립한다.
+**조립 로직은 BFF UseCase (`XxxCompositionUseCase`) 에 둔다.** controller 는 request/response 매핑만. 다음 세 가지 이유:
+1. **트랜잭션 경계** — lookup adapter 의 Exposed DSL 호출은 tx 안에서 실행되어야 한다. BFF UseCase 가 그 경계의 자리 — read composition 은 `perform` 진입에서 `transactional(readOnly = true) { }` 한 번, write composition 은 도메인 write 커밋 완결 후 lookup 만 별도 readOnly tx (`architecture.md` "BFF/Composition 계층 — 트랜잭션 경계"). controller 에 `@Transactional` 을 붙이지 않는다.
+2. **테스트 용이성** — 조립 로직이 UseCase 단위 테스트로 직접 검증 가능 (mockk + `DummyTransactionProvider`). controller 테스트는 라우팅·직렬화 회귀만.
+3. **일관성** — 도메인 UseCase 와 대칭 구조. controller = 얇은 라우터, UseCase = 로직 소유.
+
+### Payload / 조립 패턴 (BFF UseCase 안에서)
+
+BFF UseCase 는 도메인 UseCase Result 의 identifier (`authorId: UserId`) 를 받아 BFF outbound port 로 크로스도메인 스칼라를 조회한 뒤 자기 Result 로 조립. Result 는 곧 응답 payload (controller 는 매핑 없이 반환).
 
 **단건 조립 — `handleOf(id)` extension**
 
 ```kotlin
-private fun Result.toPayload(): PagePayload =
-    PagePayload(
+// XxxCompositionUseCase 안
+private fun Result.toResult(): PageResult =
+    PageResult(
         pageId = pageId,
         authorId = authorId,
         authorHandle = userHandleLookup.handleOf(authorId),
@@ -50,57 +58,64 @@ private fun Result.toPayload(): PagePayload =
 **리스트 조립 — batch 강제 (N+1 방지)**
 
 ```kotlin
-private fun PageResult<Summary>.toPayloads(): PageResult<CommentSummary> {
+private fun PageResult<Summary>.toResults(): PageResult<Result> {
     val handles = userHandleLookup.handlesOf(items.map { it.authorId }.toSet())
-    return map { it.toSummary(handles) }
+    return map { it.toResult(handles) }
 }
 
-private fun Summary.toSummary(handles: Map<UserId, String>): CommentSummary =
-    CommentSummary(
+private fun Summary.toResult(handles: Map<UserId, String>): Result =
+    Result(
         authorId = authorId,
         authorHandle = handles[authorId] ?: "",
     )
 ```
 
-리스트에서 개별 `handleOf(...)` 반복은 **N+1 회귀 신호** — port 시그니처를 `handlesOf(Collection<UserId>)` 로 두고 controller 에서 items 의 distinct id set 을 한 번에 넘긴다.
+리스트에서 개별 `handleOf(...)` 반복은 **N+1 회귀 신호** — port 시그니처를 `handlesOf(Collection<UserId>)` 로 두고 UseCase 에서 items 의 distinct id set 을 한 번에 넘긴다.
 
-### lookup 실패 격리 — `runCatching + fallback`
+### lookup 실패 격리 — `runCatching + fallback` (BFF UseCase 안에서)
 
 BFF 조립은 도메인 UseCase 가 이미 성공한 뒤 실행된다. 이 단계에서 lookup 실패로 500 이 나가는 것은 두 시나리오에서 응답의 시맨틱을 왜곡한다.
 
 | 시나리오 | 문제 | 해결 |
 |----------|------|------|
-| write endpoint (register/edit) | `useCase.perform()` 이 이미 도메인 상태 변경을 커밋한 뒤 응답 조립에서 500 → 클라이언트는 "생성 실패" 로 오해, 재시도 시 중복 write 위험 | **개별 lookup 호출 한 줄** (`userHandleLookup.handleOf(...)`) 을 `runCatching { ... }.getOrElse { "" }` 로 격리 |
-| read endpoint 의 optional 부수 lookup (예: `UserSearchingCompositionController` 의 `SpaceMembershipLookup`) | 핵심 응답 (user 검색 결과) 은 살아있는데 부가 필드 (memberSpaceIds) lookup 실패로 전체 500 → 사용자가 검색조차 못 함 | **개별 lookup 호출 한 줄** (`spaceMembershipLookup.membershipsOf(...)`) 을 `runCatching { ... }.getOrElse { emptyMap() }` 로 격리 |
+| write endpoint (register/edit) | 도메인 `useCase.perform()` 이 자기 tx 로 상태 변경을 이미 커밋한 뒤 응답 조립에서 500 → 클라이언트는 "생성 실패" 로 오해, 재시도 시 중복 write 위험 | **lookup 호출을 별도 `transactional(readOnly = true)` 로 열고 그 한 줄** 을 `runCatching { ... }.getOrElse { "" }` 로 격리 (write composition 은 outer tx 없음 — `architecture.md` "트랜잭션 경계") |
+| read endpoint 의 optional 부수 lookup (예: `UserSearchingCompositionUseCase` 의 `SpaceMembershipLookup`) | 핵심 응답 (user 검색 결과) 은 살아있는데 부가 필드 (memberSpaceIds) lookup 실패로 전체 500 → 사용자가 검색조차 못 함 | **개별 lookup 호출 한 줄** (`spaceMembershipLookup.membershipsOf(...)`) 을 `runCatching { ... }.getOrElse { emptyMap() }` 로 격리 |
 
 **write 예시**
 
 ```kotlin
-private fun Result.toPayload(): CommentRegisterPayload =
-    CommentRegisterPayload(
+// XxxCompositionUseCase 안 — perform 은 outer tx 없이, lookup 만 자기 readOnly tx
+private fun DomainResult.toResult(): Result =
+    Result(
         commentId = commentId,
-        authorHandle = runCatching { userHandleLookup.handleOf(authorId) }.getOrElse { "" }
+        authorHandle =
+            runCatching {
+                transactionProvider.transactional(readOnly = true) {
+                    userHandleLookup.handleOf(authorId)
+                }
+            }.getOrElse { "" }
     )
 ```
 
 **read + optional 부수 lookup 예시**
 
 ```kotlin
-private fun Result.toPayloadFor(viewer: Viewer.Member): UserSearchPayload {
+// read composition — perform 전체가 readOnly tx 안이므로 lookup 에 별도 tx 불필요
+private fun UserSearching.Result.toResultFor(viewer: Viewer.Member): Result {
     val memberships =
         runCatching {
             spaceMembershipLookup.membershipsOf(userIds = items.map { it.userId }.toSet(), viewer = viewer)
         }.getOrElse { emptyMap() }
-    return UserSearchPayload(items = items.map { it.toItem(memberships) })
+    return Result(items = items.map { it.toItem(memberships) })
 }
 ```
 
 **정책 판정 — 격리해야 하는 lookup**
 
 - **응답의 핵심 필드가 아닐 것** — 실패 시 빈 문자열 / 빈 컬렉션으로 fallback 해도 응답의 시맨틱이 무너지지 않아야 한다. `PageGetting` 의 `title` 처럼 응답 계약의 핵심이면 격리 대상이 아니라 그대로 실패 전파 (실패면 사용자가 페이지 자체를 못 봐야 정합).
-- **write 뒤 응답 조립** 또는 **read 의 optional 부수 필드** — 두 가지가 격리 대상. 단건 read 의 필수 필드 (예: `PageGettingCompositionController` 의 `authorHandle` — page 응답의 표시 이름이므로 여기선 격리하지 않는다) 는 격리하지 않아 실패가 사용자에게 명시적으로 나타난다.
+- **write 뒤 응답 조립** 또는 **read 의 optional 부수 필드** — 두 가지가 격리 대상. 단건 read 의 필수 필드 (예: `PageGettingCompositionUseCase` 의 `authorHandle` — page 응답의 표시 이름이므로 여기선 격리하지 않는다) 는 격리하지 않아 실패가 사용자에게 명시적으로 나타난다.
 - 격리 시 fallback 값은 sentinel (빈 문자열 / 빈 Map / 빈 컬렉션) — null 을 payload 에 흘리지 않는다.
-- **`runCatching` 범위는 lookup 호출 한 줄만** — `runCatching { userHandleLookup.handleOf(id) }` 처럼 lookup 호출 자체만 감싸고, `toPayload` / `toPayloadFor` 조립 흐름 전체를 감싸지 않는다. 조립 전체를 감싸면 lookup 실패뿐 아니라 mapping 로직의 예기치 못한 버그 (NPE / index 초과 / 도메인 매핑 미처리 케이스) 까지 sentinel 로 흡수되어, 장애가 성공 응답으로 숨고 클라이언트가 잘못된 payload 를 정상으로 오인한다.
+- **`runCatching` 범위는 lookup 호출 한 줄만** — lookup 호출 자체 (write composition 은 lookup 을 감싸는 readOnly tx 블록까지) 만 감싸고, `toResult` / `toResults` 조립 흐름 전체를 감싸지 않는다. 조립 전체를 감싸면 lookup 실패뿐 아니라 mapping 로직의 예기치 못한 버그 (NPE / index 초과 / 도메인 매핑 미처리 케이스) 까지 sentinel 로 흡수되어, 장애가 성공 응답으로 숨고 클라이언트가 잘못된 payload 를 정상으로 오인한다.
 
 ### 도메인 UseCase Result 는 identifier 만
 

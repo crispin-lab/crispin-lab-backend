@@ -46,14 +46,16 @@ com.crispinlab.space.config                                # Spring config, Bean
 
 ```
 com.crispinlab.composition                                     # CompositionModule marker (component scan 루트)
-com.crispinlab.composition.adapter.web.{aggregate}             # XxxCompositionController + Payload/Body data class
+com.crispinlab.composition.adapter.web.{aggregate}             # XxxCompositionController
 com.crispinlab.composition.adapter.{domain}                    # 다른 도메인의 outbound port 를 소비하는 어댑터
+com.crispinlab.composition.application.usecase.{aggregate}     # BFF UseCase 구현체 (@Service)
+com.crispinlab.composition.application.port.incoming.{aggregate}  # BFF 소유 UseCase 인터페이스 (XxxComposition)
 com.crispinlab.composition.application.port.outgoing.{domain}  # BFF 소유 outbound port (Lookup 류)
 ```
 
 - `adapter.{domain}` 의 sub-directory 는 **target 도메인** 이름 (`adapter/user/`, `adapter/space/`) — 기술 스택이 아니다. 도메인 어댑터의 `adapter.{기술}` (persistence / web) 과 다른 축.
 - 한 target 도메인 안에 여러 lookup 어댑터가 필요해지면 **파일명** (`UserHandleLookupAdapter.kt`, `UserEmailLookupAdapter.kt`) 으로 구분하고 sub-package (`adapter/user/handle/`) 를 두지 않는다. 어댑터 수가 커져 파일 트리가 얇은 도메인이 붐비면 그때 재편.
-- `application.usecase.*` / `application.port.incoming.*` / `domain.*` 패키지는 **없다** — BFF 는 자기 UseCase / entity 를 두지 않고 도메인 UseCase 를 재사용한다 (`architecture.md` "BFF/Composition 계층" 참조).
+- `domain.*` 패키지는 **없다** — BFF 는 자기 entity 를 두지 않고 도메인 aggregate 를 재사용한다. inbound port (UseCase) 는 도메인과 대칭으로 갖는다 (조립 로직·트랜잭션 경계의 자리 — `architecture.md` "BFF/Composition 계층 — 책임 경계" / "트랜잭션 경계" 참조).
 
 ## 새 aggregate 추가 체크리스트
 
@@ -91,10 +93,13 @@ com.crispinlab.composition.application.port.outgoing.{domain}  # BFF 소유 outb
 
 ### lab-composition/app
 
-- [ ] `adapter/web/{aggregate}/XxxCompositionController.kt` — 도메인 UseCase + BFF outbound port 를 주입해 Payload 조립.
+- [ ] `application/port/incoming/{aggregate}/XxxComposition.kt` — BFF UseCase 인터페이스 (`UseCase<Request, Result>`). Request 는 controller 로부터 raw 파라미터 pass-through, Result 는 응답 payload shape.
+- [ ] `application/usecase/{aggregate}/XxxCompositionUseCase.kt` — `@Service` + `TransactionProvider` 주입. read composition 은 `perform` 진입에서 `transactional(readOnly = true) { }` 로 감쌈, write composition 은 outer tx 없이 lookup 만 별도 `transactional(readOnly = true) { }` (`architecture.md` "트랜잭션 경계"). 도메인 UseCase + BFF lookup 조립.
+- [ ] `adapter/web/{aggregate}/XxxCompositionController.kt` — `XxxComposition` 만 주입. request/response 매핑만.
 - [ ] BFF outbound port 가 없으면 `application/port/outgoing/{domain}/XxxLookup.kt` 신설. batch 시그니처 우선 (`handlesOf(ids): Map<UserId, String>`).
 - [ ] 어댑터가 없으면 `adapter/{domain}/XxxLookupAdapter.kt` 신설. `@Component` + 도메인의 outbound port (`UserHandleQuery`, `SpaceMemberRepository`) 를 주입해 소비.
-- [ ] controller 테스트는 `CompositionAppControllerDescribeSpec` 상속 (도메인 controller test 와 wiring 동일 — StubAuthArgumentResolver + GlobalExceptionHandler).
+- [ ] UseCase 단위 테스트 `application/usecase/{aggregate}/XxxCompositionUseCaseTest.kt` — 조립 로직 검증 + `RecordingTransactionProvider` 로 "lookup 이 tx 블록 안에서 호출" 검증 (read: perform 전체 readOnly wrap / write: 도메인 perform 은 tx 밖 + lookup 만 readOnly tx — LAB-156 회귀 방지) + 입력 형식 오류 → `IllegalArgumentException` 전파 케이스.
+- [ ] controller 테스트는 `CompositionAppControllerDescribeSpec` 상속. 조립 관련 검증은 UseCase 테스트로 이동하고 controller 테스트는 라우팅·직렬화·400/401·document 산출만.
 
 ### 도메인 module 축소
 

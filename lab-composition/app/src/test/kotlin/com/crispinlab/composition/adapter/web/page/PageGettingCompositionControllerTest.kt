@@ -2,10 +2,9 @@ package com.crispinlab.composition.adapter.web.page
 
 import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder.Companion.responseFields
 import com.crispinlab.common.exception.NotFoundException
-import com.crispinlab.composition.application.port.outgoing.user.UserHandleLookup
+import com.crispinlab.composition.application.port.incoming.page.PageGettingComposition
+import com.crispinlab.composition.application.port.incoming.page.PageGettingComposition.Result
 import com.crispinlab.composition.testsupport.CompositionAppControllerDescribeSpec
-import com.crispinlab.space.application.port.incoming.page.PageGetting
-import com.crispinlab.space.application.port.incoming.page.PageGetting.Result
 import com.crispinlab.space.application.usecase.page.PageLinkMaskingPolicy.MASKED_DISPLAY_TEXT
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.PageErrorCode
@@ -29,15 +28,10 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
 class PageGettingCompositionControllerTest :
     CompositionAppControllerDescribeSpec(tag = "Page", body = {
-        val useCase = mockk<PageGetting>()
-        val userHandleLookup = mockk<UserHandleLookup>()
-        val controller = PageGettingCompositionController(useCase, userHandleLookup)
+        val useCase = mockk<PageGettingComposition>()
+        val controller = PageGettingCompositionController(useCase)
 
-        beforeEach {
-            clearMocks(useCase, userHandleLookup)
-            every { userHandleLookup.handlesOf(any()) } returns
-                mapOf(UserId(100L) to "test_user")
-        }
+        beforeEach { clearMocks(useCase) }
 
         describe("페이지 단건 조회") {
             it("존재하면 200 과 정보를 반환한다") {
@@ -47,6 +41,7 @@ class PageGettingCompositionControllerTest :
                         spaceId = SpaceId(10L),
                         parentPageId = PageId(2L),
                         authorId = UserId(100L),
+                        authorHandle = "test_user",
                         title = "오늘의 회고",
                         content =
                             doc(
@@ -140,34 +135,6 @@ class PageGettingCompositionControllerTest :
                     )
             }
 
-            it("author 가 삭제된 사용자이면 authorHandle 은 빈 문자열로 응답한다") {
-                every { userHandleLookup.handlesOf(any()) } returns emptyMap()
-                every { useCase.perform(any()) } returns
-                    Result(
-                        pageId = PageId(1L),
-                        spaceId = SpaceId(10L),
-                        parentPageId = null,
-                        authorId = UserId(100L),
-                        title = "제목",
-                        content = "본문",
-                        visibility = Visibility.PUBLIC,
-                        currentVersion = 1,
-                        displayOrder = 0,
-                        canEdit = false,
-                        canComment = false,
-                        createdAt = DUMMY_INSTANT,
-                        updatedAt = DUMMY_INSTANT,
-                        ancestors = emptyList()
-                    )
-
-                controller
-                    .`when`(get("/v1/pages/{pageId}", 1).withAuth())
-                    .then(
-                        status().isOk,
-                        jsonPath("$.authorHandle").value("")
-                    )
-            }
-
             it("없으면 404 를 반환한다") {
                 every { useCase.perform(any()) } throws
                     NotFoundException(PageErrorCode.PAGE_NOT_FOUND)
@@ -182,20 +149,27 @@ class PageGettingCompositionControllerTest :
                     )
             }
 
-            it("pageId 형식이 숫자가 아니면 400 을 반환한다") {
+            it("pageId 형식이 숫자가 아니면 UseCase 가 던진 IllegalArgumentException 이 400 으로 매핑된다") {
+                every { useCase.perform(any()) } throws
+                    IllegalArgumentException("페이지 ID 형식이 올바르지 않습니다.")
+
                 controller
                     .`when`(get("/v1/pages/{pageId}", "not-a-number").withAuth())
-                    .then(status().isBadRequest)
-                verify(exactly = 0) { useCase.perform(any()) }
+                    .then(
+                        status().isBadRequest,
+                        jsonPath("$.code").value("INVALID_REQUEST"),
+                        jsonPath("$.message").value("페이지 ID 형식이 올바르지 않습니다.")
+                    )
             }
 
-            it("비로그인 상태에서도 PUBLIC 페이지는 200 으로 응답한다") {
+            it("비로그인 상태에서도 PUBLIC 페이지는 200 으로 응답하고 Anonymous viewer 로 UseCase 가 호출된다") {
                 every { useCase.perform(any()) } returns
                     Result(
                         pageId = PageId(1L),
                         spaceId = SpaceId(10L),
                         parentPageId = null,
                         authorId = UserId(100L),
+                        authorHandle = "test_user",
                         title = "공개 페이지",
                         content = "본문",
                         visibility = Visibility.PUBLIC,
@@ -222,44 +196,6 @@ class PageGettingCompositionControllerTest :
                         match { it.viewer == Viewer.Anonymous }
                     )
                 }
-            }
-
-            it("anonymous 응답은 비공개 target 매치가 마스킹된 content 로 받는다") {
-                val maskedTipTap: String =
-                    doc(
-                        paragraph(
-                            text("관련 "),
-                            pageLink(
-                                pageId = 42L,
-                                displayText = MASKED_DISPLAY_TEXT
-                            ),
-                            text(" 참고")
-                        )
-                    )
-                every { useCase.perform(any()) } returns
-                    Result(
-                        pageId = PageId(1L),
-                        spaceId = SpaceId(10L),
-                        parentPageId = null,
-                        authorId = UserId(100L),
-                        title = "공개 페이지",
-                        content = maskedTipTap,
-                        visibility = Visibility.PUBLIC,
-                        currentVersion = 1,
-                        displayOrder = 0,
-                        canEdit = false,
-                        canComment = false,
-                        createdAt = DUMMY_INSTANT,
-                        updatedAt = DUMMY_INSTANT,
-                        ancestors = emptyList()
-                    )
-
-                controller
-                    .`when`(get("/v1/pages/{pageId}", 1))
-                    .then(
-                        status().isOk,
-                        jsonPath("$.content").value(maskedTipTap)
-                    )
             }
         }
     })

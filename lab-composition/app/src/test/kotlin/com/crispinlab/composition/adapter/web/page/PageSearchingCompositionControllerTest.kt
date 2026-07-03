@@ -2,11 +2,9 @@ package com.crispinlab.composition.adapter.web.page
 
 import com.crispinlab.apisupport.testsupport.ControllerDescribeSpec.FieldBuilder.Companion.responseFields
 import com.crispinlab.common.pagination.PageResult
-import com.crispinlab.composition.application.port.outgoing.user.UserHandleLookup
+import com.crispinlab.composition.application.port.incoming.page.PageSearchingComposition
+import com.crispinlab.composition.application.port.incoming.page.PageSearchingComposition.Result
 import com.crispinlab.composition.testsupport.CompositionAppControllerDescribeSpec
-import com.crispinlab.space.application.port.incoming.page.PageSearching
-import com.crispinlab.space.application.port.incoming.page.PageSearching.Summary
-import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.SortOption
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.Visibility
@@ -29,15 +27,10 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
 class PageSearchingCompositionControllerTest :
     CompositionAppControllerDescribeSpec(tag = "Page", body = {
-        val useCase = mockk<PageSearching>()
-        val userHandleLookup = mockk<UserHandleLookup>()
-        val controller = PageSearchingCompositionController(useCase, userHandleLookup)
+        val useCase = mockk<PageSearchingComposition>()
+        val controller = PageSearchingCompositionController(useCase)
 
-        beforeEach {
-            clearMocks(useCase, userHandleLookup)
-            every { userHandleLookup.handlesOf(any()) } returns
-                mapOf(UserId(100L) to "test_user", UserId(200L) to "other_user")
-        }
+        beforeEach { clearMocks(useCase) }
 
         describe("페이지 검색") {
             it("정상 검색 시 200 과 페이지를 반환한다") {
@@ -45,21 +38,23 @@ class PageSearchingCompositionControllerTest :
                     PageResult(
                         items =
                             listOf(
-                                Summary(
+                                Result(
                                     pageId = PageId(2L),
                                     spaceId = SpaceId(10L),
                                     parentPageId = PageId(1L),
                                     authorId = UserId(100L),
+                                    authorHandle = "test_user",
                                     title = "오늘의 회고",
                                     visibility = Visibility.PUBLIC,
                                     displayOrder = 1,
                                     updatedAt = DUMMY_INSTANT
                                 ),
-                                Summary(
+                                Result(
                                     pageId = PageId(1L),
                                     spaceId = SpaceId(10L),
                                     parentPageId = null,
                                     authorId = UserId(200L),
+                                    authorHandle = "other_user",
                                     title = "어제의 회고",
                                     visibility = Visibility.INTERNAL,
                                     displayOrder = 0,
@@ -159,87 +154,8 @@ class PageSearchingCompositionControllerTest :
                     )
             }
 
-            it("distinct authorIds 에 대해 handlesOf 를 정확히 1회 batch 호출한다") {
-                every { useCase.perform(any()) } returns
-                    PageResult(
-                        items =
-                            listOf(
-                                Summary(
-                                    pageId = PageId(1L),
-                                    spaceId = SpaceId(10L),
-                                    parentPageId = null,
-                                    authorId = UserId(100L),
-                                    title = "a",
-                                    visibility = Visibility.PUBLIC,
-                                    displayOrder = 0,
-                                    updatedAt = DUMMY_INSTANT
-                                ),
-                                Summary(
-                                    pageId = PageId(2L),
-                                    spaceId = SpaceId(10L),
-                                    parentPageId = null,
-                                    authorId = UserId(100L),
-                                    title = "b",
-                                    visibility = Visibility.PUBLIC,
-                                    displayOrder = 1,
-                                    updatedAt = DUMMY_INSTANT
-                                ),
-                                Summary(
-                                    pageId = PageId(3L),
-                                    spaceId = SpaceId(10L),
-                                    parentPageId = null,
-                                    authorId = UserId(200L),
-                                    title = "c",
-                                    visibility = Visibility.PUBLIC,
-                                    displayOrder = 2,
-                                    updatedAt = DUMMY_INSTANT
-                                )
-                            ),
-                        page = 0,
-                        size = 20,
-                        totalElements = 3L
-                    )
-
-                controller
-                    .`when`(get("/v1/pages").withAuth())
-                    .then(status().isOk)
-                verify(exactly = 1) {
-                    userHandleLookup.handlesOf(setOf(UserId(100L), UserId(200L)))
-                }
-            }
-
-            it("author 가 삭제된 사용자이면 authorHandle 은 빈 문자열로 응답한다") {
-                every { userHandleLookup.handlesOf(any()) } returns emptyMap()
-                every { useCase.perform(any()) } returns
-                    PageResult(
-                        items =
-                            listOf(
-                                Summary(
-                                    pageId = PageId(1L),
-                                    spaceId = SpaceId(10L),
-                                    parentPageId = null,
-                                    authorId = UserId(999L),
-                                    title = "삭제된 사용자가 쓴 글",
-                                    visibility = Visibility.PUBLIC,
-                                    displayOrder = 0,
-                                    updatedAt = DUMMY_INSTANT
-                                )
-                            ),
-                        page = 0,
-                        size = 20,
-                        totalElements = 1L
-                    )
-
-                controller
-                    .`when`(get("/v1/pages").withAuth())
-                    .then(
-                        status().isOk,
-                        jsonPath("$.items[0].authorHandle").value("")
-                    )
-            }
-
             it("다중 tag 파라미터가 모두 UseCase Request 에 전달된다") {
-                val requestSlot = slot<PageSearching.Request>()
+                val requestSlot = slot<PageSearchingComposition.Request>()
                 every { useCase.perform(capture(requestSlot)) } returns
                     PageResult(
                         items = emptyList(),
@@ -255,11 +171,11 @@ class PageSearchingCompositionControllerTest :
                             .param("tag", "100", "200", "300")
                     ).then(status().isOk)
 
-                requestSlot.captured.tagIds.map { it.value } shouldBe listOf(100L, 200L, 300L)
+                requestSlot.captured.tagIds shouldBe listOf("100", "200", "300")
             }
 
             it("tagName 파라미터가 UseCase Request 에 전달된다") {
-                val requestSlot = slot<PageSearching.Request>()
+                val requestSlot = slot<PageSearchingComposition.Request>()
                 every { useCase.perform(capture(requestSlot)) } returns
                     PageResult(
                         items = emptyList(),
@@ -278,34 +194,8 @@ class PageSearchingCompositionControllerTest :
                 requestSlot.captured.tagName shouldBe "kotlin"
             }
 
-            it("space 형식이 숫자가 아니면 400 을 반환한다") {
-                controller
-                    .`when`(
-                        get("/v1/pages")
-                            .withAuth()
-                            .param("space", "abc")
-                    ).then(
-                        status().isBadRequest,
-                        jsonPath("$.code").value("INVALID_REQUEST")
-                    )
-                verify(exactly = 0) { useCase.perform(any()) }
-            }
-
-            it("tag 형식이 숫자가 아니면 400 을 반환한다") {
-                controller
-                    .`when`(
-                        get("/v1/pages")
-                            .withAuth()
-                            .param("tag", "xx")
-                    ).then(
-                        status().isBadRequest,
-                        jsonPath("$.code").value("INVALID_REQUEST")
-                    )
-                verify(exactly = 0) { useCase.perform(any()) }
-            }
-
-            it("sort query param 이 UseCase Request 의 SortOption 으로 전달된다") {
-                val requestSlot = slot<PageSearching.Request>()
+            it("sort query param 이 UseCase Request 에 전달된다") {
+                val requestSlot = slot<PageSearchingComposition.Request>()
                 every { useCase.perform(capture(requestSlot)) } returns
                     PageResult(
                         items = emptyList(),
@@ -321,43 +211,29 @@ class PageSearchingCompositionControllerTest :
                             .param("sort", "CREATED_AT")
                     ).then(status().isOk)
 
-                requestSlot.captured.sort shouldBe SortOption.CREATED_AT
+                requestSlot.captured.sort shouldBe "CREATED_AT"
             }
 
-            it("sort=TREE 가 UseCase Request 의 SortOption 으로 전달된다") {
-                val requestSlot = slot<PageSearching.Request>()
-                every { useCase.perform(capture(requestSlot)) } returns
-                    PageResult(
-                        items = emptyList(),
-                        page = 0,
-                        size = 20,
-                        totalElements = 0L
-                    )
+            it("space 형식이 숫자가 아니면 UseCase 가 던진 IllegalArgumentException 이 400 으로 매핑된다") {
+                every { useCase.perform(any()) } throws
+                    IllegalArgumentException("스페이스 ID 형식이 올바르지 않습니다.")
 
                 controller
                     .`when`(
                         get("/v1/pages")
                             .withAuth()
-                            .param("sort", "TREE")
-                    ).then(status().isOk)
-
-                requestSlot.captured.sort shouldBe SortOption.TREE
-            }
-
-            it("지원하지 않는 sort 값이면 400 을 반환한다") {
-                controller
-                    .`when`(
-                        get("/v1/pages")
-                            .withAuth()
-                            .param("sort", "UNKNOWN")
+                            .param("space", "abc")
                     ).then(
                         status().isBadRequest,
-                        jsonPath("$.code").value("INVALID_REQUEST")
+                        jsonPath("$.code").value("INVALID_REQUEST"),
+                        jsonPath("$.message").value("스페이스 ID 형식이 올바르지 않습니다.")
                     )
-                verify(exactly = 0) { useCase.perform(any()) }
             }
 
-            it("page 가 음수면 400 을 반환한다") {
+            it("page 가 음수면 UseCase 가 던진 IllegalArgumentException 이 400 으로 매핑된다") {
+                every { useCase.perform(any()) } throws
+                    IllegalArgumentException("페이지 번호는 0 이상이어야 합니다.")
+
                 controller
                     .`when`(
                         get("/v1/pages")
@@ -368,26 +244,9 @@ class PageSearchingCompositionControllerTest :
                         jsonPath("$.code").value("INVALID_REQUEST"),
                         jsonPath("$.message").value("페이지 번호는 0 이상이어야 합니다.")
                     )
-                verify(exactly = 0) { useCase.perform(any()) }
             }
 
-            it("size 가 허용 범위를 벗어나면 400 을 반환한다") {
-                listOf("0", "201").forEach { invalidSize ->
-                    controller
-                        .`when`(
-                            get("/v1/pages")
-                                .withAuth()
-                                .param("size", invalidSize)
-                        ).then(
-                            status().isBadRequest,
-                            jsonPath("$.code").value("INVALID_REQUEST"),
-                            jsonPath("$.message").value("페이지 크기는 1 이상 200 이하여야 합니다.")
-                        )
-                }
-                verify(exactly = 0) { useCase.perform(any()) }
-            }
-
-            it("비로그인 상태에서도 200 으로 응답하고 Anonymous 컨텍스트로 UseCase 가 호출된다") {
+            it("비로그인 상태에서도 200 으로 응답하고 Anonymous viewer 로 UseCase 가 호출된다") {
                 every { useCase.perform(any()) } returns
                     PageResult(
                         items = emptyList(),

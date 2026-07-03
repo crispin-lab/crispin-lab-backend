@@ -17,7 +17,6 @@ import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
-import io.mockk.verify
 
 class CommentGettingCompositionUseCaseTest :
     DescribeSpec({
@@ -71,9 +70,12 @@ class CommentGettingCompositionUseCaseTest :
                 requestSlot.captured.viewer shouldBe MEMBER_VIEWER
             }
 
-            it("perform 진입에서 readOnly 트랜잭션으로 감싸고 lookup 은 tx 블록 안에서 호출한다 (LAB-156 회귀 방지)") {
+            it("perform 진입에서 readOnly 트랜잭션으로 감싸고 도메인 호출·lookup 모두 tx 블록 안에서 실행한다 (LAB-156 회귀 방지)") {
                 val transactionProvider = RecordingTransactionProvider()
-                every { commentGetting.perform(any()) } returns domainResult(authorId = 100L)
+                every { commentGetting.perform(any()) } answers {
+                    transactionProvider.inTransaction shouldBe true
+                    domainResult(authorId = 100L)
+                }
                 every { userHandleLookup.handlesOf(any()) } answers {
                     transactionProvider.inTransaction shouldBe true
                     mapOf(UserId(100L) to "alice")

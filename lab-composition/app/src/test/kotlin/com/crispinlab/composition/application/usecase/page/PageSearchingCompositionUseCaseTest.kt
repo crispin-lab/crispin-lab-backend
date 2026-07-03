@@ -7,6 +7,7 @@ import com.crispinlab.composition.application.port.incoming.page.PageSearchingCo
 import com.crispinlab.composition.application.port.outgoing.user.UserHandleLookup
 import com.crispinlab.space.application.port.incoming.page.PageSearching
 import com.crispinlab.space.application.port.incoming.page.PageSearching.Summary
+import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.SortOption
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.page.Visibility
@@ -135,15 +136,18 @@ class PageSearchingCompositionUseCaseTest :
                 requestSlot.captured.spaceId shouldBe SpaceId(10L)
                 requestSlot.captured.tagIds.map { it.value } shouldBe listOf(100L, 200L)
                 requestSlot.captured.tagName shouldBe "kotlin"
+                requestSlot.captured.sort shouldBe SortOption.CREATED_AT
                 requestSlot.captured.pageRequest.page shouldBe 1
                 requestSlot.captured.pageRequest.size shouldBe 50
                 requestSlot.captured.viewer shouldBe Viewer.Anonymous
             }
 
-            it("perform 진입에서 readOnly 트랜잭션으로 감싸고 lookup 은 tx 블록 안에서 호출한다 (LAB-156 회귀 방지)") {
+            it("perform 진입에서 readOnly 트랜잭션으로 감싸고 도메인 호출·lookup 모두 tx 블록 안에서 실행한다 (LAB-156 회귀 방지)") {
                 val transactionProvider = RecordingTransactionProvider()
-                every { pageSearching.perform(any()) } returns
+                every { pageSearching.perform(any()) } answers {
+                    transactionProvider.inTransaction shouldBe true
                     PageResult(items = emptyList(), page = 0, size = 20, totalElements = 0L)
+                }
                 every { userHandleLookup.handlesOf(any()) } answers {
                     transactionProvider.inTransaction shouldBe true
                     emptyMap()

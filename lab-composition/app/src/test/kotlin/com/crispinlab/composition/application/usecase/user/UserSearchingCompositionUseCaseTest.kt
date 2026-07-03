@@ -38,8 +38,8 @@ class UserSearchingCompositionUseCaseTest :
                     UserSearching.Result(
                         items =
                             listOf(
-                                UserSearching.Result.Item(UserId(1L), Handle("alice")),
-                                UserSearching.Result.Item(UserId(2L), Handle("alice_kim"))
+                                domainItem(userId = 1L, handle = "alice"),
+                                domainItem(userId = 2L, handle = "alice_kim")
                             )
                     )
                 every { spaceMembershipLookup.membershipsOf(any(), any()) } returns
@@ -60,9 +60,9 @@ class UserSearchingCompositionUseCaseTest :
                     UserSearching.Result(
                         items =
                             listOf(
-                                UserSearching.Result.Item(UserId(1L), Handle("alice")),
-                                UserSearching.Result.Item(UserId(1L), Handle("alice")),
-                                UserSearching.Result.Item(UserId(2L), Handle("bob"))
+                                domainItem(userId = 1L, handle = "alice"),
+                                domainItem(userId = 1L, handle = "alice"),
+                                domainItem(userId = 2L, handle = "bob")
                             )
                     )
                 every { spaceMembershipLookup.membershipsOf(any(), any()) } returns emptyMap()
@@ -80,7 +80,7 @@ class UserSearchingCompositionUseCaseTest :
             it("membershipsOf 가 예외를 던져도 items 는 반환하고 memberOfSpaceIds 는 빈 리스트로 응답한다") {
                 every { userSearching.perform(any()) } returns
                     UserSearching.Result(
-                        items = listOf(UserSearching.Result.Item(UserId(1L), Handle("alice")))
+                        items = listOf(domainItem(userId = 1L, handle = "alice"))
                     )
                 every { spaceMembershipLookup.membershipsOf(any(), any()) } throws
                     RuntimeException("lookup failure")
@@ -108,7 +108,7 @@ class UserSearchingCompositionUseCaseTest :
                 val viewerSlot = slot<Viewer.Member>()
                 every { userSearching.perform(any()) } returns
                     UserSearching.Result(
-                        items = listOf(UserSearching.Result.Item(UserId(1L), Handle("alice")))
+                        items = listOf(domainItem(userId = 1L, handle = "alice"))
                     )
                 every { spaceMembershipLookup.membershipsOf(any(), capture(viewerSlot)) } returns
                     emptyMap()
@@ -117,7 +117,7 @@ class UserSearchingCompositionUseCaseTest :
                     Request(
                         query = "alice",
                         size = 10,
-                        viewer = Viewer.Member(UserId(500L), isAdmin = true)
+                        viewer = Viewer.Member(userId = UserId(500L), isAdmin = true)
                     )
                 )
 
@@ -125,10 +125,12 @@ class UserSearchingCompositionUseCaseTest :
                 viewerSlot.captured.isAdmin shouldBe true
             }
 
-            it("perform 진입에서 readOnly 트랜잭션으로 감싸고 lookup 은 tx 블록 안에서 호출한다 (LAB-156 회귀 방지)") {
+            it("perform 진입에서 readOnly 트랜잭션으로 감싸고 도메인 호출·lookup 모두 tx 블록 안에서 실행한다 (LAB-156 회귀 방지)") {
                 val transactionProvider = RecordingTransactionProvider()
-                every { userSearching.perform(any()) } returns
+                every { userSearching.perform(any()) } answers {
+                    transactionProvider.inTransaction shouldBe true
                     UserSearching.Result(items = emptyList())
+                }
                 every { spaceMembershipLookup.membershipsOf(any(), any()) } answers {
                     transactionProvider.inTransaction shouldBe true
                     emptyMap()
@@ -154,6 +156,15 @@ class UserSearchingCompositionUseCaseTest :
                 query = query,
                 size = 10,
                 viewer = MEMBER_VIEWER
+            )
+
+        fun domainItem(
+            userId: Long,
+            handle: String
+        ): UserSearching.Result.Item =
+            UserSearching.Result.Item(
+                userId = UserId(userId),
+                handle = Handle(handle)
             )
     }
 }

@@ -110,10 +110,12 @@ class CommentListingCompositionUseCaseTest :
                 requestSlot.captured.viewer shouldBe MEMBER_VIEWER
             }
 
-            it("perform 진입에서 readOnly 트랜잭션으로 감싸고 lookup 은 tx 블록 안에서 호출한다 (LAB-156 회귀 방지)") {
+            it("perform 진입에서 readOnly 트랜잭션으로 감싸고 도메인 호출·lookup 모두 tx 블록 안에서 실행한다 (LAB-156 회귀 방지)") {
                 val transactionProvider = RecordingTransactionProvider()
-                every { commentListing.perform(any()) } returns
+                every { commentListing.perform(any()) } answers {
+                    transactionProvider.inTransaction shouldBe true
                     PageResult(items = emptyList(), page = 0, size = 20, totalElements = 0L)
+                }
                 every { userHandleLookup.handlesOf(any()) } answers {
                     transactionProvider.inTransaction shouldBe true
                     emptyMap()

@@ -1,11 +1,11 @@
-package com.crispinlab.space.adapter.web.spacemember
+package com.crispinlab.composition.adapter.web.spacemember
 
 import com.crispinlab.common.pagination.PageRequest.Companion.DEFAULT_SIZE
 import com.crispinlab.common.pagination.PageResult
+import com.crispinlab.composition.application.port.incoming.spacemember.SpaceMemberListingComposition
+import com.crispinlab.composition.application.port.incoming.spacemember.SpaceMemberListingComposition.Request
+import com.crispinlab.composition.application.port.incoming.spacemember.SpaceMemberListingComposition.Result
 import com.crispinlab.space.adapter.web.auth.toViewer
-import com.crispinlab.space.application.port.incoming.spacemember.SpaceMemberListing
-import com.crispinlab.space.application.port.incoming.spacemember.SpaceMemberListing.Request
-import com.crispinlab.space.application.port.incoming.spacemember.SpaceMemberListing.Summary
 import com.crispinlab.user.adapter.web.auth.Auth
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -15,8 +15,8 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/v1/spaces/{spaceId}/members")
-class SpaceMemberListingController(
-    private val useCase: SpaceMemberListing
+class SpaceMemberListingCompositionController(
+    private val useCase: SpaceMemberListingComposition
 ) {
     @GetMapping
     fun list(
@@ -24,7 +24,7 @@ class SpaceMemberListingController(
         @RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "$DEFAULT_SIZE") size: Int,
         auth: Auth?
-    ): PageResult<Summary> =
+    ): PageResult<Result> =
         Request(
             spaceId = spaceId,
             page = page,

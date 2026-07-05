@@ -62,7 +62,7 @@ class SpaceGettingControllerTest :
                                 "viewer 가 본 스페이스에 페이지를 작성할 수 있는지 여부 (ADMIN / OWNER / MEMBER → true, VIEWER · 비멤버 · 비로그인 → false)"
                             )
                             "viewerRole".string(
-                                "viewer 의 본 스페이스 내 역할 (OWNER / MEMBER / VIEWER). 비-스페이스멤버 · 비로그인 → null",
+                                "viewer 의 본 스페이스 내 역할 (OWNER / MEMBER / VIEWER). 비-스페이스멤버 · 비로그인 · ADMIN → null (ADMIN 진입점은 별도 시그널로 판정)",
                                 optional = true
                             )
                             "createdAt".datetime("생성 시각")

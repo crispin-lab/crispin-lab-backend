@@ -7,6 +7,7 @@ import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.space.SpaceId.Companion.asSpaceId
 import com.crispinlab.space.domain.space.SpaceVisibility
+import com.crispinlab.space.domain.spacemember.SpaceMemberRole
 import java.time.Instant
 
 interface SpaceGetting : UseCase<Request, Result> {
@@ -23,6 +24,7 @@ interface SpaceGetting : UseCase<Request, Result> {
         val description: String,
         val visibility: SpaceVisibility,
         val canWrite: Boolean,
+        val viewerRole: SpaceMemberRole?,
         val createdAt: Instant,
         val updatedAt: Instant
     )

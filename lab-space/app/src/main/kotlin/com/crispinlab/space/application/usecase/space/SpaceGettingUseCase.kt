@@ -60,6 +60,7 @@ class SpaceGettingUseCase(
             description = description,
             visibility = visibility,
             canWrite = viewer.canWrite(membership),
+            viewerRole = membership?.role,
             createdAt = createdAt,
             updatedAt = updatedAt
         )

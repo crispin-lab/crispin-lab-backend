@@ -8,6 +8,7 @@ import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRep
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.space.SpaceVisibility
+import com.crispinlab.space.domain.spacemember.SpaceMember
 import com.crispinlab.space.domain.spacemember.SpaceMemberRole
 import com.crispinlab.space.testsupport.Fixtures.basicSpace
 import com.crispinlab.space.testsupport.Fixtures.basicSpaceMember
@@ -196,6 +197,92 @@ class SpaceGettingUseCaseTest :
                 result.canWrite shouldBe true
                 verify(exactly = 0) {
                     spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
+                }
+            }
+        }
+
+        describe("응답의 viewerRole — viewer 의 스페이스 역할 노출") {
+            data class Case(
+                val label: String,
+                val viewer: Viewer,
+                val membership: SpaceMember?,
+                val expectedRole: SpaceMemberRole?,
+                val expectsMembershipLookup: Boolean
+            )
+
+            val member =
+                Viewer.Member(
+                    userId = UserId(100L),
+                    isAdmin = false
+                )
+            val admin =
+                Viewer.Member(
+                    userId = UserId(100L),
+                    isAdmin = true
+                )
+
+            listOf(
+                Case(
+                    label = "anonymous → null",
+                    viewer = Viewer.Anonymous,
+                    membership = null,
+                    expectedRole = null,
+                    expectsMembershipLookup = false
+                ),
+                Case(
+                    label = "비멤버 authenticated → null",
+                    viewer = member,
+                    membership = null,
+                    expectedRole = null,
+                    expectsMembershipLookup = true
+                ),
+                Case(
+                    label = "VIEWER 멤버 → VIEWER",
+                    viewer = member,
+                    membership = basicSpaceMember(role = SpaceMemberRole.VIEWER),
+                    expectedRole = SpaceMemberRole.VIEWER,
+                    expectsMembershipLookup = true
+                ),
+                Case(
+                    label = "MEMBER 멤버 → MEMBER",
+                    viewer = member,
+                    membership = basicSpaceMember(role = SpaceMemberRole.MEMBER),
+                    expectedRole = SpaceMemberRole.MEMBER,
+                    expectsMembershipLookup = true
+                ),
+                Case(
+                    label = "OWNER 멤버 → OWNER",
+                    viewer = member,
+                    membership = basicSpaceMember(role = SpaceMemberRole.OWNER),
+                    expectedRole = SpaceMemberRole.OWNER,
+                    expectsMembershipLookup = true
+                ),
+                Case(
+                    label = "ADMIN 비-멤버 → null",
+                    viewer = admin,
+                    membership = null,
+                    expectedRole = null,
+                    expectsMembershipLookup = false
+                )
+            ).forEach { case ->
+                it(case.label) {
+                    val space =
+                        basicSpace(id = SpaceId(1L), visibility = SpaceVisibility.PUBLIC)
+                    every { spaceRepository.findBy(space.id) } returns space
+                    if (case.expectsMembershipLookup) {
+                        every {
+                            spaceMemberRepository.findBySpaceIdAndUserId(space.id, UserId(100L))
+                        } returns case.membership
+                    }
+
+                    val result = useCase.perform(basicRequest(viewer = case.viewer))
+
+                    result.viewerRole shouldBe case.expectedRole
+                    if (!case.expectsMembershipLookup) {
+                        verify(exactly = 0) {
+                            spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
+                        }
+                    }
                 }
             }
         }

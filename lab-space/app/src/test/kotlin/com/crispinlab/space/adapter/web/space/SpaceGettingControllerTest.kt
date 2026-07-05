@@ -8,6 +8,7 @@ import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.space.SpaceErrorCode
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.space.SpaceVisibility
+import com.crispinlab.space.domain.spacemember.SpaceMemberRole
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
 import com.crispinlab.user.testsupport.withAuth
@@ -15,6 +16,7 @@ import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import org.hamcrest.Matchers.nullValue
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
@@ -35,6 +37,7 @@ class SpaceGettingControllerTest :
                         description = "공유 공간",
                         visibility = SpaceVisibility.INTERNAL,
                         canWrite = true,
+                        viewerRole = SpaceMemberRole.OWNER,
                         createdAt = DUMMY_INSTANT,
                         updatedAt = DUMMY_INSTANT
                     )
@@ -46,7 +49,8 @@ class SpaceGettingControllerTest :
                         status().isOk,
                         jsonPath("$.spaceId").value("1"),
                         jsonPath("$.name").value("팀 위키"),
-                        jsonPath("$.canWrite").value(true)
+                        jsonPath("$.canWrite").value(true),
+                        jsonPath("$.viewerRole").value("OWNER")
                     ).document(
                         authHeader(required = false),
                         responseFields {
@@ -56,6 +60,10 @@ class SpaceGettingControllerTest :
                             "visibility".string("공개 범위")
                             "canWrite".boolean(
                                 "viewer 가 본 스페이스에 페이지를 작성할 수 있는지 여부 (ADMIN / OWNER / MEMBER → true, VIEWER · 비멤버 · 비로그인 → false)"
+                            )
+                            "viewerRole".string(
+                                "viewer 의 본 스페이스 내 역할 (OWNER / MEMBER / VIEWER). 비-스페이스멤버 · 비로그인 → null",
+                                optional = true
                             )
                             "createdAt".datetime("생성 시각")
                             "updatedAt".datetime("최근 갱신 시각")
@@ -78,7 +86,7 @@ class SpaceGettingControllerTest :
                     )
             }
 
-            it("비로그인 상태에서도 PUBLIC 스페이스는 200 으로 응답한다 — canWrite = false") {
+            it("비로그인 상태에서도 PUBLIC 스페이스는 200 으로 응답한다 — canWrite = false, viewerRole = null") {
                 every { useCase.perform(any()) } returns
                     Result(
                         spaceId = SpaceId(1L),
@@ -86,6 +94,7 @@ class SpaceGettingControllerTest :
                         description = "누구나 볼 수 있음",
                         visibility = SpaceVisibility.PUBLIC,
                         canWrite = false,
+                        viewerRole = null,
                         createdAt = DUMMY_INSTANT,
                         updatedAt = DUMMY_INSTANT
                     )
@@ -95,7 +104,8 @@ class SpaceGettingControllerTest :
                     .then(
                         status().isOk,
                         jsonPath("$.visibility").value("PUBLIC"),
-                        jsonPath("$.canWrite").value(false)
+                        jsonPath("$.canWrite").value(false),
+                        jsonPath("$.viewerRole").value(nullValue())
                     )
                 verify {
                     useCase.perform(

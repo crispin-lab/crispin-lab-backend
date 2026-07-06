@@ -5,10 +5,11 @@ import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.common.persistence.escapeLike
 import com.crispinlab.space.adapter.persistence.page.Pages
 import com.crispinlab.space.adapter.persistence.page.decodeVisibility
-import com.crispinlab.space.adapter.persistence.page.toPagesCondition
 import com.crispinlab.space.adapter.persistence.space.Spaces
 import com.crispinlab.space.adapter.persistence.tag.PageTags
 import com.crispinlab.space.adapter.persistence.toPageResult
+import com.crispinlab.space.adapter.persistence.visibility.toClauses
+import com.crispinlab.space.adapter.persistence.visibility.toExposedOp
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.PageSummary
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.SortOption
@@ -64,8 +65,13 @@ class ExposedPageSearchAdapter : PageSearchPort {
                 matched
             }
 
-        return baseQuery(keyword, spaceId, tagPageIds, anyOfPageIds, scope.toPagesCondition())
-            .toPageResult(pageRequest, *sort.toOrderColumns()) { it.toSummary() }
+        return baseQuery(
+            keyword,
+            spaceId,
+            tagPageIds,
+            anyOfPageIds,
+            scope.toClauses().toExposedOp()
+        ).toPageResult(pageRequest, *sort.toOrderColumns()) { it.toSummary() }
     }
 
     private fun matchedPageIdsByTag(tagIds: Collection<TagId>): List<Long> =

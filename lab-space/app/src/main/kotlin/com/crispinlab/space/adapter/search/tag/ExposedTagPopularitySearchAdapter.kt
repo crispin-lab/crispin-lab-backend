@@ -2,15 +2,14 @@ package com.crispinlab.space.adapter.search.tag
 
 import com.crispinlab.common.pagination.PageRequest
 import com.crispinlab.common.pagination.PageResult
+import com.crispinlab.space.adapter.persistence.visibility.toClauses
+import com.crispinlab.space.adapter.persistence.visibility.toSqlFragment
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
 import com.crispinlab.space.application.port.outgoing.tag.TagPopularitySearchPort
 import com.crispinlab.space.application.port.outgoing.tag.TagPopularitySearchPort.TagPopularitySummary
-import com.crispinlab.space.domain.page.Visibility
-import com.crispinlab.space.domain.space.SpaceVisibility
 import org.jetbrains.exposed.v1.core.IColumnType
 import org.jetbrains.exposed.v1.core.IntegerColumnType
 import org.jetbrains.exposed.v1.core.LongColumnType
-import org.jetbrains.exposed.v1.core.VarCharColumnType
 import org.jetbrains.exposed.v1.core.statements.StatementType
 import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
 import org.springframework.stereotype.Repository
@@ -21,7 +20,7 @@ class ExposedTagPopularitySearchAdapter : TagPopularitySearchPort {
         scope: VisibilityScope,
         pageRequest: PageRequest
     ): PageResult<TagPopularitySummary> {
-        val visibility = scope.toSqlFragment()
+        val visibility = scope.toClauses().toSqlFragment()
         val sql =
             """
             SELECT name, usage_count, total_elements FROM (
@@ -73,68 +72,4 @@ class ExposedTagPopularitySearchAdapter : TagPopularitySearchPort {
             totalElements = totalElements
         )
     }
-
-    private data class VisibilityFragment(
-        val sql: String,
-        val args: List<Pair<IColumnType<*>, Any?>>
-    )
-
-    private fun VisibilityScope.toSqlFragment(): VisibilityFragment =
-        when (this) {
-            is VisibilityScope.Anonymous -> {
-                VisibilityFragment(
-                    sql = "(pages.visibility = ? AND spaces.visibility = ?)",
-                    args =
-                        listOf(
-                            VarCharColumnType() to Visibility.PUBLIC.name,
-                            VarCharColumnType() to SpaceVisibility.PUBLIC.name
-                        )
-                )
-            }
-
-            is VisibilityScope.Authenticated -> {
-                val clauses = mutableListOf<String>()
-                val args = mutableListOf<Pair<IColumnType<*>, Any?>>()
-
-                clauses += "(pages.visibility = ? AND spaces.visibility = ?)"
-                args += VarCharColumnType() to Visibility.PUBLIC.name
-                args += VarCharColumnType() to SpaceVisibility.PUBLIC.name
-
-                if (memberOfSpaceIds.isNotEmpty()) {
-                    val placeholders = memberOfSpaceIds.joinToString(", ") { "?" }
-                    clauses +=
-                        "(pages.visibility = ? AND spaces.visibility = ? " +
-                        "AND pages.space_id IN ($placeholders))"
-                    args += VarCharColumnType() to Visibility.MEMBER.name
-                    args += VarCharColumnType() to SpaceVisibility.PUBLIC.name
-                    memberOfSpaceIds.forEach { args += LongColumnType() to it.value }
-                }
-
-                clauses +=
-                    "((pages.visibility = ? " +
-                    "OR (pages.visibility IN (?, ?) AND spaces.visibility = ?)) " +
-                    "AND pages.author_id = ?)"
-                args += VarCharColumnType() to Visibility.INTERNAL.name
-                args += VarCharColumnType() to Visibility.PUBLIC.name
-                args += VarCharColumnType() to Visibility.MEMBER.name
-                args += VarCharColumnType() to SpaceVisibility.INTERNAL.name
-                args += LongColumnType() to viewerId.value
-
-                clauses += "(pages.visibility = ? AND pages.author_id = ?)"
-                args += VarCharColumnType() to Visibility.DRAFT.name
-                args += LongColumnType() to viewerId.value
-
-                VisibilityFragment(
-                    sql = "(${clauses.joinToString(" OR ")})",
-                    args = args
-                )
-            }
-
-            is VisibilityScope.Privileged -> {
-                VisibilityFragment(
-                    sql = "TRUE",
-                    args = emptyList()
-                )
-            }
-        }
 }

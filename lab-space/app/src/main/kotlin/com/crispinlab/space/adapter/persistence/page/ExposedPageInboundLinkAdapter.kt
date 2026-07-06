@@ -4,6 +4,8 @@ import com.crispinlab.common.pagination.PageRequest
 import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.adapter.persistence.space.Spaces
 import com.crispinlab.space.adapter.persistence.toPageResult
+import com.crispinlab.space.adapter.persistence.visibility.toClauses
+import com.crispinlab.space.adapter.persistence.visibility.toExposedOp
 import com.crispinlab.space.application.port.outgoing.page.PageInboundLinkPort
 import com.crispinlab.space.application.port.outgoing.page.PageInboundLinkPort.InboundLinkSummary
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
@@ -39,7 +41,7 @@ class ExposedPageInboundLinkAdapter : PageInboundLinkPort {
             .where {
                 Pages.notDeleted() and
                     Spaces.deletedAt.isNull() and
-                    scope.toPagesCondition() and
+                    scope.toClauses().toExposedOp() and
                     hasCurrentRevisionLinkTo(targetPageId)
             }.toPageResult(
                 pageRequest,

@@ -22,7 +22,7 @@ class UserSearchingCompositionUseCase(
             request
                 .toDomainRequest()
                 .let { userSearching.perform(it) }
-                .toResultFor(request.viewer)
+                .toResultFor(viewer = request.viewer, targetSpaceId = request.spaceId)
         }
 
     private fun Request.toDomainRequest(): UserSearching.Request =
@@ -31,26 +31,36 @@ class UserSearchingCompositionUseCase(
             size = size
         )
 
-    private fun UserSearching.Result.toResultFor(viewer: Viewer.Member): Result {
+    private fun UserSearching.Result.toResultFor(
+        viewer: Viewer.Member,
+        targetSpaceId: SpaceId?
+    ): Result {
+        val userIds = items.map { it.userId }.toSet()
         val memberships =
             runCatching {
-                spaceMembershipLookup.membershipsOf(
-                    userIds = items.map { it.userId }.toSet(),
-                    viewer = viewer
-                )
+                spaceMembershipLookup.membershipsOf(userIds = userIds, viewer = viewer)
             }.getOrElse { emptyMap() }
-        return Result(items = items.map { it.toItem(memberships) })
+        val memberIdsInTarget: Set<UserId>? =
+            targetSpaceId?.let { id ->
+                runCatching {
+                    spaceMembershipLookup.memberIdsIn(
+                        spaceId = id,
+                        userIds = userIds,
+                        viewer = viewer
+                    )
+                }.getOrNull()
+            }
+        return Result(items = items.map { it.toItem(memberships, memberIdsInTarget) })
     }
 
     private fun UserSearching.Result.Item.toItem(
-        memberships: Map<UserId, Set<SpaceId>>
+        memberships: Map<UserId, Set<SpaceId>>,
+        memberIdsInTarget: Set<UserId>?
     ): Result.Item =
         Result.Item(
             userId = userId,
             handle = handle,
-            memberOfSpaceIds =
-                memberships[userId]
-                    .orEmpty()
-                    .sortedBy { it.value }
+            memberOfSpaceIds = memberships[userId].orEmpty().sortedBy { it.value },
+            alreadyMember = memberIdsInTarget?.contains(userId)
         )
 }

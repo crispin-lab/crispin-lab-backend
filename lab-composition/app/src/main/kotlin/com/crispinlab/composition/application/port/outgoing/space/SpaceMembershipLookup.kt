@@ -9,4 +9,10 @@ interface SpaceMembershipLookup {
         userIds: Collection<UserId>,
         viewer: Viewer
     ): Map<UserId, Set<SpaceId>>
+
+    fun memberIdsIn(
+        spaceId: SpaceId,
+        userIds: Collection<UserId>,
+        viewer: Viewer
+    ): Set<UserId>?
 }

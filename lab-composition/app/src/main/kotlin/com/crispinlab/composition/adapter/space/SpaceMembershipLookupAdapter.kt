@@ -25,9 +25,30 @@ class SpaceMembershipLookupAdapter(
         }
     }
 
+    override fun memberIdsIn(
+        spaceId: SpaceId,
+        userIds: Collection<UserId>,
+        viewer: Viewer
+    ): Set<UserId>? {
+        val idSet = userIds.toSet()
+        if (idSet.isEmpty()) return emptySet()
+        if (!viewer.canSeeMembersOf(spaceId)) return null
+        val memberships = spaceMemberRepository.findSpaceIdsByUserIds(idSet)
+        return idSet.filterTo(mutableSetOf()) { spaceId in memberships[it].orEmpty() }
+    }
+
     private fun Viewer.memberSpaceIds(): Set<SpaceId> =
         when (this) {
             is Viewer.Member -> spaceMemberRepository.findSpaceIdsByUserId(userId)
             Viewer.Anonymous -> emptySet()
         }
+
+    private fun Viewer.canSeeMembersOf(spaceId: SpaceId): Boolean =
+        when (this) {
+            is Viewer.Member -> isAdmin || isMemberOf(spaceId)
+            Viewer.Anonymous -> false
+        }
+
+    private fun Viewer.Member.isMemberOf(spaceId: SpaceId): Boolean =
+        spaceMemberRepository.findBySpaceIdAndUserId(spaceId, userId) != null
 }

@@ -358,6 +358,26 @@ class PageEditingUseCaseTest :
                 verify(exactly = 0) { pageLinkRepository.saveAll(any()) }
             }
 
+            it("INTERNAL space 의 page 를 MEMBER 로 바꾸는 것은 통과한다") {
+                val page = basicPage(visibility = Visibility.DRAFT)
+                every { pageRepository.findBy(page.id) } returns page
+                every { spaceRepository.findVisibility(page.spaceId) } returns
+                    SpaceVisibility.INTERNAL
+                val savedPage = slot<Page>()
+                every { pageRepository.save(capture(savedPage)) } answers { savedPage.captured }
+
+                useCase.perform(
+                    basicRequest(
+                        pageId = page.id.value.toString(),
+                        title = page.title,
+                        content = page.content.raw,
+                        visibility = Visibility.MEMBER.name
+                    )
+                )
+
+                savedPage.captured.visibility shouldBe Visibility.MEMBER
+            }
+
             it("INTERNAL space 안의 page 라도 visibility 가 그대로면 cascade 검증 자체가 실행되지 않는다") {
                 val page = basicPage(visibility = Visibility.INTERNAL)
                 every { pageRepository.findBy(page.id) } returns page

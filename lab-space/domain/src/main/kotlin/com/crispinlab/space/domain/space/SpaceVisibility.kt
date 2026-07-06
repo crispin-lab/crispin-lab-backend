@@ -10,7 +10,7 @@ enum class SpaceVisibility {
     fun ceiling(): Visibility =
         when (this) {
             PUBLIC -> Visibility.PUBLIC
-            INTERNAL -> Visibility.INTERNAL
+            INTERNAL -> Visibility.MEMBER
         }
 
     companion object {

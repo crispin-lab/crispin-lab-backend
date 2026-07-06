@@ -129,8 +129,28 @@ class CommentRegisteringUseCaseTest :
                 verify(exactly = 1) { commentRepository.save(any()) }
             }
 
-            it("INTERNAL space 의 author 본인은 비멤버 상태에서도 댓글을 등록할 수 있다") {
+            it(
+                "INTERNAL space 안의 MEMBER 페이지에 스페이스 멤버는 댓글을 등록할 수 있다 (cascade=MEMBER 로 열려있다)"
+            ) {
                 every { idGenerator.next() } returns 42L
+                every { pageRepository.findBy(any()) } returns
+                    basicPage(
+                        spaceId = SpaceId(10L),
+                        authorId = UserId(999L),
+                        visibility = Visibility.MEMBER
+                    )
+                every { spaceRepository.findVisibility(SpaceId(10L)) } returns
+                    SpaceVisibility.INTERNAL
+                every {
+                    spaceMemberRepository.findSpaceIdsByUserId(UserId(100L))
+                } returns setOf(SpaceId(10L))
+
+                useCase.perform(basicRequest())
+
+                verify(exactly = 1) { commentRepository.save(any()) }
+            }
+
+            it("INTERNAL space 의 PUBLIC 페이지에는 author 본인이라도 비멤버면 등록 실패한다 (effective=MEMBER)") {
                 every { pageRepository.findBy(any()) } returns
                     basicPage(
                         spaceId = SpaceId(10L),
@@ -140,9 +160,10 @@ class CommentRegisteringUseCaseTest :
                 every { spaceRepository.findVisibility(SpaceId(10L)) } returns
                     SpaceVisibility.INTERNAL
 
-                useCase.perform(basicRequest())
-
-                verify(exactly = 1) { commentRepository.save(any()) }
+                shouldThrow<NotFoundException> {
+                    useCase.perform(basicRequest())
+                }
+                verify(exactly = 0) { commentRepository.save(any()) }
             }
 
             it("ADMIN 은 다른 사용자의 DRAFT 페이지에도, 비멤버 상태에서도 댓글을 달 수 있다") {

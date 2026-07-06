@@ -32,9 +32,7 @@ class VisibilityScopePredicateTest :
                     )
             }
 
-            it(
-                "Authenticated 비멤버는 PUBLIC + INTERNAL 자기 + PUBLIC/MEMBER 자기 INTERNAL space + DRAFT 자기 네 clause"
-            ) {
+            it("Authenticated 비멤버는 PUBLIC + INTERNAL 자기 + DRAFT 자기 세 clause") {
                 val viewerId = UserId(100L)
 
                 val clauses =
@@ -44,7 +42,7 @@ class VisibilityScopePredicateTest :
                             memberOfSpaceIds = emptySet()
                         ).toClauses()
 
-                clauses.size shouldBe 4
+                clauses.size shouldBe 3
                 clauses[0].atoms shouldBe
                     listOf(
                         VisibilityAtom.Eq(
@@ -69,21 +67,6 @@ class VisibilityScopePredicateTest :
                     )
                 clauses[2].atoms shouldBe
                     listOf(
-                        VisibilityAtom.In(
-                            column = VisibilityColumn.PageVisibility,
-                            values = listOf(Visibility.PUBLIC.name, Visibility.MEMBER.name)
-                        ),
-                        VisibilityAtom.Eq(
-                            column = VisibilityColumn.SpaceVisibility,
-                            value = SpaceVisibility.INTERNAL.name
-                        ),
-                        VisibilityAtom.Eq(
-                            column = VisibilityColumn.PageAuthorId,
-                            value = viewerId.value
-                        )
-                    )
-                clauses[3].atoms shouldBe
-                    listOf(
                         VisibilityAtom.Eq(
                             column = VisibilityColumn.PageVisibility,
                             value = Visibility.DRAFT.name
@@ -95,7 +78,9 @@ class VisibilityScopePredicateTest :
                     )
             }
 
-            it("Authenticated 멤버는 MEMBER page × PUBLIC space clause 가 추가된다") {
+            it(
+                "Authenticated 멤버는 MEMBER page × PUBLIC space + MEMBER/PUBLIC page × INTERNAL space clause 가 추가된다"
+            ) {
                 val viewerId = UserId(100L)
                 val memberSpaceIds = setOf(SpaceId(10L), SpaceId(20L))
 
@@ -116,6 +101,21 @@ class VisibilityScopePredicateTest :
                         VisibilityAtom.Eq(
                             column = VisibilityColumn.SpaceVisibility,
                             value = SpaceVisibility.PUBLIC.name
+                        ),
+                        VisibilityAtom.In(
+                            column = VisibilityColumn.PageSpaceId,
+                            values = memberSpaceIds.map { it.value }
+                        )
+                    )
+                clauses[3].atoms shouldBe
+                    listOf(
+                        VisibilityAtom.In(
+                            column = VisibilityColumn.PageVisibility,
+                            values = listOf(Visibility.PUBLIC.name, Visibility.MEMBER.name)
+                        ),
+                        VisibilityAtom.Eq(
+                            column = VisibilityColumn.SpaceVisibility,
+                            value = SpaceVisibility.INTERNAL.name
                         ),
                         VisibilityAtom.In(
                             column = VisibilityColumn.PageSpaceId,

@@ -227,16 +227,13 @@ class PageRegisteringUseCaseTest :
                 verify(exactly = 0) { pageRepository.save(any()) }
             }
 
-            it("INTERNAL space 안에 MEMBER 페이지를 생성하면 ConflictException (cascade)") {
+            it("INTERNAL space 안의 MEMBER 페이지 생성은 통과한다") {
                 every { spaceRepository.findVisibility(any()) } returns SpaceVisibility.INTERNAL
+                every { idGenerator.next() } returns 1L
 
-                val exception =
-                    shouldThrow<ConflictException> {
-                        useCase.perform(basicRequest(visibility = "MEMBER"))
-                    }
+                useCase.perform(basicRequest(visibility = "MEMBER"))
 
-                exception.errorCode shouldBe PageErrorCode.PAGE_VISIBILITY_EXCEEDS_SPACE
-                verify(exactly = 0) { pageRepository.save(any()) }
+                verify(exactly = 1) { pageRepository.save(any()) }
             }
 
             it("INTERNAL space 안의 INTERNAL 페이지 생성은 통과한다") {
@@ -257,13 +254,15 @@ class PageRegisteringUseCaseTest :
                 verify(exactly = 1) { pageRepository.save(any()) }
             }
 
-            it("PUBLIC space 안의 PUBLIC 페이지 생성은 통과한다") {
-                every { spaceRepository.findVisibility(any()) } returns SpaceVisibility.PUBLIC
-                every { idGenerator.next() } returns 1L
+            listOf("PUBLIC", "MEMBER", "INTERNAL", "DRAFT").forEach { visibility ->
+                it("PUBLIC space 안의 $visibility 페이지 생성은 통과한다") {
+                    every { spaceRepository.findVisibility(any()) } returns SpaceVisibility.PUBLIC
+                    every { idGenerator.next() } returns 1L
 
-                useCase.perform(basicRequest(visibility = "PUBLIC"))
+                    useCase.perform(basicRequest(visibility = visibility))
 
-                verify(exactly = 1) { pageRepository.save(any()) }
+                    verify(exactly = 1) { pageRepository.save(any()) }
+                }
             }
         }
     }) {

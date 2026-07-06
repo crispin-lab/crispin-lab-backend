@@ -20,11 +20,13 @@ class UserSearchingCompositionController(
     fun search(
         @RequestParam query: String,
         @RequestParam(defaultValue = "$DEFAULT_SIZE") size: Int,
+        @RequestParam(required = false) spaceId: String?,
         auth: Auth
     ): Result =
         Request(
             query = query,
             size = size,
+            spaceId = spaceId,
             viewer = auth.toMember()
         ).let { useCase.perform(it) }
 }

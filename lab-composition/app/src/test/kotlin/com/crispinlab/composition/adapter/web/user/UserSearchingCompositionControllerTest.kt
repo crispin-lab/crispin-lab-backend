@@ -29,7 +29,7 @@ class UserSearchingCompositionControllerTest :
         beforeEach { clearMocks(useCase) }
 
         describe("사용자 검색") {
-            it("정상 검색 시 200 과 매칭 결과 + 소속 스페이스 집합을 반환한다") {
+            it("정상 검색 시 200 과 매칭 결과 + 소속 스페이스 집합 + alreadyMember 를 반환한다") {
                 every { useCase.perform(any()) } returns
                     Result(
                         items =
@@ -37,12 +37,14 @@ class UserSearchingCompositionControllerTest :
                                 Result.Item(
                                     userId = UserId(1L),
                                     handle = Handle("alice"),
-                                    memberOfSpaceIds = listOf(SpaceId(10L), SpaceId(20L))
+                                    memberOfSpaceIds = listOf(SpaceId(10L), SpaceId(20L)),
+                                    alreadyMember = true
                                 ),
                                 Result.Item(
                                     userId = UserId(2L),
                                     handle = Handle("alice_kim"),
-                                    memberOfSpaceIds = listOf(SpaceId(10L))
+                                    memberOfSpaceIds = listOf(SpaceId(20L)),
+                                    alreadyMember = false
                                 )
                             )
                     )
@@ -53,6 +55,7 @@ class UserSearchingCompositionControllerTest :
                             .withAuth()
                             .param("query", "ali")
                             .param("size", "10")
+                            .param("spaceId", "10")
                     ).then(
                         status().isOk,
                         jsonPath("$.items.length()").value(2),
@@ -61,16 +64,21 @@ class UserSearchingCompositionControllerTest :
                         jsonPath("$.items[0].memberOfSpaceIds.length()").value(2),
                         jsonPath("$.items[0].memberOfSpaceIds[0]").value("10"),
                         jsonPath("$.items[0].memberOfSpaceIds[1]").value("20"),
+                        jsonPath("$.items[0].alreadyMember").value(true),
                         jsonPath("$.items[1].userId").value("2"),
                         jsonPath("$.items[1].handle").value("alice_kim"),
                         jsonPath("$.items[1].memberOfSpaceIds.length()").value(1),
-                        jsonPath("$.items[1].memberOfSpaceIds[0]").value("10")
+                        jsonPath("$.items[1].memberOfSpaceIds[0]").value("20"),
+                        jsonPath("$.items[1].alreadyMember").value(false)
                     ).document(
                         authHeader(required = true),
                         queryParameters(
                             "query" isParameterFor "검색어 (handle 부분 일치, 대소문자 무시, 1~30자)",
                             "size" isParameterFor
-                                "결과 수 (1 ~ 20, 기본값 10)" isOptional true
+                                "결과 수 (1 ~ 20, 기본값 10)" isOptional true,
+                            "spaceId" isParameterFor
+                                "초대 대상 스페이스 식별자. 지정 시 각 item 의 alreadyMember 가 " +
+                                "true/false 로 채워진다. 지정 시 Long 형식이어야 하며, 빈 값이면 400." isOptional true
                         ),
                         responseFields {
                             "items".array("매칭된 사용자 목록") {
@@ -80,10 +88,72 @@ class UserSearchingCompositionControllerTest :
                                     "사용자가 소속된 스페이스 식별자 목록 " +
                                         "(검색자가 볼 수 있는 스페이스만 노출, SpaceId 오름차순, 없으면 빈 배열)"
                                 )
+                                "alreadyMember".boolean(
+                                    "요청 spaceId 에 이미 참여 중인지 여부. " +
+                                        "spaceId 미지정 또는 검색자가 해당 스페이스를 볼 수 없으면 null.",
+                                    optional = true
+                                )
                             }
                         },
                         responseSchema = "UserSearchResponse"
                     )
+            }
+
+            it("spaceId 를 Request 에 그대로 전달한다") {
+                val captured = slot<Request>()
+                every { useCase.perform(capture(captured)) } returns Result(items = emptyList())
+
+                controller
+                    .`when`(
+                        get("/v1/users")
+                            .withAuth()
+                            .param("query", "ali")
+                            .param("spaceId", "42")
+                    ).then(status().isOk)
+
+                captured.captured.spaceId shouldBe SpaceId(42L)
+            }
+
+            it("spaceId 를 생략하면 Request.spaceId 는 null 이다") {
+                val captured = slot<Request>()
+                every { useCase.perform(capture(captured)) } returns Result(items = emptyList())
+
+                controller
+                    .`when`(
+                        get("/v1/users")
+                            .withAuth()
+                            .param("query", "ali")
+                    ).then(status().isOk)
+
+                captured.captured.spaceId shouldBe null
+            }
+
+            it("spaceId 가 Long 형식이 아니면 400 을 반환한다") {
+                controller
+                    .`when`(
+                        get("/v1/users")
+                            .withAuth()
+                            .param("query", "ali")
+                            .param("spaceId", "not-a-long")
+                    ).then(
+                        status().isBadRequest,
+                        jsonPath("$.code").value("INVALID_REQUEST")
+                    )
+                verify(exactly = 0) { useCase.perform(any()) }
+            }
+
+            it("spaceId 가 빈 문자열이면 400 을 반환한다") {
+                controller
+                    .`when`(
+                        get("/v1/users")
+                            .withAuth()
+                            .param("query", "ali")
+                            .param("spaceId", "")
+                    ).then(
+                        status().isBadRequest,
+                        jsonPath("$.code").value("INVALID_REQUEST")
+                    )
+                verify(exactly = 0) { useCase.perform(any()) }
             }
 
             it("size 를 생략하면 default 10 으로 Request 가 만들어진다") {

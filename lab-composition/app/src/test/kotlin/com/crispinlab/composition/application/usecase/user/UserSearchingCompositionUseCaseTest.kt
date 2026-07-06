@@ -105,7 +105,7 @@ class UserSearchingCompositionUseCaseTest :
             }
 
             it("Viewer.Member 가 membershipsOf 에 그대로 전달된다") {
-                val viewerSlot = slot<Viewer.Member>()
+                val viewerSlot = slot<Viewer>()
                 every { userSearching.perform(any()) } returns
                     UserSearching.Result(
                         items = listOf(domainItem(userId = 1L, handle = "alice"))
@@ -121,7 +121,7 @@ class UserSearchingCompositionUseCaseTest :
                     )
                 )
 
-                viewerSlot.captured.userId shouldBe UserId(500L)
+                (viewerSlot.captured as Viewer.Member).userId shouldBe UserId(500L)
                 viewerSlot.captured.isAdmin shouldBe true
             }
 
@@ -147,14 +147,144 @@ class UserSearchingCompositionUseCaseTest :
                 }
             }
         }
+
+        describe("alreadyMember 파생") {
+            it("spaceId 미지정 시 memberIdsIn 을 호출하지 않고 alreadyMember 는 null 이다") {
+                every { userSearching.perform(any()) } returns
+                    UserSearching.Result(
+                        items = listOf(domainItem(userId = 1L, handle = "alice"))
+                    )
+                every { spaceMembershipLookup.membershipsOf(any(), any()) } returns
+                    mapOf(UserId(1L) to setOf(SpaceId(10L)))
+
+                val result = useCaseWith().perform(basicRequest())
+
+                result.items.single().alreadyMember shouldBe null
+                verify(exactly = 0) {
+                    spaceMembershipLookup.memberIdsIn(any(), any(), any())
+                }
+            }
+
+            it("spaceId 지정 + 사용자가 해당 스페이스 소속이면 alreadyMember=true") {
+                every { userSearching.perform(any()) } returns
+                    UserSearching.Result(
+                        items = listOf(domainItem(userId = 1L, handle = "alice"))
+                    )
+                every { spaceMembershipLookup.membershipsOf(any(), any()) } returns
+                    mapOf(UserId(1L) to setOf(SpaceId(10L), SpaceId(20L)))
+                every { spaceMembershipLookup.memberIdsIn(SpaceId(10L), any(), any()) } returns
+                    setOf(UserId(1L))
+
+                val result = useCaseWith().perform(basicRequest(spaceId = "10"))
+
+                result.items.single().alreadyMember shouldBe true
+            }
+
+            it("spaceId 지정 + 사용자가 해당 스페이스 미소속이면 alreadyMember=false") {
+                every { userSearching.perform(any()) } returns
+                    UserSearching.Result(
+                        items = listOf(domainItem(userId = 1L, handle = "alice"))
+                    )
+                every { spaceMembershipLookup.membershipsOf(any(), any()) } returns
+                    mapOf(UserId(1L) to setOf(SpaceId(20L)))
+                every { spaceMembershipLookup.memberIdsIn(SpaceId(10L), any(), any()) } returns
+                    emptySet()
+
+                val result = useCaseWith().perform(basicRequest(spaceId = "10"))
+
+                result.items.single().alreadyMember shouldBe false
+            }
+
+            it("검색 결과 중 일부만 해당 스페이스 소속이면 각 item 별로 alreadyMember 가 다르다") {
+                every { userSearching.perform(any()) } returns
+                    UserSearching.Result(
+                        items =
+                            listOf(
+                                domainItem(userId = 1L, handle = "alice"),
+                                domainItem(userId = 2L, handle = "alice_kim"),
+                                domainItem(userId = 3L, handle = "alicia")
+                            )
+                    )
+                every { spaceMembershipLookup.membershipsOf(any(), any()) } returns
+                    mapOf(
+                        UserId(1L) to setOf(SpaceId(10L)),
+                        UserId(3L) to setOf(SpaceId(10L), SpaceId(20L))
+                    )
+                every { spaceMembershipLookup.memberIdsIn(SpaceId(10L), any(), any()) } returns
+                    setOf(UserId(1L), UserId(3L))
+
+                val result = useCaseWith().perform(basicRequest(spaceId = "10"))
+
+                result.items[0].alreadyMember shouldBe true
+                result.items[1].alreadyMember shouldBe false
+                result.items[2].alreadyMember shouldBe true
+            }
+
+            it("spaceId 지정 + memberIdsIn 이 null 반환 (검색자가 해당 스페이스를 볼 수 없음) 시 alreadyMember=null") {
+                every { userSearching.perform(any()) } returns
+                    UserSearching.Result(
+                        items = listOf(domainItem(userId = 1L, handle = "alice"))
+                    )
+                every { spaceMembershipLookup.membershipsOf(any(), any()) } returns emptyMap()
+                every { spaceMembershipLookup.memberIdsIn(SpaceId(10L), any(), any()) } returns null
+
+                val result = useCaseWith().perform(basicRequest(spaceId = "10"))
+
+                result.items.single().alreadyMember shouldBe null
+            }
+
+            it("spaceId 지정 + memberIdsIn 이 예외를 던져도 items 는 반환하고 alreadyMember 는 null 로 폴백한다") {
+                every { userSearching.perform(any()) } returns
+                    UserSearching.Result(
+                        items = listOf(domainItem(userId = 1L, handle = "alice"))
+                    )
+                every { spaceMembershipLookup.membershipsOf(any(), any()) } returns
+                    mapOf(UserId(1L) to setOf(SpaceId(10L)))
+                every { spaceMembershipLookup.memberIdsIn(SpaceId(10L), any(), any()) } throws
+                    RuntimeException("lookup failure")
+
+                val result = useCaseWith().perform(basicRequest(spaceId = "10"))
+
+                result.items.single().alreadyMember shouldBe null
+                result.items.single().memberOfSpaceIds shouldBe listOf(SpaceId(10L))
+            }
+
+            it("spaceId 지정 시 distinct userIds 로 memberIdsIn 을 batch 1회 호출한다") {
+                every { userSearching.perform(any()) } returns
+                    UserSearching.Result(
+                        items =
+                            listOf(
+                                domainItem(userId = 1L, handle = "alice"),
+                                domainItem(userId = 1L, handle = "alice"),
+                                domainItem(userId = 2L, handle = "bob")
+                            )
+                    )
+                every { spaceMembershipLookup.membershipsOf(any(), any()) } returns emptyMap()
+                every { spaceMembershipLookup.memberIdsIn(any(), any(), any()) } returns emptySet()
+
+                useCaseWith().perform(basicRequest(spaceId = "10"))
+
+                verify(exactly = 1) {
+                    spaceMembershipLookup.memberIdsIn(
+                        spaceId = SpaceId(10L),
+                        userIds = setOf(UserId(1L), UserId(2L)),
+                        viewer = MEMBER_VIEWER
+                    )
+                }
+            }
+        }
     }) {
     companion object {
         val MEMBER_VIEWER: Viewer.Member = Viewer.Member(userId = UserId(100L), isAdmin = false)
 
-        fun basicRequest(query: String = "alice"): Request =
+        fun basicRequest(
+            query: String = "alice",
+            spaceId: String? = null
+        ): Request =
             Request(
                 query = query,
                 size = 10,
+                spaceId = spaceId,
                 viewer = MEMBER_VIEWER
             )
 

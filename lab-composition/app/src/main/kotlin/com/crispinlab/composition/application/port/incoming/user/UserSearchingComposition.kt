@@ -5,6 +5,7 @@ import com.crispinlab.composition.application.port.incoming.user.UserSearchingCo
 import com.crispinlab.composition.application.port.incoming.user.UserSearchingComposition.Result
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.space.SpaceId
+import com.crispinlab.space.domain.space.SpaceId.Companion.asSpaceId
 import com.crispinlab.user.domain.user.Handle
 import com.crispinlab.user.domain.user.UserId
 
@@ -12,8 +13,11 @@ interface UserSearchingComposition : UseCase<Request, Result> {
     class Request(
         val query: String,
         val size: Int,
+        spaceId: String? = null,
         val viewer: Viewer.Member
-    )
+    ) {
+        val spaceId: SpaceId? = spaceId?.asSpaceId()
+    }
 
     data class Result(
         val items: List<Item>
@@ -21,7 +25,8 @@ interface UserSearchingComposition : UseCase<Request, Result> {
         data class Item(
             val userId: UserId,
             val handle: Handle,
-            val memberOfSpaceIds: List<SpaceId>
+            val memberOfSpaceIds: List<SpaceId>,
+            val alreadyMember: Boolean?
         )
     }
 }

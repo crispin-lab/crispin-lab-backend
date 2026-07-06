@@ -1,7 +1,7 @@
 [versions]
 kotlin = "2.4.0"
 kotest = "6.2.1"
-kotlinter = "5.5.0"
+kotlinter = "5.6.0"
 spring-boot = "3.5.16"
 kotlin-snowflake = "1.0.1"
 kotlin-serialization = "1.11.0"

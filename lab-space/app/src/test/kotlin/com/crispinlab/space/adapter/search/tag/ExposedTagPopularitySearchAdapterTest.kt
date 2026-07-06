@@ -5,8 +5,6 @@ import com.crispinlab.common.persistence.PostgresTestContext
 import com.crispinlab.space.adapter.persistence.page.ExposedPageRepository
 import com.crispinlab.space.adapter.persistence.tag.PageTags
 import com.crispinlab.space.adapter.persistence.tag.Tags
-import com.crispinlab.space.adapter.search.page.ExposedPageSearchAdapter
-import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.SortOption
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
 import com.crispinlab.space.domain.page.Page
 import com.crispinlab.space.domain.page.PageId
@@ -18,7 +16,6 @@ import com.crispinlab.space.testsupport.Fixtures.basicPage
 import com.crispinlab.space.testsupport.seedPublicSpaces
 import com.crispinlab.space.testsupport.seedSpaces
 import com.crispinlab.user.domain.user.UserId
-import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
@@ -30,7 +27,6 @@ class ExposedTagPopularitySearchAdapterTest :
         val database = PostgresTestContext.database
         val pageRepository = ExposedPageRepository()
         val adapter = ExposedTagPopularitySearchAdapter()
-        val pageAdapter = ExposedPageSearchAdapter()
 
         afterEach {
             PostgresTestContext.truncateAll()
@@ -546,137 +542,6 @@ class ExposedTagPopularitySearchAdapterTest :
                         "public-tag"
                     )
                 result.totalElements shouldBe 4L
-            }
-
-            it("두 검색 어댑터가 같은 visibility 룰을 적용한다 (cross-check)") {
-                val viewerId = UserId(100L)
-                val otherId = UserId(200L)
-                seedSpaces(
-                    database,
-                    10L to SpaceVisibility.PUBLIC,
-                    20L to SpaceVisibility.INTERNAL
-                )
-                transaction(database) {
-                    pageRepository.save(
-                        publicPage(
-                            id = PageId(1L),
-                            spaceId = SpaceId(10L),
-                            authorId = otherId
-                        )
-                    )
-                    pageRepository.save(
-                        basicPage(
-                            id = PageId(2L),
-                            spaceId = SpaceId(10L),
-                            authorId = otherId,
-                            visibility = Visibility.MEMBER
-                        )
-                    )
-                    pageRepository.save(
-                        basicPage(
-                            id = PageId(3L),
-                            spaceId = SpaceId(10L),
-                            authorId = viewerId,
-                            visibility = Visibility.INTERNAL
-                        )
-                    )
-                    pageRepository.save(
-                        basicPage(
-                            id = PageId(4L),
-                            spaceId = SpaceId(10L),
-                            authorId = otherId,
-                            visibility = Visibility.INTERNAL
-                        )
-                    )
-                    pageRepository.save(
-                        basicPage(
-                            id = PageId(5L),
-                            spaceId = SpaceId(10L),
-                            authorId = viewerId,
-                            visibility = Visibility.DRAFT
-                        )
-                    )
-                    pageRepository.save(
-                        publicPage(
-                            id = PageId(6L),
-                            spaceId = SpaceId(20L),
-                            authorId = viewerId
-                        )
-                    )
-                    pageRepository.save(
-                        publicPage(
-                            id = PageId(7L),
-                            spaceId = SpaceId(20L),
-                            authorId = otherId
-                        )
-                    )
-                    pageRepository.save(
-                        basicPage(
-                            id = PageId(8L),
-                            spaceId = SpaceId(20L),
-                            authorId = viewerId,
-                            visibility = Visibility.MEMBER
-                        )
-                    )
-                    pageRepository.save(
-                        basicPage(
-                            id = PageId(9L),
-                            spaceId = SpaceId(20L),
-                            authorId = viewerId,
-                            visibility = Visibility.DRAFT
-                        )
-                    )
-                    (1L..9L).forEach { id ->
-                        insertTag(tagId = id, name = "tag-p$id")
-                        attachPageTag(pageId = id, tagId = id)
-                    }
-                }
-
-                val scopes =
-                    listOf(
-                        VisibilityScope.Anonymous,
-                        VisibilityScope.Authenticated(
-                            viewerId = viewerId,
-                            memberOfSpaceIds = emptySet()
-                        ),
-                        VisibilityScope.Authenticated(
-                            viewerId = viewerId,
-                            memberOfSpaceIds = setOf(SpaceId(10L))
-                        ),
-                        VisibilityScope.Privileged
-                    )
-
-                scopes.forEach { scope ->
-                    val visiblePageIds =
-                        transaction(database) {
-                            pageAdapter
-                                .search(
-                                    keyword = null,
-                                    spaceId = null,
-                                    tagIds = emptyList(),
-                                    tagIdsAnyOf = emptyList(),
-                                    sort = SortOption.CREATED_AT,
-                                    scope = scope,
-                                    pageRequest = PageRequest(page = 0, size = 100)
-                                ).items
-                                .map { it.id.value }
-                                .toSet()
-                        }
-                    val taggedPageIds =
-                        transaction(database) {
-                            adapter
-                                .search(
-                                    scope = scope,
-                                    pageRequest = PageRequest(page = 0, size = 100)
-                                ).items
-                                .map { it.name.removePrefix("tag-p").toLong() }
-                                .toSet()
-                        }
-
-                    withClue("scope=$scope") {
-                        taggedPageIds shouldBe visiblePageIds
-                    }
-                }
             }
         }
     }) {

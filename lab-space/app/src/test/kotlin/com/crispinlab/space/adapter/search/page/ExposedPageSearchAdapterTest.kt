@@ -1065,7 +1065,7 @@ class ExposedPageSearchAdapterTest :
             }
 
             it(
-                "cascade — INTERNAL space 안의 PUBLIC 페이지는 작성자에게는 노출 (effective=INTERNAL, author=viewer)"
+                "cascade — INTERNAL space 안의 PUBLIC 페이지는 작성자라도 스페이스 멤버가 아니면 검색 결과에서 빠진다 (effective=MEMBER)"
             ) {
                 seedSpaces(database, 50L to SpaceVisibility.INTERNAL)
                 transaction(database) {
@@ -1096,11 +1096,11 @@ class ExposedPageSearchAdapterTest :
                         )
                     }
 
-                result.items.map { it.id } shouldBe listOf(PageId(500L))
+                result.items.shouldBeEmpty()
             }
 
             it(
-                "cascade — INTERNAL space 안의 PUBLIC 페이지는 비작성자 멤버에게도 가려진다 (effective=INTERNAL, author≠viewer)"
+                "cascade — INTERNAL space 안의 PUBLIC 페이지는 스페이스 멤버에게 노출된다 (effective=MEMBER 로 열려있다)"
             ) {
                 seedSpaces(database, 50L to SpaceVisibility.INTERNAL)
                 transaction(database) {
@@ -1131,10 +1131,12 @@ class ExposedPageSearchAdapterTest :
                         )
                     }
 
-                result.items.shouldBeEmpty()
+                result.items.map { it.id } shouldBe listOf(PageId(500L))
             }
 
-            it("cascade — INTERNAL space 안의 MEMBER 페이지도 비작성자 멤버에게 가려진다 (effective=INTERNAL)") {
+            it(
+                "cascade — INTERNAL space 안의 MEMBER 페이지는 스페이스 멤버에게 노출된다 (LAB-161 primary cascade fix)"
+            ) {
                 seedSpaces(database, 50L to SpaceVisibility.INTERNAL)
                 transaction(database) {
                     pageRepository.save(
@@ -1164,7 +1166,7 @@ class ExposedPageSearchAdapterTest :
                         )
                     }
 
-                result.items.shouldBeEmpty()
+                result.items.map { it.id } shouldBe listOf(PageId(500L))
             }
 
             it("cascade — PUBLIC space 안의 MEMBER 페이지는 멤버에게 노출 (cascade 영향 없음)") {

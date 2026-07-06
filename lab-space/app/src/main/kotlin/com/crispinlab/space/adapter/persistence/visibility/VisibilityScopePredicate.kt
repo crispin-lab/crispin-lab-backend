@@ -107,25 +107,27 @@ private fun VisibilityScope.Authenticated.authenticatedClauses(): List<Visibilit
                     )
             )
         )
-        add(
-            VisibilityClause(
-                atoms =
-                    listOf(
-                        VisibilityAtom.In(
-                            column = VisibilityColumn.PageVisibility,
-                            values = listOf(Visibility.PUBLIC.name, Visibility.MEMBER.name)
-                        ),
-                        VisibilityAtom.Eq(
-                            column = VisibilityColumn.SpaceVisibility,
-                            value = SpaceVisibility.INTERNAL.name
-                        ),
-                        VisibilityAtom.Eq(
-                            column = VisibilityColumn.PageAuthorId,
-                            value = viewerId.value
+        if (memberOfSpaceIds.isNotEmpty()) {
+            add(
+                VisibilityClause(
+                    atoms =
+                        listOf(
+                            VisibilityAtom.In(
+                                column = VisibilityColumn.PageVisibility,
+                                values = listOf(Visibility.PUBLIC.name, Visibility.MEMBER.name)
+                            ),
+                            VisibilityAtom.Eq(
+                                column = VisibilityColumn.SpaceVisibility,
+                                value = SpaceVisibility.INTERNAL.name
+                            ),
+                            VisibilityAtom.In(
+                                column = VisibilityColumn.PageSpaceId,
+                                values = memberOfSpaceIds.map { it.value }
+                            )
                         )
-                    )
+                )
             )
-        )
+        }
         add(
             VisibilityClause(
                 atoms =

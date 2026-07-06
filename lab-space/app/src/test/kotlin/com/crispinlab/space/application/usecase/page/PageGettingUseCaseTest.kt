@@ -247,7 +247,9 @@ class PageGettingUseCaseTest :
                 }
             }
 
-            it("INTERNAL space 안의 PUBLIC 페이지는 작성자에게는 노출된다 (effective=INTERNAL)") {
+            it(
+                "INTERNAL space 안의 PUBLIC 페이지는 작성자라도 스페이스 멤버가 아니면 NotFoundException (effective=MEMBER)"
+            ) {
                 val page =
                     basicPage(
                         spaceId = SpaceId(10L),
@@ -258,13 +260,13 @@ class PageGettingUseCaseTest :
                 every { spaceRepository.findVisibility(SpaceId(10L)) } returns
                     SpaceVisibility.INTERNAL
 
-                val result = useCase.perform(basicRequest())
-
-                result.pageId shouldBe page.id
+                shouldThrow<NotFoundException> {
+                    useCase.perform(basicRequest())
+                }
             }
 
             it(
-                "INTERNAL space 안의 PUBLIC 페이지는 비작성자 멤버에게도 NotFoundException 으로 응답한다 (cascade=INTERNAL)"
+                "INTERNAL space 안의 PUBLIC 페이지는 비작성자 스페이스 멤버에게 노출된다 (effective=MEMBER 로 열려있다)"
             ) {
                 val page =
                     basicPage(
@@ -277,6 +279,40 @@ class PageGettingUseCaseTest :
                     SpaceVisibility.INTERNAL
                 every { spaceMemberRepository.findSpaceIdsByUserId(UserId(100L)) } returns
                     setOf(SpaceId(10L))
+
+                val result = useCase.perform(basicRequest())
+
+                result.pageId shouldBe page.id
+            }
+
+            it("INTERNAL space 안의 MEMBER 페이지는 스페이스 멤버에게 노출된다 (LAB-161 primary cascade fix)") {
+                val page =
+                    basicPage(
+                        spaceId = SpaceId(10L),
+                        authorId = UserId(200L),
+                        visibility = Visibility.MEMBER
+                    )
+                every { pageRepository.findBy(page.id) } returns page
+                every { spaceRepository.findVisibility(SpaceId(10L)) } returns
+                    SpaceVisibility.INTERNAL
+                every { spaceMemberRepository.findSpaceIdsByUserId(UserId(100L)) } returns
+                    setOf(SpaceId(10L))
+
+                val result = useCase.perform(basicRequest())
+
+                result.pageId shouldBe page.id
+            }
+
+            it("INTERNAL space 안의 MEMBER 페이지는 비멤버에게는 NotFoundException (effective=MEMBER)") {
+                val page =
+                    basicPage(
+                        spaceId = SpaceId(10L),
+                        authorId = UserId(200L),
+                        visibility = Visibility.MEMBER
+                    )
+                every { pageRepository.findBy(page.id) } returns page
+                every { spaceRepository.findVisibility(SpaceId(10L)) } returns
+                    SpaceVisibility.INTERNAL
 
                 shouldThrow<NotFoundException> {
                     useCase.perform(basicRequest())

@@ -471,7 +471,7 @@ class ExposedTagPopularitySearchAdapterTest :
             }
 
             it(
-                "Authenticated author 는 자기 INTERNAL space 의 " +
+                "Authenticated author 겸 스페이스 멤버는 자기 INTERNAL space 의 " +
                     "PUBLIC/MEMBER/INTERNAL 페이지 태그를 본다"
             ) {
                 val viewerId = UserId(100L)
@@ -528,7 +528,7 @@ class ExposedTagPopularitySearchAdapterTest :
                             scope =
                                 VisibilityScope.Authenticated(
                                     viewerId = viewerId,
-                                    memberOfSpaceIds = emptySet()
+                                    memberOfSpaceIds = setOf(SpaceId(20L))
                                 ),
                             pageRequest = PageRequest.firstPage()
                         )

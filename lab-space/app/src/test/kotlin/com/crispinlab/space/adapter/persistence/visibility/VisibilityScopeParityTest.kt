@@ -97,7 +97,7 @@ class VisibilityScopeParityTest :
         }
     }) {
     companion object {
-        private const val MATRIX_PAGE_SIZE: Int = 32
+        private val MATRIX_PAGE_SIZE: Int get() = matrixRows.size
 
         private val PUBLIC_SPACE = SpaceId(10L)
         private val INTERNAL_SPACE = SpaceId(20L)

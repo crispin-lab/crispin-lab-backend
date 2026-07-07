@@ -75,6 +75,8 @@ class PageSearchingUseCaseTest :
                         spaceId = SpaceId(10L),
                         tagIds = listOf(TagId(100L), TagId(200L)),
                         tagIdsAnyOf = emptyList(),
+                        parentPageId = any(),
+                        onlyRoot = any(),
                         sort = any(),
                         scope = any(),
                         pageRequest = any()
@@ -111,6 +113,8 @@ class PageSearchingUseCaseTest :
                         spaceId = SpaceId(10L),
                         tagIds = listOf(TagId(100L), TagId(200L)),
                         tagIdsAnyOf = emptyList(),
+                        parentPageId = any(),
+                        onlyRoot = any(),
                         sort = any(),
                         scope = any(),
                         pageRequest =
@@ -129,6 +133,8 @@ class PageSearchingUseCaseTest :
                         spaceId = null,
                         tagIds = emptyList(),
                         tagIdsAnyOf = emptyList(),
+                        parentPageId = any(),
+                        onlyRoot = any(),
                         sort = any(),
                         scope = any(),
                         pageRequest = any()
@@ -143,6 +149,8 @@ class PageSearchingUseCaseTest :
                         spaceId = null,
                         tagIds = emptyList(),
                         tagIdsAnyOf = emptyList(),
+                        parentPageId = any(),
+                        onlyRoot = any(),
                         sort = any(),
                         scope = any(),
                         pageRequest = any()
@@ -157,6 +165,8 @@ class PageSearchingUseCaseTest :
                         spaceId = null,
                         tagIds = emptyList(),
                         tagIdsAnyOf = emptyList(),
+                        parentPageId = any(),
+                        onlyRoot = any(),
                         sort = any(),
                         scope = any(),
                         pageRequest = any()
@@ -176,6 +186,8 @@ class PageSearchingUseCaseTest :
                         spaceId = any(),
                         tagIds = any(),
                         tagIdsAnyOf = any(),
+                        parentPageId = any(),
+                        onlyRoot = any(),
                         sort = any(),
                         scope = any(),
                         pageRequest = any()
@@ -190,6 +202,8 @@ class PageSearchingUseCaseTest :
                         spaceId = any(),
                         tagIds = any(),
                         tagIdsAnyOf = any(),
+                        parentPageId = any(),
+                        onlyRoot = any(),
                         sort = SortOption.CREATED_AT,
                         scope = any(),
                         pageRequest = any()
@@ -204,6 +218,8 @@ class PageSearchingUseCaseTest :
                         spaceId = any(),
                         tagIds = any(),
                         tagIdsAnyOf = any(),
+                        parentPageId = any(),
+                        onlyRoot = any(),
                         sort = any(),
                         scope = any(),
                         pageRequest = any()
@@ -218,6 +234,8 @@ class PageSearchingUseCaseTest :
                         spaceId = any(),
                         tagIds = any(),
                         tagIdsAnyOf = any(),
+                        parentPageId = any(),
+                        onlyRoot = any(),
                         sort = SortOption.UPDATED_AT,
                         scope = any(),
                         pageRequest = any()
@@ -232,6 +250,8 @@ class PageSearchingUseCaseTest :
                         spaceId = any(),
                         tagIds = any(),
                         tagIdsAnyOf = any(),
+                        parentPageId = any(),
+                        onlyRoot = any(),
                         sort = any(),
                         scope = any(),
                         pageRequest = any()
@@ -246,6 +266,8 @@ class PageSearchingUseCaseTest :
                         spaceId = any(),
                         tagIds = any(),
                         tagIdsAnyOf = any(),
+                        parentPageId = any(),
+                        onlyRoot = any(),
                         sort = any(),
                         scope = VisibilityScope.Anonymous,
                         pageRequest = any()
@@ -263,6 +285,8 @@ class PageSearchingUseCaseTest :
                         spaceId = any(),
                         tagIds = any(),
                         tagIdsAnyOf = any(),
+                        parentPageId = any(),
+                        onlyRoot = any(),
                         sort = any(),
                         scope = any(),
                         pageRequest = any()
@@ -281,6 +305,8 @@ class PageSearchingUseCaseTest :
                         spaceId = any(),
                         tagIds = any(),
                         tagIdsAnyOf = any(),
+                        parentPageId = any(),
+                        onlyRoot = any(),
                         sort = any(),
                         scope =
                             VisibilityScope.Authenticated(
@@ -301,6 +327,8 @@ class PageSearchingUseCaseTest :
                         spaceId = any(),
                         tagIds = any(),
                         tagIdsAnyOf = any(),
+                        parentPageId = any(),
+                        onlyRoot = any(),
                         sort = any(),
                         scope = any(),
                         pageRequest = any()
@@ -315,6 +343,8 @@ class PageSearchingUseCaseTest :
                         spaceId = any(),
                         tagIds = emptyList(),
                         tagIdsAnyOf = listOf(TagId(500L), TagId(600L)),
+                        parentPageId = any(),
+                        onlyRoot = any(),
                         sort = any(),
                         scope = any(),
                         pageRequest = any()
@@ -336,6 +366,8 @@ class PageSearchingUseCaseTest :
                         spaceId = any(),
                         tagIds = any(),
                         tagIdsAnyOf = any(),
+                        parentPageId = any(),
+                        onlyRoot = any(),
                         sort = any(),
                         scope = any(),
                         pageRequest = any()
@@ -350,6 +382,8 @@ class PageSearchingUseCaseTest :
                         spaceId = any(),
                         tagIds = any(),
                         tagIdsAnyOf = any(),
+                        parentPageId = any(),
+                        onlyRoot = any(),
                         sort = any(),
                         scope = any(),
                         pageRequest = any()
@@ -365,6 +399,8 @@ class PageSearchingUseCaseTest :
                         spaceId = any(),
                         tagIds = any(),
                         tagIdsAnyOf = emptyList(),
+                        parentPageId = any(),
+                        onlyRoot = any(),
                         sort = any(),
                         scope = any(),
                         pageRequest = any()
@@ -381,6 +417,8 @@ class PageSearchingUseCaseTest :
                         spaceId = any(),
                         tagIds = any(),
                         tagIdsAnyOf = any(),
+                        parentPageId = any(),
+                        onlyRoot = any(),
                         sort = any(),
                         scope = any(),
                         pageRequest = any()
@@ -397,6 +435,8 @@ class PageSearchingUseCaseTest :
                         spaceId = any(),
                         tagIds = listOf(TagId(100L), TagId(200L)),
                         tagIdsAnyOf = listOf(TagId(500L), TagId(600L)),
+                        parentPageId = any(),
+                        onlyRoot = any(),
                         sort = any(),
                         scope = any(),
                         pageRequest = any()
@@ -411,6 +451,8 @@ class PageSearchingUseCaseTest :
                         spaceId = any(),
                         tagIds = any(),
                         tagIdsAnyOf = any(),
+                        parentPageId = any(),
+                        onlyRoot = any(),
                         sort = any(),
                         scope = any(),
                         pageRequest = any()
@@ -429,8 +471,106 @@ class PageSearchingUseCaseTest :
                         spaceId = any(),
                         tagIds = any(),
                         tagIdsAnyOf = any(),
+                        parentPageId = any(),
+                        onlyRoot = any(),
                         sort = any(),
                         scope = VisibilityScope.Privileged,
+                        pageRequest = any()
+                    )
+                }
+            }
+
+            it("parentPageId 가 지정되면 PageId 로 변환되어 port 에 전달된다") {
+                every {
+                    pageSearchPort.search(
+                        keyword = any(),
+                        spaceId = any(),
+                        tagIds = any(),
+                        tagIdsAnyOf = any(),
+                        parentPageId = any(),
+                        onlyRoot = any(),
+                        sort = any(),
+                        scope = any(),
+                        pageRequest = any()
+                    )
+                } returns PageResult.empty(basicRequest().pageRequest)
+
+                useCase.perform(basicRequest(parentPageId = "50"))
+
+                verify {
+                    pageSearchPort.search(
+                        keyword = any(),
+                        spaceId = any(),
+                        tagIds = any(),
+                        tagIdsAnyOf = any(),
+                        parentPageId = PageId(50L),
+                        onlyRoot = false,
+                        sort = any(),
+                        scope = any(),
+                        pageRequest = any()
+                    )
+                }
+            }
+
+            it("onlyRoot 가 true 면 port 에 그대로 전달된다") {
+                every {
+                    pageSearchPort.search(
+                        keyword = any(),
+                        spaceId = any(),
+                        tagIds = any(),
+                        tagIdsAnyOf = any(),
+                        parentPageId = any(),
+                        onlyRoot = any(),
+                        sort = any(),
+                        scope = any(),
+                        pageRequest = any()
+                    )
+                } returns PageResult.empty(basicRequest().pageRequest)
+
+                useCase.perform(basicRequest(onlyRoot = true))
+
+                verify {
+                    pageSearchPort.search(
+                        keyword = any(),
+                        spaceId = any(),
+                        tagIds = any(),
+                        tagIdsAnyOf = any(),
+                        parentPageId = null,
+                        onlyRoot = true,
+                        sort = any(),
+                        scope = any(),
+                        pageRequest = any()
+                    )
+                }
+            }
+
+            it("parentPageId / onlyRoot 미지정 시 null / false 가 default 로 전달된다") {
+                every {
+                    pageSearchPort.search(
+                        keyword = any(),
+                        spaceId = any(),
+                        tagIds = any(),
+                        tagIdsAnyOf = any(),
+                        parentPageId = any(),
+                        onlyRoot = any(),
+                        sort = any(),
+                        scope = any(),
+                        pageRequest = any()
+                    )
+                } returns PageResult.empty(basicRequest().pageRequest)
+
+                useCase.perform(basicRequest())
+
+                verify {
+                    pageSearchPort.search(
+                        keyword = any(),
+                        spaceId = any(),
+                        tagIds = any(),
+                        tagIdsAnyOf = any(),
+                        parentPageId = null,
+                        onlyRoot = false,
+                        sort = any(),
+                        scope = any(),
                         pageRequest = any()
                     )
                 }
@@ -470,6 +610,18 @@ class PageSearchingUseCaseTest :
                     basicRequest(size = 201)
                 }
             }
+
+            it("parentPageId 형식이 숫자가 아니면 실패한다") {
+                shouldThrow<IllegalArgumentException> {
+                    basicRequest(parentPageId = "abc")
+                }
+            }
+
+            it("parentPageId 와 onlyRoot 를 동시에 지정하면 실패한다") {
+                shouldThrow<IllegalArgumentException> {
+                    basicRequest(parentPageId = "50", onlyRoot = true)
+                }
+            }
         }
     }) {
     companion object {
@@ -479,6 +631,8 @@ class PageSearchingUseCaseTest :
             tagIds: List<String> = emptyList(),
             tagName: String? = null,
             sort: String? = null,
+            parentPageId: String? = null,
+            onlyRoot: Boolean = false,
             page: Int = 0,
             size: Int = DEFAULT_SIZE,
             viewer: Viewer = Viewer.Member(userId = UserId(100L), isAdmin = false)
@@ -489,6 +643,8 @@ class PageSearchingUseCaseTest :
                 tagIds = tagIds,
                 tagName = tagName,
                 sort = sort,
+                parentPageId = parentPageId,
+                onlyRoot = onlyRoot,
                 page = page,
                 size = size,
                 viewer = viewer

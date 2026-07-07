@@ -126,6 +126,8 @@ class PageSearchingCompositionUseCaseTest :
                         tagIds = listOf("100", "200"),
                         tagName = "kotlin",
                         sort = "CREATED_AT",
+                        parentPageId = "50",
+                        onlyRoot = false,
                         page = 1,
                         size = 50,
                         viewer = Viewer.Anonymous
@@ -137,9 +139,36 @@ class PageSearchingCompositionUseCaseTest :
                 requestSlot.captured.tagIds.map { it.value } shouldBe listOf(100L, 200L)
                 requestSlot.captured.tagName shouldBe "kotlin"
                 requestSlot.captured.sort shouldBe SortOption.CREATED_AT
+                requestSlot.captured.parentPageId shouldBe PageId(50L)
+                requestSlot.captured.onlyRoot shouldBe false
                 requestSlot.captured.pageRequest.page shouldBe 1
                 requestSlot.captured.pageRequest.size shouldBe 50
                 requestSlot.captured.viewer shouldBe Viewer.Anonymous
+            }
+
+            it("onlyRoot=true 는 도메인 Request 로 그대로 전달된다") {
+                val requestSlot = slot<PageSearching.Request>()
+                every { pageSearching.perform(capture(requestSlot)) } returns
+                    PageResult(items = emptyList(), page = 0, size = 20, totalElements = 0L)
+                every { userHandleLookup.handlesOf(any()) } returns emptyMap()
+
+                useCaseWith().perform(
+                    Request(
+                        keyword = null,
+                        spaceId = null,
+                        tagIds = emptyList(),
+                        tagName = null,
+                        sort = null,
+                        parentPageId = null,
+                        onlyRoot = true,
+                        page = 0,
+                        size = 20,
+                        viewer = Viewer.Anonymous
+                    )
+                )
+
+                requestSlot.captured.onlyRoot shouldBe true
+                requestSlot.captured.parentPageId shouldBe null
             }
 
             it("perform 진입에서 readOnly 트랜잭션으로 감싸고 도메인 호출·lookup 모두 tx 블록 안에서 실행한다 (LAB-156 회귀 방지)") {
@@ -167,6 +196,27 @@ class PageSearchingCompositionUseCaseTest :
                             tagIds = emptyList(),
                             tagName = null,
                             sort = null,
+                            parentPageId = null,
+                            onlyRoot = false,
+                            page = 0,
+                            size = 20,
+                            viewer = Viewer.Anonymous
+                        )
+                    )
+                }
+            }
+
+            it("parentPageId 와 onlyRoot 를 동시에 지정하면 IllegalArgumentException 을 그대로 올린다") {
+                shouldThrow<IllegalArgumentException> {
+                    useCaseWith().perform(
+                        Request(
+                            keyword = null,
+                            spaceId = null,
+                            tagIds = emptyList(),
+                            tagName = null,
+                            sort = null,
+                            parentPageId = "50",
+                            onlyRoot = true,
                             page = 0,
                             size = 20,
                             viewer = Viewer.Anonymous
@@ -184,6 +234,8 @@ class PageSearchingCompositionUseCaseTest :
                 tagIds = emptyList(),
                 tagName = null,
                 sort = null,
+                parentPageId = null,
+                onlyRoot = false,
                 page = 0,
                 size = 20,
                 viewer = Viewer.Anonymous

@@ -24,6 +24,8 @@ class PageSearchingCompositionController(
         @RequestParam(required = false) tag: List<String>?,
         @RequestParam(required = false) tagName: String?,
         @RequestParam(required = false) sort: String?,
+        @RequestParam(required = false) parentPageId: String?,
+        @RequestParam(defaultValue = "false") onlyRoot: Boolean,
         @RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "$DEFAULT_SIZE") size: Int,
         auth: Auth?
@@ -34,6 +36,8 @@ class PageSearchingCompositionController(
             tagIds = tag.orEmpty(),
             tagName = tagName,
             sort = sort,
+            parentPageId = parentPageId,
+            onlyRoot = onlyRoot,
             page = page,
             size = size,
             viewer = auth.toViewer()

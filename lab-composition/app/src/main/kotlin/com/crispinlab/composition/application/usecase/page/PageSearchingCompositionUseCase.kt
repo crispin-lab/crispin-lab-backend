@@ -32,6 +32,8 @@ class PageSearchingCompositionUseCase(
             tagIds = tagIds,
             tagName = tagName,
             sort = sort,
+            parentPageId = parentPageId,
+            onlyRoot = onlyRoot,
             page = page,
             size = size,
             viewer = viewer

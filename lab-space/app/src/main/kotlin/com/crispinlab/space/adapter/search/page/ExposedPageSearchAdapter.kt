@@ -44,10 +44,15 @@ class ExposedPageSearchAdapter : PageSearchPort {
         spaceId: SpaceId?,
         tagIds: Collection<TagId>,
         tagIdsAnyOf: Collection<TagId>,
+        parentPageId: PageId?,
+        onlyRoot: Boolean,
         sort: SortOption,
         scope: VisibilityScope,
         pageRequest: PageRequest
     ): PageResult<PageSummary> {
+        require(!(onlyRoot && parentPageId != null)) {
+            "parentPageId 와 onlyRoot 는 동시에 지정할 수 없습니다."
+        }
         val tagPageIds =
             if (tagIds.isEmpty()) {
                 null
@@ -70,6 +75,8 @@ class ExposedPageSearchAdapter : PageSearchPort {
             spaceId,
             tagPageIds,
             anyOfPageIds,
+            parentPageId,
+            onlyRoot,
             scope.toClauses().toExposedOp()
         ).toPageResult(pageRequest, *sort.toOrderColumns()) { it.toSummary() }
     }
@@ -139,6 +146,8 @@ class ExposedPageSearchAdapter : PageSearchPort {
         spaceId: SpaceId?,
         tagPageIds: List<Long>?,
         anyOfPageIds: List<Long>?,
+        parentPageId: PageId?,
+        onlyRoot: Boolean,
         visibilityCondition: Op<Boolean>
     ): Query {
         val conditions =
@@ -156,6 +165,8 @@ class ExposedPageSearchAdapter : PageSearchPort {
                 spaceId?.let { add(Pages.spaceId eq it.value) }
                 tagPageIds?.let { add(Pages.id inList it) }
                 anyOfPageIds?.let { add(Pages.id inList it) }
+                if (onlyRoot) add(Pages.parentPageId.isNull())
+                parentPageId?.let { add(Pages.parentPageId eq it.value) }
             }
         val combined = conditions.compoundAnd()
         return Pages

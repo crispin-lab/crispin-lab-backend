@@ -106,6 +106,12 @@ class PageSearchingCompositionControllerTest :
                                 isOptional true,
                             "sort" isParameterFor
                                 "정렬 옵션 (CREATED_AT / UPDATED_AT / RELEVANCE / TREE, 기본값 UPDATED_AT)"
+                                isOptional true,
+                            "parentPageId" isParameterFor
+                                "부모 페이지 ID 필터 (해당 부모의 직계 자녀만 반환, onlyRoot 와 상호 배타)"
+                                isOptional true,
+                            "onlyRoot" isParameterFor
+                                "루트 페이지 (parentPageId 가 null) 만 반환. 기본값 false, parentPageId 와 상호 배타"
                                 isOptional true
                         ).withPaging(),
                         responseFields {
@@ -214,6 +220,66 @@ class PageSearchingCompositionControllerTest :
                 requestSlot.captured.sort shouldBe "CREATED_AT"
             }
 
+            it("parentPageId 파라미터가 UseCase Request 에 전달된다") {
+                val requestSlot = slot<PageSearchingComposition.Request>()
+                every { useCase.perform(capture(requestSlot)) } returns
+                    PageResult(
+                        items = emptyList(),
+                        page = 0,
+                        size = 20,
+                        totalElements = 0L
+                    )
+
+                controller
+                    .`when`(
+                        get("/v1/pages")
+                            .withAuth()
+                            .param("parentPageId", "100")
+                    ).then(status().isOk)
+
+                requestSlot.captured.parentPageId shouldBe "100"
+                requestSlot.captured.onlyRoot shouldBe false
+            }
+
+            it("onlyRoot=true 파라미터가 UseCase Request 에 전달된다") {
+                val requestSlot = slot<PageSearchingComposition.Request>()
+                every { useCase.perform(capture(requestSlot)) } returns
+                    PageResult(
+                        items = emptyList(),
+                        page = 0,
+                        size = 20,
+                        totalElements = 0L
+                    )
+
+                controller
+                    .`when`(
+                        get("/v1/pages")
+                            .withAuth()
+                            .param("onlyRoot", "true")
+                    ).then(status().isOk)
+
+                requestSlot.captured.onlyRoot shouldBe true
+                requestSlot.captured.parentPageId shouldBe null
+            }
+
+            it("parentPageId / onlyRoot 미지정 시 null / false 가 default 로 전달된다") {
+                val requestSlot = slot<PageSearchingComposition.Request>()
+                every { useCase.perform(capture(requestSlot)) } returns
+                    PageResult(
+                        items = emptyList(),
+                        page = 0,
+                        size = 20,
+                        totalElements = 0L
+                    )
+
+                controller
+                    .`when`(get("/v1/pages").withAuth())
+                    .then(status().isOk)
+
+                requestSlot.captured.parentPageId shouldBe null
+                requestSlot.captured.onlyRoot shouldBe false
+            }
+
             it("space 형식이 숫자가 아니면 UseCase 가 던진 IllegalArgumentException 이 400 으로 매핑된다") {
                 every { useCase.perform(any()) } throws
                     IllegalArgumentException("스페이스 ID 형식이 올바르지 않습니다.")
@@ -227,6 +293,23 @@ class PageSearchingCompositionControllerTest :
                         status().isBadRequest,
                         jsonPath("$.code").value("INVALID_REQUEST"),
                         jsonPath("$.message").value("스페이스 ID 형식이 올바르지 않습니다.")
+                    )
+            }
+
+            it("parentPageId 와 onlyRoot 를 동시에 지정하면 400 으로 매핑된다") {
+                every { useCase.perform(any()) } throws
+                    IllegalArgumentException("parentPageId 와 onlyRoot 는 동시에 지정할 수 없습니다.")
+
+                controller
+                    .`when`(
+                        get("/v1/pages")
+                            .withAuth()
+                            .param("parentPageId", "50")
+                            .param("onlyRoot", "true")
+                    ).then(
+                        status().isBadRequest,
+                        jsonPath("$.code").value("INVALID_REQUEST"),
+                        jsonPath("$.message").value("parentPageId 와 onlyRoot 는 동시에 지정할 수 없습니다.")
                     )
             }
 

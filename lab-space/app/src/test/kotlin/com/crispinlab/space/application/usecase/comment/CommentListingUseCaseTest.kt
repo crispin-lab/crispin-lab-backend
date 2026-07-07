@@ -109,7 +109,7 @@ class CommentListingUseCaseTest :
                 capturedPageRequest.captured.size shouldBe 5
             }
 
-            it("결과가 비어 있어도 빈 페이지를 반환한다 — membership lookup 도 호출되지 않음") {
+            it("결과가 비어 있어도 빈 페이지를 반환한다") {
                 every { commentRepository.findByPageId(any(), any()) } returns
                     PageResult(
                         items = emptyList(),
@@ -122,9 +122,6 @@ class CommentListingUseCaseTest :
 
                 result.items shouldBe emptyList()
                 result.totalElements shouldBe 0L
-                verify(exactly = 0) {
-                    spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
-                }
             }
 
             it("Page 가 없으면 NotFoundException") {
@@ -192,7 +189,7 @@ class CommentListingUseCaseTest :
         }
 
         describe("각 Summary 의 canEdit — viewer 의 수정 권한 노출") {
-            it("ADMIN 은 본인/타인 댓글 모두 canEdit=true (membership lookup 호출되지 않음)") {
+            it("ADMIN 은 본인/타인 댓글 모두 canEdit=true") {
                 every { commentRepository.findByPageId(any(), any()) } returns
                     PageResult(
                         items =
@@ -208,17 +205,9 @@ class CommentListingUseCaseTest :
                 val result = useCase.perform(basicRequest(isAdmin = true))
 
                 result.items.map { it.canEdit } shouldBe listOf(true, true)
-                verify(exactly = 0) {
-                    spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
-                }
             }
 
-            it("일반 USER 는 본인 댓글만 canEdit=true — N개 row 라도 membership lookup 은 1회") {
-                val page = basicPage()
-                every { pageRepository.findBy(any()) } returns page
-                every {
-                    spaceMemberRepository.findBySpaceIdAndUserId(page.spaceId, UserId(100L))
-                } returns basicSpaceMember(role = SpaceMemberRole.MEMBER)
+            it("일반 USER 는 본인 댓글만 canEdit=true") {
                 every { commentRepository.findByPageId(any(), any()) } returns
                     PageResult(
                         items =
@@ -235,14 +224,9 @@ class CommentListingUseCaseTest :
                 val result = useCase.perform(basicRequest(userId = UserId(100L)))
 
                 result.items.map { it.canEdit } shouldBe listOf(true, true, false)
-                verify(exactly = 1) {
-                    spaceMemberRepository.findBySpaceIdAndUserId(page.spaceId, UserId(100L))
-                }
             }
 
-            it("본인 댓글이 한 건도 없으면 membership lookup 도 생략 (canEdit 전부 false)") {
-                val page = basicPage()
-                every { pageRepository.findBy(any()) } returns page
+            it("본인 댓글이 없으면 canEdit 전부 false") {
                 every { commentRepository.findByPageId(any(), any()) } returns
                     PageResult(
                         items =
@@ -258,12 +242,23 @@ class CommentListingUseCaseTest :
                 val result = useCase.perform(basicRequest(userId = UserId(100L)))
 
                 result.items.map { it.canEdit } shouldBe listOf(false, false)
-                verify(exactly = 0) {
-                    spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
-                }
             }
 
-            it("일반 USER 가 스페이스 쓰기 권한이 없으면 본인 댓글도 canEdit=false (VIEWER role)") {
+            it("스페이스 비멤버 author 도 자기 댓글은 canEdit=true (스페이스 멤버십 무관)") {
+                every { commentRepository.findByPageId(any(), any()) } returns
+                    PageResult(
+                        items = listOf(basicComment(authorId = UserId(100L))),
+                        page = 0,
+                        size = 20,
+                        totalElements = 1L
+                    )
+
+                val result = useCase.perform(basicRequest(userId = UserId(100L)))
+
+                result.items.single().canEdit shouldBe true
+            }
+
+            it("VIEWER role author 도 자기 댓글은 canEdit=true (스페이스 write role 무관)") {
                 val page = basicPage()
                 every { pageRepository.findBy(any()) } returns page
                 every {
@@ -279,7 +274,7 @@ class CommentListingUseCaseTest :
 
                 val result = useCase.perform(basicRequest(userId = UserId(100L)))
 
-                result.items.single().canEdit shouldBe false
+                result.items.single().canEdit shouldBe true
             }
         }
     }) {

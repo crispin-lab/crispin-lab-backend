@@ -218,14 +218,11 @@ class CommentGettingUseCaseTest :
                 result.canEdit shouldBe true
             }
 
-            it("본인 댓글 + 스페이스 쓰기 권한 보유면 canEdit=true") {
+            it("본인 댓글이면 canEdit=true (스페이스 멤버십 무관)") {
                 val page = basicPage(id = PageId(10L), visibility = Visibility.PUBLIC)
                 val comment = basicComment(pageId = page.id, authorId = UserId(100L))
                 every { pageRepository.findBy(page.id) } returns page
                 every { commentRepository.findBy(comment.id) } returns comment
-                every {
-                    spaceMemberRepository.findBySpaceIdAndUserId(page.spaceId, UserId(100L))
-                } returns basicSpaceMember(role = SpaceMemberRole.MEMBER)
 
                 val result =
                     useCase.perform(
@@ -239,7 +236,25 @@ class CommentGettingUseCaseTest :
                 result.canEdit shouldBe true
             }
 
-            it("본인 댓글이지만 스페이스 쓰기 권한이 없으면 canEdit=false (VIEWER role)") {
+            it("스페이스 비멤버 author 도 자기 댓글은 canEdit=true") {
+                val page = basicPage(id = PageId(10L), visibility = Visibility.PUBLIC)
+                val comment = basicComment(pageId = page.id, authorId = UserId(100L))
+                every { pageRepository.findBy(page.id) } returns page
+                every { commentRepository.findBy(comment.id) } returns comment
+
+                val result =
+                    useCase.perform(
+                        basicRequest(
+                            pageId = "10",
+                            commentId = comment.id.value.toString(),
+                            userId = UserId(100L)
+                        )
+                    )
+
+                result.canEdit shouldBe true
+            }
+
+            it("VIEWER role author 도 자기 댓글은 canEdit=true (스페이스 write role 무관)") {
                 val page = basicPage(id = PageId(10L), visibility = Visibility.PUBLIC)
                 val comment = basicComment(pageId = page.id, authorId = UserId(100L))
                 every { pageRepository.findBy(page.id) } returns page
@@ -257,7 +272,7 @@ class CommentGettingUseCaseTest :
                         )
                     )
 
-                result.canEdit shouldBe false
+                result.canEdit shouldBe true
             }
 
             it("타인 댓글이면 canEdit=false (일반 USER)") {
@@ -265,9 +280,6 @@ class CommentGettingUseCaseTest :
                 val comment = basicComment(pageId = page.id, authorId = UserId(999L))
                 every { pageRepository.findBy(page.id) } returns page
                 every { commentRepository.findBy(comment.id) } returns comment
-                every {
-                    spaceMemberRepository.findBySpaceIdAndUserId(page.spaceId, UserId(100L))
-                } returns basicSpaceMember(role = SpaceMemberRole.MEMBER)
 
                 val result =
                     useCase.perform(

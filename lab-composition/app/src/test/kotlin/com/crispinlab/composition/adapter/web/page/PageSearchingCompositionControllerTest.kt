@@ -296,6 +296,23 @@ class PageSearchingCompositionControllerTest :
                     )
             }
 
+            it("parentPageId 와 onlyRoot 를 동시에 지정하면 400 으로 매핑된다") {
+                every { useCase.perform(any()) } throws
+                    IllegalArgumentException("parentPageId 와 onlyRoot 는 동시에 지정할 수 없습니다.")
+
+                controller
+                    .`when`(
+                        get("/v1/pages")
+                            .withAuth()
+                            .param("parentPageId", "50")
+                            .param("onlyRoot", "true")
+                    ).then(
+                        status().isBadRequest,
+                        jsonPath("$.code").value("INVALID_REQUEST"),
+                        jsonPath("$.message").value("parentPageId 와 onlyRoot 는 동시에 지정할 수 없습니다.")
+                    )
+            }
+
             it("page 가 음수면 UseCase 가 던진 IllegalArgumentException 이 400 으로 매핑된다") {
                 every { useCase.perform(any()) } throws
                     IllegalArgumentException("페이지 번호는 0 이상이어야 합니다.")

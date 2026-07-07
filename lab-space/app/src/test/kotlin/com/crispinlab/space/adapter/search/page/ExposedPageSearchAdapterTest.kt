@@ -19,6 +19,7 @@ import com.crispinlab.space.testsupport.Fixtures.basicPage
 import com.crispinlab.space.testsupport.seedPublicSpaces
 import com.crispinlab.space.testsupport.seedSpaces
 import com.crispinlab.user.domain.user.UserId
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldHaveSize
@@ -282,6 +283,24 @@ class ExposedPageSearchAdapterTest :
 
                 result.items.map { it.id } shouldBe listOf(PageId(2L))
                 result.totalElements shouldBe 1L
+            }
+
+            it("parentPageId 와 onlyRoot 를 동시에 지정하면 어댑터에서도 실패한다") {
+                shouldThrow<IllegalArgumentException> {
+                    transaction(database) {
+                        adapter.search(
+                            keyword = null,
+                            spaceId = null,
+                            tagIds = emptyList(),
+                            tagIdsAnyOf = emptyList(),
+                            parentPageId = PageId(1L),
+                            onlyRoot = true,
+                            sort = SortOption.UPDATED_AT,
+                            scope = VisibilityScope.Anonymous,
+                            pageRequest = PageRequest.firstPage()
+                        )
+                    }
+                }
             }
 
             it("키워드는 title 과 content 를 모두 LIKE 매칭한다") {

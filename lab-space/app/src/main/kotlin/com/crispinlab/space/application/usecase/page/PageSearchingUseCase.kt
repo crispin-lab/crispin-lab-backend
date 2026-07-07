@@ -39,6 +39,8 @@ class PageSearchingUseCase(
                     spaceId = spaceId,
                     tagIds = tagIds,
                     tagIdsAnyOf = tagIdsAnyOf,
+                    parentPageId = parentPageId,
+                    onlyRoot = onlyRoot,
                     sort = sort,
                     scope = toScope(),
                     pageRequest = pageRequest

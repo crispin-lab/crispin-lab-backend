@@ -18,6 +18,8 @@ interface PageSearchingComposition : UseCase<Request, PageResult<Result>> {
         val tagIds: List<String>,
         val tagName: String?,
         val sort: String?,
+        val parentPageId: String?,
+        val onlyRoot: Boolean,
         val page: Int,
         val size: Int,
         val viewer: Viewer

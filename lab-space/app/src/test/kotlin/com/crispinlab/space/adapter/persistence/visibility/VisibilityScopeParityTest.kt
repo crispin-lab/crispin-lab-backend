@@ -180,6 +180,8 @@ class VisibilityScopeParityTest :
                         spaceId = null,
                         tagIds = emptyList(),
                         tagIdsAnyOf = emptyList(),
+                        parentPageId = null,
+                        onlyRoot = false,
                         sort = SortOption.CREATED_AT,
                         scope = scope,
                         pageRequest = PageRequest(page = 0, size = MATRIX_PAGE_SIZE)

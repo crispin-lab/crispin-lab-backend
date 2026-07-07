@@ -10,6 +10,7 @@ import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.SortOp
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.SortOption.Companion.asSortOption
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.PageId
+import com.crispinlab.space.domain.page.PageId.Companion.asPageId
 import com.crispinlab.space.domain.page.Visibility
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.space.SpaceId.Companion.asSpaceId
@@ -25,6 +26,8 @@ interface PageSearching : UseCase<Request, PageResult<Summary>> {
         tagIds: List<String>,
         tagName: String? = null,
         sort: String? = null,
+        parentPageId: String? = null,
+        val onlyRoot: Boolean = false,
         page: Int = 0,
         size: Int = DEFAULT_SIZE,
         val viewer: Viewer
@@ -34,11 +37,18 @@ interface PageSearching : UseCase<Request, PageResult<Summary>> {
         val tagIds: List<TagId> = tagIds.map { it.asTagId() }
         val tagName: String? = tagName?.trim()?.takeIf { it.isNotEmpty() }
         val sort: SortOption = sort?.asSortOption() ?: SortOption.UPDATED_AT
+        val parentPageId: PageId? = parentPageId?.asPageId()
         val pageRequest: PageRequest =
             PageRequest(
                 page = page,
                 size = size
             )
+
+        init {
+            require(!(onlyRoot && this.parentPageId != null)) {
+                "parentPageId 와 onlyRoot 는 동시에 지정할 수 없습니다."
+            }
+        }
     }
 
     data class Summary(

@@ -9,10 +9,9 @@ import com.crispinlab.space.application.port.outgoing.comment.CommentRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
-import com.crispinlab.space.application.usecase.access.canEdit
+import com.crispinlab.space.application.usecase.access.canEditCommentOf
 import com.crispinlab.space.application.usecase.access.requireReadablePage
 import com.crispinlab.space.domain.comment.Comment
-import com.crispinlab.space.domain.page.Page
 import org.springframework.stereotype.Service
 
 @Service
@@ -25,33 +24,23 @@ class CommentListingUseCase(
 ) : CommentListing {
     override fun perform(request: Request): PageResult<Summary> =
         transactionProvider.transactional(readOnly = true) {
-            val page =
-                requireReadablePage(
-                    pageRepository = pageRepository,
-                    spaceRepository = spaceRepository,
-                    spaceMemberRepository = spaceMemberRepository,
-                    viewer = request.viewer,
-                    pageId = request.pageId
-                )
-            request.toResult(page = page)
+            request
+                .also {
+                    requireReadablePage(
+                        pageRepository = pageRepository,
+                        spaceRepository = spaceRepository,
+                        spaceMemberRepository = spaceMemberRepository,
+                        viewer = it.viewer,
+                        pageId = it.pageId
+                    )
+                }.toResult()
         }
 
-    private fun Request.toResult(page: Page): PageResult<Summary> =
+    private fun Request.toResult(): PageResult<Summary> =
         commentRepository
             .findByPageId(pageId, pageRequest)
-            .let { comments ->
-                val authorIds = comments.items.map { it.authorId }
-                val canEditByAuthor =
-                    spaceMemberRepository.canEdit(
-                        viewer = viewer,
-                        authorIds = authorIds,
-                        spaceId = page.spaceId
-                    )
-                comments.map { comment ->
-                    comment.toSummary(
-                        canEdit = canEditByAuthor[comment.authorId] == true
-                    )
-                }
+            .map { comment ->
+                comment.toSummary(canEdit = viewer.canEditCommentOf(comment.authorId))
             }
 
     private fun Comment.toSummary(canEdit: Boolean): Summary =

@@ -8,6 +8,7 @@ import com.crispinlab.space.application.port.incoming.comment.CommentEditing.Res
 import com.crispinlab.space.application.port.outgoing.comment.CommentRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
+import com.crispinlab.space.application.usecase.access.canEditCommentOf
 import com.crispinlab.space.application.usecase.mention.MentionDispatcher
 import com.crispinlab.space.application.usecase.mention.extractMentions
 import com.crispinlab.space.domain.comment.Comment
@@ -40,7 +41,7 @@ class CommentEditingUseCase(
         commentRepository
             .findBy(commentId)
             ?.takeIf { it.pageId == pageId }
-            ?.takeIf { viewer.isAdmin || it.authorId == viewer.userId }
+            ?.takeIf { viewer.canEditCommentOf(it.authorId) }
             ?: throw NotFoundException(CommentErrorCode.COMMENT_NOT_FOUND)
 
     private fun Comment.editWith(request: Request): Comment =

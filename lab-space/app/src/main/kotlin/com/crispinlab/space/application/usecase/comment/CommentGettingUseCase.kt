@@ -9,7 +9,7 @@ import com.crispinlab.space.application.port.outgoing.comment.CommentRepository
 import com.crispinlab.space.application.port.outgoing.page.PageRepository
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
-import com.crispinlab.space.application.usecase.access.canEdit
+import com.crispinlab.space.application.usecase.access.canEditCommentOf
 import com.crispinlab.space.application.usecase.access.requireReadablePage
 import com.crispinlab.space.domain.comment.Comment
 import com.crispinlab.space.domain.comment.CommentErrorCode
@@ -25,25 +25,18 @@ class CommentGettingUseCase(
 ) : CommentGetting {
     override fun perform(request: Request): Result =
         transactionProvider.transactional(readOnly = true) {
-            val page =
-                requireReadablePage(
-                    pageRepository = pageRepository,
-                    spaceRepository = spaceRepository,
-                    spaceMemberRepository = spaceMemberRepository,
-                    viewer = request.viewer,
-                    pageId = request.pageId
-                )
             request
-                .toEntity()
-                .let { comment ->
-                    comment.toResult(
-                        canEdit =
-                            spaceMemberRepository.canEdit(
-                                viewer = request.viewer,
-                                authorId = comment.authorId,
-                                spaceId = page.spaceId
-                            )
+                .also {
+                    requireReadablePage(
+                        pageRepository = pageRepository,
+                        spaceRepository = spaceRepository,
+                        spaceMemberRepository = spaceMemberRepository,
+                        viewer = it.viewer,
+                        pageId = it.pageId
                     )
+                }.toEntity()
+                .let { comment ->
+                    comment.toResult(canEdit = request.viewer.canEditCommentOf(comment.authorId))
                 }
         }
 

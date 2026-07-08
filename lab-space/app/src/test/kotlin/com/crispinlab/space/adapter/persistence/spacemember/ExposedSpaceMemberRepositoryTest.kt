@@ -321,6 +321,98 @@ class ExposedSpaceMemberRepositoryTest :
                 }
             }
 
+            it("rolesOf 는 사용자의 각 스페이스 role 을 map 으로 반환하고 매핑 없는 space 는 결과에서 제외한다") {
+                transaction(database) {
+                    repository.save(
+                        basicSpaceMember(
+                            id = SpaceMemberId(60L),
+                            spaceId = SpaceId(100L),
+                            userId = UserId(600L),
+                            role = SpaceMemberRole.OWNER
+                        )
+                    )
+                    repository.save(
+                        basicSpaceMember(
+                            id = SpaceMemberId(61L),
+                            spaceId = SpaceId(101L),
+                            userId = UserId(600L),
+                            role = SpaceMemberRole.MEMBER
+                        )
+                    )
+                    repository.save(
+                        basicSpaceMember(
+                            id = SpaceMemberId(62L),
+                            spaceId = SpaceId(102L),
+                            userId = UserId(601L),
+                            role = SpaceMemberRole.OWNER
+                        )
+                    )
+                }
+
+                transaction(database) {
+                    repository.rolesOf(
+                        userId = UserId(600L),
+                        spaceIds = setOf(SpaceId(100L), SpaceId(101L), SpaceId(102L))
+                    ) shouldBe
+                        mapOf(
+                            SpaceId(100L) to SpaceMemberRole.OWNER,
+                            SpaceId(101L) to SpaceMemberRole.MEMBER
+                        )
+                }
+            }
+
+            it("rolesOf 는 빈 spaceIds 에 대해 emptyMap 반환한다") {
+                transaction(database) {
+                    repository.rolesOf(UserId(1L), emptyList()) shouldBe emptyMap()
+                }
+            }
+
+            it("memberCountsOf 는 스페이스별 멤버 수를 반환하고 0 명 스페이스는 결과에서 제외한다") {
+                transaction(database) {
+                    repository.save(
+                        basicSpaceMember(
+                            id = SpaceMemberId(70L),
+                            spaceId = SpaceId(110L),
+                            userId = UserId(700L)
+                        )
+                    )
+                    repository.save(
+                        basicSpaceMember(
+                            id = SpaceMemberId(71L),
+                            spaceId = SpaceId(110L),
+                            userId = UserId(701L)
+                        )
+                    )
+                    repository.save(
+                        basicSpaceMember(
+                            id = SpaceMemberId(72L),
+                            spaceId = SpaceId(110L),
+                            userId = UserId(702L)
+                        )
+                    )
+                    repository.save(
+                        basicSpaceMember(
+                            id = SpaceMemberId(73L),
+                            spaceId = SpaceId(111L),
+                            userId = UserId(703L)
+                        )
+                    )
+                }
+
+                transaction(database) {
+                    repository.memberCountsOf(
+                        setOf(SpaceId(110L), SpaceId(111L), SpaceId(112L))
+                    ) shouldBe
+                        mapOf(SpaceId(110L) to 3L, SpaceId(111L) to 1L)
+                }
+            }
+
+            it("memberCountsOf 는 빈 spaceIds 에 대해 emptyMap 반환한다") {
+                transaction(database) {
+                    repository.memberCountsOf(emptyList()) shouldBe emptyMap()
+                }
+            }
+
             it("findBySpaceId 는 joinedAt ASC 순으로 정렬한다") {
                 transaction(database) {
                     repository.save(

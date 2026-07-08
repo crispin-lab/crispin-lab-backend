@@ -5,6 +5,7 @@ import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.spacemember.SpaceMember
 import com.crispinlab.space.domain.spacemember.SpaceMemberId
+import com.crispinlab.space.domain.spacemember.SpaceMemberRole
 import com.crispinlab.user.domain.user.UserId
 
 interface SpaceMemberRepository {
@@ -25,6 +26,13 @@ interface SpaceMemberRepository {
     fun findSpaceIdsByUserId(userId: UserId): Set<SpaceId>
 
     fun findSpaceIdsByUserIds(userIds: Collection<UserId>): Map<UserId, Set<SpaceId>>
+
+    fun rolesOf(
+        userId: UserId,
+        spaceIds: Collection<SpaceId>
+    ): Map<SpaceId, SpaceMemberRole>
+
+    fun memberCountsOf(spaceIds: Collection<SpaceId>): Map<SpaceId, Long>
 
     fun countOwnersBy(spaceId: SpaceId): Long
 

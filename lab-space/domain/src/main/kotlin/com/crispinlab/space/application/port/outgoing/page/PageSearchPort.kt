@@ -24,6 +24,11 @@ interface PageSearchPort {
         pageRequest: PageRequest
     ): PageResult<PageSummary>
 
+    fun statsBySpaceIds(
+        spaceIds: Collection<SpaceId>,
+        scope: VisibilityScope
+    ): Map<SpaceId, PageStat>
+
     enum class SortOption {
         CREATED_AT,
         UPDATED_AT,
@@ -113,6 +118,17 @@ interface PageSearchPort {
         val title: String,
         val visibility: Visibility,
         val displayOrder: Int,
+        val updatedAt: Instant
+    )
+
+    data class PageStat(
+        val count: Long,
+        val latest: LatestPage?
+    )
+
+    data class LatestPage(
+        val pageId: PageId,
+        val title: String,
         val updatedAt: Instant
     )
 }

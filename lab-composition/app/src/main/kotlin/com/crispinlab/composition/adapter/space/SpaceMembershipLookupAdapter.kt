@@ -4,6 +4,7 @@ import com.crispinlab.composition.application.port.outgoing.space.SpaceMembershi
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.space.SpaceId
+import com.crispinlab.space.domain.spacemember.SpaceMemberRole
 import com.crispinlab.user.domain.user.UserId
 import org.springframework.stereotype.Component
 
@@ -36,6 +37,23 @@ class SpaceMembershipLookupAdapter(
         val memberships = spaceMemberRepository.findSpaceIdsByUserIds(idSet)
         return idSet.filterTo(mutableSetOf()) { spaceId in memberships[it].orEmpty() }
     }
+
+    override fun rolesOf(
+        userId: UserId,
+        spaceIds: Collection<SpaceId>
+    ): Map<SpaceId, SpaceMemberRole> {
+        val idSet = spaceIds.toSet()
+        if (idSet.isEmpty()) return emptyMap()
+        return spaceMemberRepository.rolesOf(userId, idSet)
+    }
+
+    override fun memberCountsOf(spaceIds: Collection<SpaceId>): Map<SpaceId, Long> {
+        val idSet = spaceIds.toSet()
+        if (idSet.isEmpty()) return emptyMap()
+        return spaceMemberRepository.memberCountsOf(idSet)
+    }
+
+    override fun memberSpaceIdsOf(viewer: Viewer): Set<SpaceId> = viewer.memberSpaceIds()
 
     private fun Viewer.memberSpaceIds(): Set<SpaceId> =
         when (this) {

@@ -1482,6 +1482,283 @@ class ExposedPageSearchAdapterTest :
                 result.items.map { it.id } shouldBe listOf(PageId(500L))
             }
         }
+
+        describe("스페이스별 페이지 통계") {
+            it("스페이스별 count 와 latest snapshot 을 반환하고 latest 는 updatedAt DESC 로 결정된다") {
+                transaction(database) {
+                    pageRepository.save(
+                        publicPage(
+                            id = PageId(1L),
+                            spaceId = SpaceId(10L),
+                            title = "10-이전",
+                            createdAt = DUMMY_INSTANT
+                        )
+                    )
+                    pageRepository.save(
+                        publicPage(
+                            id = PageId(2L),
+                            spaceId = SpaceId(10L),
+                            title = "10-최근",
+                            createdAt = DUMMY_INSTANT.plusSeconds(60)
+                        )
+                    )
+                    pageRepository.save(
+                        publicPage(
+                            id = PageId(3L),
+                            spaceId = SpaceId(20L),
+                            title = "20-유일",
+                            createdAt = DUMMY_INSTANT.plusSeconds(30)
+                        )
+                    )
+                }
+
+                val stats =
+                    transaction(database) {
+                        adapter.statsBySpaceIds(
+                            spaceIds = setOf(SpaceId(10L), SpaceId(20L), SpaceId(99L)),
+                            scope = VisibilityScope.Anonymous
+                        )
+                    }
+
+                stats[SpaceId(10L)]?.count shouldBe 2L
+                stats[SpaceId(10L)]?.latest?.pageId shouldBe PageId(2L)
+                stats[SpaceId(10L)]?.latest?.title shouldBe "10-최근"
+                stats[SpaceId(20L)]?.count shouldBe 1L
+                stats[SpaceId(20L)]?.latest?.pageId shouldBe PageId(3L)
+                stats[SpaceId(99L)] shouldBe null
+            }
+
+            it("같은 updatedAt 이 여럿이면 id DESC 로 tie-break 한다") {
+                transaction(database) {
+                    pageRepository.save(
+                        publicPage(
+                            id = PageId(1L),
+                            spaceId = SpaceId(10L),
+                            title = "먼저 저장",
+                            createdAt = DUMMY_INSTANT.plusSeconds(60)
+                        )
+                    )
+                    pageRepository.save(
+                        publicPage(
+                            id = PageId(2L),
+                            spaceId = SpaceId(10L),
+                            title = "나중 저장",
+                            createdAt = DUMMY_INSTANT.plusSeconds(60)
+                        )
+                    )
+                }
+
+                val stats =
+                    transaction(database) {
+                        adapter.statsBySpaceIds(
+                            spaceIds = setOf(SpaceId(10L)),
+                            scope = VisibilityScope.Anonymous
+                        )
+                    }
+
+                stats[SpaceId(10L)]?.latest?.pageId shouldBe PageId(2L)
+            }
+
+            it("deleted page 는 count 와 latest 모두에서 제외된다") {
+                transaction(database) {
+                    pageRepository.save(
+                        publicPage(
+                            id = PageId(1L),
+                            spaceId = SpaceId(10L),
+                            title = "정상",
+                            createdAt = DUMMY_INSTANT
+                        )
+                    )
+                    pageRepository.save(
+                        publicPage(
+                            id = PageId(2L),
+                            spaceId = SpaceId(10L),
+                            title = "삭제됨",
+                            createdAt = DUMMY_INSTANT.plusSeconds(3600)
+                        )
+                    )
+                    pageRepository.delete(PageId(2L))
+                }
+
+                val stats =
+                    transaction(database) {
+                        adapter.statsBySpaceIds(
+                            spaceIds = setOf(SpaceId(10L)),
+                            scope = VisibilityScope.Anonymous
+                        )
+                    }
+
+                stats[SpaceId(10L)]?.count shouldBe 1L
+                stats[SpaceId(10L)]?.latest?.pageId shouldBe PageId(1L)
+            }
+
+            it("Anonymous scope 는 PUBLIC 페이지만 카운트한다") {
+                transaction(database) {
+                    pageRepository.save(
+                        publicPage(
+                            id = PageId(1L),
+                            spaceId = SpaceId(10L),
+                            title = "PUBLIC"
+                        )
+                    )
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(2L),
+                            spaceId = SpaceId(10L),
+                            title = "DRAFT",
+                            visibility = Visibility.DRAFT,
+                            authorId = UserId(100L)
+                        )
+                    )
+                }
+
+                val stats =
+                    transaction(database) {
+                        adapter.statsBySpaceIds(
+                            spaceIds = setOf(SpaceId(10L)),
+                            scope = VisibilityScope.Anonymous
+                        )
+                    }
+
+                stats[SpaceId(10L)]?.count shouldBe 1L
+                stats[SpaceId(10L)]?.latest?.pageId shouldBe PageId(1L)
+            }
+
+            it("Authenticated scope 는 본인 DRAFT 를 포함해 카운트한다") {
+                transaction(database) {
+                    pageRepository.save(
+                        publicPage(
+                            id = PageId(1L),
+                            spaceId = SpaceId(10L),
+                            title = "PUBLIC"
+                        )
+                    )
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(2L),
+                            spaceId = SpaceId(10L),
+                            title = "내 DRAFT",
+                            visibility = Visibility.DRAFT,
+                            authorId = UserId(500L)
+                        )
+                    )
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(3L),
+                            spaceId = SpaceId(10L),
+                            title = "타인 DRAFT",
+                            visibility = Visibility.DRAFT,
+                            authorId = UserId(999L)
+                        )
+                    )
+                }
+
+                val stats =
+                    transaction(database) {
+                        adapter.statsBySpaceIds(
+                            spaceIds = setOf(SpaceId(10L)),
+                            scope =
+                                VisibilityScope.Authenticated(
+                                    viewerId = UserId(500L),
+                                    memberOfSpaceIds = emptySet()
+                                )
+                        )
+                    }
+
+                stats[SpaceId(10L)]?.count shouldBe 2L
+            }
+
+            it("INTERNAL space 안의 페이지는 memberOfSpaceIds 에 포함된 Member 에게만 노출된다") {
+                seedSpaces(database, 50L to SpaceVisibility.INTERNAL)
+                transaction(database) {
+                    pageRepository.save(
+                        publicPage(
+                            id = PageId(500L),
+                            spaceId = SpaceId(50L),
+                            title = "internal-PUBLIC",
+                            createdAt = DUMMY_INSTANT.plusSeconds(60)
+                        )
+                    )
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(501L),
+                            spaceId = SpaceId(50L),
+                            authorId = UserId(200L),
+                            visibility = Visibility.MEMBER,
+                            title = "internal-MEMBER",
+                            createdAt = DUMMY_INSTANT.plusSeconds(120)
+                        )
+                    )
+                }
+
+                val memberStats =
+                    transaction(database) {
+                        adapter.statsBySpaceIds(
+                            spaceIds = setOf(SpaceId(50L)),
+                            scope =
+                                VisibilityScope.Authenticated(
+                                    viewerId = UserId(100L),
+                                    memberOfSpaceIds = setOf(SpaceId(50L))
+                                )
+                        )
+                    }
+                memberStats[SpaceId(50L)]?.count shouldBe 2L
+                memberStats[SpaceId(50L)]?.latest?.pageId shouldBe PageId(501L)
+
+                val nonMemberStats =
+                    transaction(database) {
+                        adapter.statsBySpaceIds(
+                            spaceIds = setOf(SpaceId(50L)),
+                            scope =
+                                VisibilityScope.Authenticated(
+                                    viewerId = UserId(100L),
+                                    memberOfSpaceIds = emptySet()
+                                )
+                        )
+                    }
+                nonMemberStats[SpaceId(50L)] shouldBe null
+            }
+
+            it("Privileged scope 는 visibility 필터 없이 모두 카운트한다") {
+                transaction(database) {
+                    pageRepository.save(
+                        publicPage(
+                            id = PageId(1L),
+                            spaceId = SpaceId(10L)
+                        )
+                    )
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(2L),
+                            spaceId = SpaceId(10L),
+                            visibility = Visibility.DRAFT,
+                            authorId = UserId(999L)
+                        )
+                    )
+                }
+
+                val stats =
+                    transaction(database) {
+                        adapter.statsBySpaceIds(
+                            spaceIds = setOf(SpaceId(10L)),
+                            scope = VisibilityScope.Privileged
+                        )
+                    }
+
+                stats[SpaceId(10L)]?.count shouldBe 2L
+            }
+
+            it("빈 spaceIds 는 emptyMap 반환") {
+                val stats =
+                    transaction(database) {
+                        adapter.statsBySpaceIds(
+                            spaceIds = emptyList(),
+                            scope = VisibilityScope.Anonymous
+                        )
+                    }
+                stats shouldBe emptyMap()
+            }
+        }
     }) {
     companion object {
         fun publicPage(

@@ -16,6 +16,7 @@ import com.crispinlab.user.domain.user.UserId
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.count
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.statements.UpsertStatement
@@ -114,6 +115,32 @@ class ExposedSpaceMemberRepository :
             .groupBy({ UserId(it[SpaceMembers.userId]) }) {
                 SpaceId(it[SpaceMembers.spaceId])
             }.mapValues { it.value.toSet() }
+    }
+
+    override fun rolesOf(
+        userId: UserId,
+        spaceIds: Collection<SpaceId>
+    ): Map<SpaceId, SpaceMemberRole> {
+        if (spaceIds.isEmpty()) return emptyMap()
+        val rawSpaceIds = spaceIds.map { it.value }.distinct()
+        return SpaceMembers
+            .select(SpaceMembers.spaceId, SpaceMembers.role)
+            .where {
+                (SpaceMembers.userId eq userId.value) and (SpaceMembers.spaceId inList rawSpaceIds)
+            }.associate {
+                SpaceId(it[SpaceMembers.spaceId]) to decodeRole(it[SpaceMembers.role])
+            }
+    }
+
+    override fun memberCountsOf(spaceIds: Collection<SpaceId>): Map<SpaceId, Long> {
+        if (spaceIds.isEmpty()) return emptyMap()
+        val rawSpaceIds = spaceIds.map { it.value }.distinct()
+        val countColumn = SpaceMembers.id.count()
+        return SpaceMembers
+            .select(SpaceMembers.spaceId, countColumn)
+            .where { SpaceMembers.spaceId inList rawSpaceIds }
+            .groupBy(SpaceMembers.spaceId)
+            .associate { SpaceId(it[SpaceMembers.spaceId]) to it[countColumn] }
     }
 
     override fun countOwnersBy(spaceId: SpaceId): Long =

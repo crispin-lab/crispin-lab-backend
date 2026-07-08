@@ -3,6 +3,7 @@ package com.crispinlab.space.adapter.search.page
 import com.crispinlab.common.pagination.PageRequest
 import com.crispinlab.common.persistence.PostgresTestContext
 import com.crispinlab.space.adapter.persistence.page.ExposedPageRepository
+import com.crispinlab.space.adapter.persistence.space.ExposedSpaceRepository
 import com.crispinlab.space.adapter.persistence.tag.PageTags
 import com.crispinlab.space.adapter.persistence.tag.Tags
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.SortOption
@@ -33,6 +34,7 @@ class ExposedPageSearchAdapterTest :
     DescribeSpec({
         val database = PostgresTestContext.database
         val pageRepository = ExposedPageRepository()
+        val spaceRepository = ExposedSpaceRepository()
         val adapter = ExposedPageSearchAdapter()
 
         beforeEach {
@@ -1557,6 +1559,40 @@ class ExposedPageSearchAdapterTest :
                     }
 
                 stats[SpaceId(10L)]?.latest?.pageId shouldBe PageId(2L)
+            }
+
+            it("deleted space 의 페이지는 count 와 latest 모두에서 제외된다 (JOIN spaces.deleted_at IS NULL)") {
+                transaction(database) {
+                    pageRepository.save(
+                        publicPage(
+                            id = PageId(1L),
+                            spaceId = SpaceId(10L),
+                            title = "정상 스페이스",
+                            createdAt = DUMMY_INSTANT
+                        )
+                    )
+                    pageRepository.save(
+                        publicPage(
+                            id = PageId(2L),
+                            spaceId = SpaceId(20L),
+                            title = "삭제될 스페이스의 페이지",
+                            createdAt = DUMMY_INSTANT.plusSeconds(3600)
+                        )
+                    )
+                    spaceRepository.delete(SpaceId(20L))
+                }
+
+                val stats =
+                    transaction(database) {
+                        adapter.statsBySpaceIds(
+                            spaceIds = setOf(SpaceId(10L), SpaceId(20L)),
+                            scope = VisibilityScope.Anonymous
+                        )
+                    }
+
+                stats[SpaceId(10L)]?.count shouldBe 1L
+                stats[SpaceId(10L)]?.latest?.pageId shouldBe PageId(1L)
+                stats[SpaceId(20L)] shouldBe null
             }
 
             it("deleted page 는 count 와 latest 모두에서 제외된다") {

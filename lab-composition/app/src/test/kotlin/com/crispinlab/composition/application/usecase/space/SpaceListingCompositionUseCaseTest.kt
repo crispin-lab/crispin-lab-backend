@@ -15,6 +15,7 @@ import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.domain.spacemember.SpaceMemberRole
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.user.domain.user.UserId
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
@@ -105,6 +106,17 @@ class SpaceListingCompositionUseCaseTest :
                 verify(exactly = 1) { spaceMembershipLookup.memberCountsOf(expected) }
                 verify(exactly = 1) { pageStatLookup.countsAndLatestOf(expected, member, any()) }
                 verify(exactly = 1) { spaceMembershipLookup.memberSpaceIdsOf(member) }
+            }
+
+            it("memberSpaceIdsOf 실패는 격리하지 않고 그대로 전파한다 (pageStat scope precondition)") {
+                val member = memberViewer(userId = 100L)
+                every { spaceMembershipLookup.memberSpaceIdsOf(any()) } throws
+                    IllegalStateException("멤버십 조회 실패")
+
+                shouldThrow<IllegalStateException> {
+                    useCaseWith().perform(basicRequestFor(member))
+                }
+                verify(exactly = 0) { spaceListing.perform(any()) }
             }
 
             it("memberSpaceIdsOf 로 lookup 을 한 번만 부르고 그 값을 pageStatLookup 에 전달한다") {

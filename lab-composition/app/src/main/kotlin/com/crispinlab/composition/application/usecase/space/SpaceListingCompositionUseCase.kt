@@ -25,6 +25,7 @@ class SpaceListingCompositionUseCase(
 ) : SpaceListingComposition {
     override fun perform(request: Request): PageResult<Result> =
         transactionProvider.transactional(readOnly = true) {
+            // pageStat scope precondition — 실패 시 emptySet fallback 은 자기 스페이스 pageCount 를 silent 왜곡하므로 전파.
             val memberSpaceIds = spaceMembershipLookup.memberSpaceIdsOf(request.viewer)
             request
                 .toDomainRequest()

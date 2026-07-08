@@ -177,5 +177,57 @@ class SpaceListingCompositionControllerTest :
                     )
                 verify(exactly = 0) { useCase.perform(any()) }
             }
+
+            it("size 가 0 이면 400 으로 매핑되고 UseCase 는 호출되지 않는다") {
+                controller
+                    .`when`(
+                        get("/v1/spaces")
+                            .withAuth()
+                            .param("size", "0")
+                    ).then(
+                        status().isBadRequest,
+                        jsonPath("$.code").value("INVALID_REQUEST")
+                    )
+                verify(exactly = 0) { useCase.perform(any()) }
+            }
+
+            it("size 가 MAX_SIZE 를 넘으면 400 으로 매핑되고 UseCase 는 호출되지 않는다") {
+                controller
+                    .`when`(
+                        get("/v1/spaces")
+                            .withAuth()
+                            .param("size", "201")
+                    ).then(
+                        status().isBadRequest,
+                        jsonPath("$.code").value("INVALID_REQUEST")
+                    )
+                verify(exactly = 0) { useCase.perform(any()) }
+            }
+
+            it("page 가 숫자가 아니면 타입 변환 실패로 400 이 반환된다") {
+                controller
+                    .`when`(
+                        get("/v1/spaces")
+                            .withAuth()
+                            .param("page", "abc")
+                    ).then(
+                        status().isBadRequest,
+                        jsonPath("$.code").value("INVALID_REQUEST")
+                    )
+                verify(exactly = 0) { useCase.perform(any()) }
+            }
+
+            it("size 가 숫자가 아니면 타입 변환 실패로 400 이 반환된다") {
+                controller
+                    .`when`(
+                        get("/v1/spaces")
+                            .withAuth()
+                            .param("size", "twenty")
+                    ).then(
+                        status().isBadRequest,
+                        jsonPath("$.code").value("INVALID_REQUEST")
+                    )
+                verify(exactly = 0) { useCase.perform(any()) }
+            }
         }
     })

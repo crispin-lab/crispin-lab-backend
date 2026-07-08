@@ -10,7 +10,10 @@ import com.crispinlab.space.adapter.persistence.tag.PageTags
 import com.crispinlab.space.adapter.persistence.toPageResult
 import com.crispinlab.space.adapter.persistence.visibility.toClauses
 import com.crispinlab.space.adapter.persistence.visibility.toExposedOp
+import com.crispinlab.space.adapter.persistence.visibility.toSqlFragment
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort
+import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.LatestPage
+import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.PageStat
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.PageSummary
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.SortOption
 import com.crispinlab.space.application.port.outgoing.page.PageSearchPort.VisibilityScope
@@ -18,13 +21,18 @@ import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.tag.TagId
 import com.crispinlab.user.domain.user.UserId
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 import org.jetbrains.exposed.v1.core.Expression
+import org.jetbrains.exposed.v1.core.IColumnType
 import org.jetbrains.exposed.v1.core.JoinType
+import org.jetbrains.exposed.v1.core.LongColumnType
 import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.compoundAnd
+import org.jetbrains.exposed.v1.core.count
 import org.jetbrains.exposed.v1.core.countDistinct
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
@@ -32,9 +40,11 @@ import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.like
 import org.jetbrains.exposed.v1.core.lowerCase
 import org.jetbrains.exposed.v1.core.or
+import org.jetbrains.exposed.v1.core.statements.StatementType
 import org.jetbrains.exposed.v1.jdbc.Query
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
 import org.springframework.stereotype.Repository
 
 @Repository
@@ -79,6 +89,85 @@ class ExposedPageSearchAdapter : PageSearchPort {
             onlyRoot,
             scope.toClauses().toExposedOp()
         ).toPageResult(pageRequest, *sort.toOrderColumns()) { it.toSummary() }
+    }
+
+    override fun statsBySpaceIds(
+        spaceIds: Collection<SpaceId>,
+        scope: VisibilityScope
+    ): Map<SpaceId, PageStat> {
+        if (spaceIds.isEmpty()) return emptyMap()
+        val rawSpaceIds = spaceIds.map { it.value }.distinct()
+        val latests = latestsBySpaceIds(rawSpaceIds, scope)
+        return countsBySpaceIds(rawSpaceIds, scope)
+            .mapKeys { SpaceId(it.key) }
+            .mapValues { (spaceId, count) ->
+                PageStat(count = count, latest = latests[spaceId.value])
+            }
+    }
+
+    private fun countsBySpaceIds(
+        rawSpaceIds: List<Long>,
+        scope: VisibilityScope
+    ): Map<Long, Long> {
+        val countColumn = Pages.id.count()
+        return Pages
+            .join(
+                otherTable = Spaces,
+                joinType = JoinType.INNER,
+                additionalConstraint = { Pages.spaceId eq Spaces.id }
+            ).select(Pages.spaceId, countColumn)
+            .where {
+                (Pages.spaceId inList rawSpaceIds) and
+                    Pages.notDeleted() and
+                    Spaces.deletedAt.isNull() and
+                    scope.toClauses().toExposedOp()
+            }.groupBy(Pages.spaceId)
+            .associate { it[Pages.spaceId] to it[countColumn] }
+    }
+
+    private fun latestsBySpaceIds(
+        rawSpaceIds: List<Long>,
+        scope: VisibilityScope
+    ): Map<Long, LatestPage> {
+        val fragment = scope.toClauses().toSqlFragment()
+        val placeholders = rawSpaceIds.joinToString(", ") { "?" }
+        val sql =
+            """
+            SELECT DISTINCT ON (pages.space_id)
+                pages.space_id, pages.id, pages.title, pages.updated_at
+            FROM pages
+            INNER JOIN spaces ON spaces.id = pages.space_id AND spaces.deleted_at IS NULL
+            WHERE pages.space_id IN ($placeholders)
+              AND pages.deleted_at IS NULL
+              AND ${fragment.sql}
+            ORDER BY pages.space_id, pages.updated_at DESC, pages.id DESC
+            """.trimIndent()
+        val args =
+            buildList<Pair<IColumnType<*>, Any?>> {
+                rawSpaceIds.forEach { add(LongColumnType() to it) }
+                addAll(fragment.args)
+            }
+        return buildMap {
+            TransactionManager.current().exec(
+                stmt = sql,
+                args = args,
+                explicitStatementType = StatementType.SELECT
+            ) { rs ->
+                while (rs.next()) {
+                    put(
+                        rs.getLong("space_id"),
+                        LatestPage(
+                            pageId = PageId(rs.getLong("id")),
+                            title = rs.getString("title"),
+                            updatedAt =
+                                rs
+                                    .getObject("updated_at", LocalDateTime::class.java)
+                                    .toInstant(ZoneOffset.UTC)
+                        )
+                    )
+                }
+            }
+        }
     }
 
     private fun matchedPageIdsByTag(tagIds: Collection<TagId>): List<Long> =

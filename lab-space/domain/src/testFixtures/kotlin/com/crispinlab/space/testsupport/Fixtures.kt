@@ -1,5 +1,9 @@
 package com.crispinlab.space.testsupport
 
+import com.crispinlab.space.domain.audit.AuditChangeSummary
+import com.crispinlab.space.domain.audit.SpaceAuditAction
+import com.crispinlab.space.domain.audit.SpaceAuditEntry
+import com.crispinlab.space.domain.audit.SpaceAuditEntryId
 import com.crispinlab.space.domain.comment.Comment
 import com.crispinlab.space.domain.comment.CommentContent
 import com.crispinlab.space.domain.comment.CommentId
@@ -178,5 +182,25 @@ object Fixtures {
             userId = userId,
             role = role,
             joinedAt = joinedAt
+        )
+
+    fun basicSpaceAuditEntry(
+        id: SpaceAuditEntryId = SpaceAuditEntryId(1L),
+        spaceId: SpaceId = SpaceId(10L),
+        actorUserId: UserId = UserId(100L),
+        action: SpaceAuditAction = SpaceAuditAction.REGISTERED,
+        changeSummary: AuditChangeSummary =
+            AuditChangeSummary(
+                """{"name":"자유게시판","description":"기본 설명","visibility":"INTERNAL"}"""
+            ),
+        createdAt: Instant = DUMMY_INSTANT
+    ): SpaceAuditEntry =
+        SpaceAuditEntry(
+            id = id,
+            spaceId = spaceId,
+            actorUserId = actorUserId,
+            action = action,
+            changeSummary = changeSummary,
+            createdAt = createdAt
         )
 }

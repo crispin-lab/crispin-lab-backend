@@ -6,8 +6,11 @@ import com.crispinlab.common.transaction.DummyTransactionProvider
 import com.crispinlab.space.application.port.incoming.space.SpaceEditing.Request
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
+import com.crispinlab.space.application.usecase.audit.SpaceAuditRecorder
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.space.Space
+import com.crispinlab.space.domain.space.SpaceSnapshot
+import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.domain.spacemember.SpaceMemberRole
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.Fixtures.basicSpace
@@ -19,6 +22,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.mockk.clearMocks
 import io.mockk.every
+import io.mockk.justRun
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
@@ -27,18 +31,23 @@ class SpaceEditingUseCaseTest :
     DescribeSpec({
         val spaceRepository = mockk<SpaceRepository>()
         val spaceMemberRepository = mockk<SpaceMemberRepository>()
+        val spaceAuditRecorder = mockk<SpaceAuditRecorder>()
         val useCase =
             SpaceEditingUseCase(
                 spaceRepository = spaceRepository,
                 spaceMemberRepository = spaceMemberRepository,
+                spaceAuditRecorder = spaceAuditRecorder,
                 transactionProvider = DummyTransactionProvider()
             )
 
         beforeEach {
-            clearMocks(spaceRepository, spaceMemberRepository)
+            clearMocks(spaceRepository, spaceMemberRepository, spaceAuditRecorder)
             every {
                 spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
             } returns basicSpaceMember(role = SpaceMemberRole.OWNER)
+            justRun {
+                spaceAuditRecorder.recordEdited(any(), any(), any(), any())
+            }
         }
 
         describe("스페이스 수정") {
@@ -107,6 +116,45 @@ class SpaceEditingUseCaseTest :
                 verify(exactly = 1) { spaceRepository.save(any()) }
                 verify(exactly = 0) {
                     spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
+                }
+            }
+
+            it("수정 성공 시 before 스냅샷과 after 로 EDITED audit 을 기록한다") {
+                val space =
+                    basicSpace(
+                        name = "이전 이름",
+                        description = "이전 설명",
+                        visibility = SpaceVisibility.INTERNAL
+                    )
+                every { spaceRepository.findBy(space.id) } returns space
+                every { spaceRepository.save(any()) } answers { firstArg() }
+                val before = slot<SpaceSnapshot>()
+                val after = slot<Space>()
+                justRun {
+                    spaceAuditRecorder.recordEdited(
+                        spaceId = any(),
+                        before = capture(before),
+                        after = capture(after),
+                        viewer = any()
+                    )
+                }
+
+                useCase.perform(basicRequest(name = "새 이름"))
+
+                before.captured.name shouldBe "이전 이름"
+                before.captured.description shouldBe "이전 설명"
+                before.captured.visibility shouldBe SpaceVisibility.INTERNAL
+                after.captured.name shouldBe "새 이름"
+            }
+
+            it("실패 흐름에서는 audit 기록이 일어나지 않는다") {
+                every { spaceRepository.findBy(any()) } returns null
+
+                shouldThrow<NotFoundException> {
+                    useCase.perform(basicRequest(name = "x"))
+                }
+                verify(exactly = 0) {
+                    spaceAuditRecorder.recordEdited(any(), any(), any(), any())
                 }
             }
         }

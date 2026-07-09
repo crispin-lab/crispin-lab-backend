@@ -7,6 +7,7 @@ import com.crispinlab.space.application.port.incoming.space.SpaceRegistering.Req
 import com.crispinlab.space.application.port.incoming.space.SpaceRegistering.Result
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
+import com.crispinlab.space.application.usecase.audit.SpaceAuditRecorder
 import com.crispinlab.space.domain.space.Space
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.spacemember.SpaceMember
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service
 class SpaceRegisteringUseCase(
     private val spaceRepository: SpaceRepository,
     private val spaceMemberRepository: SpaceMemberRepository,
+    private val spaceAuditRecorder: SpaceAuditRecorder,
     private val idGenerator: IdGenerator,
     private val transactionProvider: TransactionProvider
 ) : SpaceRegistering {
@@ -28,6 +30,7 @@ class SpaceRegisteringUseCase(
                 .toEntity()
                 .let { spaceRepository.save(it) }
                 .also { it.registerOwner(request) }
+                .also { spaceAuditRecorder.recordRegistered(it, request.viewer) }
                 .toResult()
         }
 

@@ -7,8 +7,10 @@ import com.crispinlab.space.application.port.incoming.space.SpaceDeleting
 import com.crispinlab.space.application.port.incoming.space.SpaceDeleting.Request
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
+import com.crispinlab.space.application.usecase.audit.SpaceAuditRecorder
 import com.crispinlab.space.domain.space.Space
 import com.crispinlab.space.domain.space.SpaceErrorCode
+import com.crispinlab.space.domain.space.SpaceSnapshot
 import com.crispinlab.space.domain.spacemember.SpaceMemberErrorCode
 import org.springframework.stereotype.Service
 
@@ -16,14 +18,20 @@ import org.springframework.stereotype.Service
 class SpaceDeletingUseCase(
     private val spaceRepository: SpaceRepository,
     private val spaceMemberRepository: SpaceMemberRepository,
+    private val spaceAuditRecorder: SpaceAuditRecorder,
     private val transactionProvider: TransactionProvider
 ) : SpaceDeleting {
     override fun perform(request: Request) {
         transactionProvider.transactional {
-            request
-                .also { it.validate() }
-                .toEntity()
-                .withdraw()
+            request.also { it.validate() }
+            val space = request.toEntity()
+            val snapshot = SpaceSnapshot.of(space)
+            space.withdraw()
+            spaceAuditRecorder.recordDeleted(
+                spaceId = space.id,
+                snapshot = snapshot,
+                viewer = request.viewer
+            )
         }
     }
 

@@ -5,6 +5,7 @@ import com.crispinlab.common.transaction.DummyTransactionProvider
 import com.crispinlab.space.application.port.incoming.space.SpaceRegistering.Request
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
+import com.crispinlab.space.application.usecase.audit.SpaceAuditRecorder
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.space.Space
 import com.crispinlab.space.domain.space.SpaceId
@@ -16,6 +17,7 @@ import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
 import io.mockk.every
+import io.mockk.justRun
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
@@ -24,19 +26,22 @@ class SpaceRegisteringUseCaseTest :
     DescribeSpec({
         val spaceRepository = mockk<SpaceRepository>()
         val spaceMemberRepository = mockk<SpaceMemberRepository>()
+        val spaceAuditRecorder = mockk<SpaceAuditRecorder>()
         val idGenerator = mockk<IdGenerator>()
         val useCase =
             SpaceRegisteringUseCase(
                 spaceRepository = spaceRepository,
                 spaceMemberRepository = spaceMemberRepository,
+                spaceAuditRecorder = spaceAuditRecorder,
                 idGenerator = idGenerator,
                 transactionProvider = DummyTransactionProvider()
             )
 
         beforeEach {
-            clearMocks(spaceRepository, spaceMemberRepository, idGenerator)
+            clearMocks(spaceRepository, spaceMemberRepository, spaceAuditRecorder, idGenerator)
             every { spaceRepository.save(any()) } answers { firstArg() }
             every { spaceMemberRepository.save(any()) } answers { firstArg() }
+            justRun { spaceAuditRecorder.recordRegistered(any(), any()) }
         }
 
         describe("스페이스 생성") {
@@ -75,6 +80,37 @@ class SpaceRegisteringUseCaseTest :
                 }
                 verify(exactly = 0) { spaceRepository.save(any()) }
                 verify(exactly = 0) { spaceMemberRepository.save(any()) }
+                verify(exactly = 0) { spaceAuditRecorder.recordRegistered(any(), any()) }
+            }
+
+            it("Space 저장 자체가 실패하면 audit 이 남지 않는다") {
+                every { idGenerator.next() } returnsMany listOf(42L, 43L)
+                every { spaceRepository.save(any()) } throws RuntimeException("db down")
+
+                shouldThrow<RuntimeException> {
+                    useCase.perform(basicRequest())
+                }
+                verify(exactly = 0) { spaceAuditRecorder.recordRegistered(any(), any()) }
+            }
+
+            it("생성 성공 시 REGISTERED audit 이 저장된 Space·viewer 와 함께 기록된다") {
+                every { idGenerator.next() } returnsMany listOf(42L, 43L)
+                val savedSpace = slot<Space>()
+                every { spaceRepository.save(capture(savedSpace)) } answers { savedSpace.captured }
+                val auditedSpace = slot<Space>()
+                val auditedViewer = slot<Viewer.Member>()
+                justRun {
+                    spaceAuditRecorder.recordRegistered(
+                        capture(auditedSpace),
+                        capture(auditedViewer)
+                    )
+                }
+
+                useCase.perform(basicRequest(userId = UserId(100L)))
+
+                auditedSpace.captured.id shouldBe SpaceId(42L)
+                auditedViewer.captured.userId shouldBe UserId(100L)
+                verify(exactly = 1) { spaceAuditRecorder.recordRegistered(any(), any()) }
             }
         }
     }) {

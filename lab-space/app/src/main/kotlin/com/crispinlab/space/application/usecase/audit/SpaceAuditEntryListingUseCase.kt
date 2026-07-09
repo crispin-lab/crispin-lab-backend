@@ -35,12 +35,12 @@ class SpaceAuditEntryListingUseCase(
 
     private fun Request.validate() {
         if (viewer.isAdmin) return
-        spaceRepository.findBy(spaceId)
-            ?: throw NotFoundException(SpaceErrorCode.SPACE_NOT_FOUND)
         spaceMemberRepository.requireSpaceEditPermission(
             viewer = viewer,
             spaceId = spaceId
         )
+        spaceRepository.findBy(spaceId)
+            ?: throw NotFoundException(SpaceErrorCode.SPACE_NOT_FOUND)
     }
 
     private fun SpaceAuditEntry.toResult(): Result =

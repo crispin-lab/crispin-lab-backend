@@ -92,7 +92,10 @@ class SpaceAuditEntryListingUseCaseTest :
                 verify(exactly = 1) { spaceAuditRepository.findBySpaceId(any(), any()) }
             }
 
-            it("스페이스가 없거나 삭제되어 findBy 가 null 이면 NotFoundException") {
+            it("편집 권한자가 삭제된 스페이스를 조회하면 NotFoundException") {
+                every {
+                    spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
+                } returns basicSpaceMember(role = SpaceMemberRole.OWNER)
                 every { spaceRepository.findBy(any()) } returns null
 
                 shouldThrow<NotFoundException> {

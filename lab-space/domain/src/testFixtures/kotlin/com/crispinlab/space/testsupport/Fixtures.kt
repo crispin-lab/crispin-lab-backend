@@ -190,7 +190,9 @@ object Fixtures {
         actorUserId: UserId = UserId(100L),
         action: SpaceAuditAction = SpaceAuditAction.REGISTERED,
         changeSummary: AuditChangeSummary =
-            AuditChangeSummary("""{"name":{"before":null,"after":"자유게시판"}}"""),
+            AuditChangeSummary(
+                """{"name":"자유게시판","description":"기본 설명","visibility":"INTERNAL"}"""
+            ),
         createdAt: Instant = DUMMY_INSTANT
     ): SpaceAuditEntry =
         SpaceAuditEntry(

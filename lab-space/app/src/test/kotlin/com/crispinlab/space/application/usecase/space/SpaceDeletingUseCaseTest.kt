@@ -88,7 +88,7 @@ class SpaceDeletingUseCaseTest :
                 verify(exactly = 0) { spaceRepository.delete(any()) }
             }
 
-            it("ADMIN 은 멤버가 아니어도 삭제할 수 있다") {
+            it("ADMIN 은 멤버가 아니어도 삭제할 수 있고 audit 기록이 남는다") {
                 val space = basicSpace(id = SpaceId(1L))
                 every { spaceRepository.findBy(space.id) } returns space
                 every {
@@ -99,6 +99,7 @@ class SpaceDeletingUseCaseTest :
                 useCase.perform(basicRequest(isAdmin = true))
 
                 verify(exactly = 1) { spaceRepository.delete(any()) }
+                verify(exactly = 1) { spaceAuditRecorder.recordDeleted(any(), any(), any()) }
             }
 
             it("삭제 성공 시 삭제 시점 스냅샷과 함께 DELETED audit 을 기록한다") {

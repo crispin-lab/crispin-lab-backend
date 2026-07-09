@@ -10,6 +10,7 @@ import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.space.SpaceId.Companion.asSpaceId
 import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.domain.space.SpaceVisibility.Companion.asSpaceVisibility
+import com.crispinlab.user.application.port.incoming.user.UserSearching
 import com.crispinlab.user.domain.user.Handle
 import com.crispinlab.user.domain.user.UserId
 import com.crispinlab.user.domain.user.UserId.Companion.asUserId
@@ -17,13 +18,19 @@ import com.crispinlab.user.domain.user.UserId.Companion.asUserId
 interface MentionSuggesting : UseCase<Request, Result> {
     class Request(
         val query: String,
-        val size: Int,
+        size: Int,
         spaceId: String,
         spaceVisibility: String,
         pageVisibility: String,
         pageAuthorId: String,
         val viewer: Viewer.Member
     ) {
+        val size: Int =
+            size.also {
+                require(it in 1..UserSearching.Request.MAX_SIZE) {
+                    "결과 수는 1 이상 ${UserSearching.Request.MAX_SIZE} 이하여야 합니다."
+                }
+            }
         val spaceId: SpaceId = spaceId.asSpaceId()
         val spaceVisibility: SpaceVisibility = spaceVisibility.asSpaceVisibility()
         val pageVisibility: Visibility = pageVisibility.asVisibility()
@@ -37,9 +44,5 @@ interface MentionSuggesting : UseCase<Request, Result> {
             val userId: UserId,
             val handle: Handle
         )
-    }
-
-    companion object {
-        const val CANDIDATE_MULTIPLIER: Int = 3
     }
 }

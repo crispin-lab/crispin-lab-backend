@@ -3,7 +3,6 @@ package com.crispinlab.composition.application.usecase.mention
 import com.crispinlab.common.exception.NotFoundException
 import com.crispinlab.common.transaction.TransactionProvider
 import com.crispinlab.composition.application.port.incoming.mention.MentionSuggesting
-import com.crispinlab.composition.application.port.incoming.mention.MentionSuggesting.Companion.CANDIDATE_MULTIPLIER
 import com.crispinlab.composition.application.port.incoming.mention.MentionSuggesting.Request
 import com.crispinlab.composition.application.port.incoming.mention.MentionSuggesting.Result
 import com.crispinlab.composition.application.port.outgoing.space.SpaceMembershipLookup
@@ -80,4 +79,8 @@ class MentionSuggestingUseCase(
                     )
                 }
         )
+
+    private companion object {
+        private const val CANDIDATE_MULTIPLIER: Int = 3
+    }
 }

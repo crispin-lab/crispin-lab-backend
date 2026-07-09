@@ -309,6 +309,20 @@ class MentionSuggestingUseCaseTest :
                 }
             }
 
+            describe("Request 형식 검증") {
+                it("size 가 상한을 넘으면 IllegalArgumentException 을 던진다") {
+                    shouldThrow<IllegalArgumentException> {
+                        basicRequest(size = UserSearching.Request.MAX_SIZE + 1)
+                    }
+                }
+
+                it("size 가 0 이하이면 IllegalArgumentException 을 던진다") {
+                    shouldThrow<IllegalArgumentException> {
+                        basicRequest(size = 0)
+                    }
+                }
+            }
+
             describe("실패 전파") {
                 it("adminsAmong 이 예외를 던지면 그대로 전파한다 (lookup 격리 미적용)") {
                     every { userSearching.perform(any()) } returns

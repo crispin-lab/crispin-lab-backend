@@ -304,10 +304,7 @@ class MentionSuggestingCompositionControllerTest :
                 verify(exactly = 0) { useCase.perform(any()) }
             }
 
-            it("size 가 21 이상이면 UseCase 가 던진 IllegalArgumentException 이 400 으로 매핑된다") {
-                every { useCase.perform(any()) } throws
-                    IllegalArgumentException("결과 수는 1 이상 20 이하여야 합니다.")
-
+            it("size 가 21 이상이면 Request 생성 시점에 400 을 반환한다") {
                 controller
                     .`when`(
                         get("/v1/mention-candidates")
@@ -322,6 +319,25 @@ class MentionSuggestingCompositionControllerTest :
                         status().isBadRequest,
                         jsonPath("$.code").value("INVALID_REQUEST")
                     )
+                verify(exactly = 0) { useCase.perform(any()) }
+            }
+
+            it("size 가 0 이하이면 Request 생성 시점에 400 을 반환한다") {
+                controller
+                    .`when`(
+                        get("/v1/mention-candidates")
+                            .withAuth()
+                            .param("query", "ali")
+                            .param("size", "0")
+                            .param("spaceId", "10")
+                            .param("spaceVisibility", "PUBLIC")
+                            .param("pageVisibility", "PUBLIC")
+                            .param("pageAuthorId", "100")
+                    ).then(
+                        status().isBadRequest,
+                        jsonPath("$.code").value("INVALID_REQUEST")
+                    )
+                verify(exactly = 0) { useCase.perform(any()) }
             }
 
             it("Authorization 헤더가 없으면 401 을 반환하고 UseCase 를 호출하지 않는다") {

@@ -8,6 +8,7 @@ import com.crispinlab.space.application.port.incoming.space.SpaceGetting.Result
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.space.SpaceVisibilityScope
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
+import com.crispinlab.space.application.usecase.access.canEditSpace
 import com.crispinlab.space.application.usecase.access.canWrite
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.space.Space
@@ -60,6 +61,7 @@ class SpaceGettingUseCase(
             description = description,
             visibility = visibility,
             canWrite = viewer.canWrite(membership),
+            canEdit = viewer.canEditSpace(membership),
             viewerRole = membership?.role,
             createdAt = createdAt,
             updatedAt = updatedAt

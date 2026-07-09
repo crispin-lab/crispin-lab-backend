@@ -201,6 +201,86 @@ class SpaceGettingUseCaseTest :
             }
         }
 
+        describe("응답의 canEdit — viewer 의 편집 권한 노출") {
+            it("anonymous 는 편집할 수 없다") {
+                val space = basicSpace(visibility = SpaceVisibility.PUBLIC)
+                every { spaceRepository.findBy(space.id) } returns space
+
+                val result = useCase.perform(basicRequest(viewer = Viewer.Anonymous))
+
+                result.canEdit shouldBe false
+                verify(exactly = 0) {
+                    spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
+                }
+            }
+
+            it("비멤버 authenticated 는 편집할 수 없다") {
+                val space = basicSpace(visibility = SpaceVisibility.PUBLIC)
+                every { spaceRepository.findBy(space.id) } returns space
+                every {
+                    spaceMemberRepository.findBySpaceIdAndUserId(space.id, UserId(100L))
+                } returns null
+
+                val result = useCase.perform(basicRequest())
+
+                result.canEdit shouldBe false
+            }
+
+            it("VIEWER role 은 편집할 수 없다") {
+                val space = basicSpace(visibility = SpaceVisibility.INTERNAL, id = SpaceId(1L))
+                every { spaceRepository.findBy(space.id) } returns space
+                every {
+                    spaceMemberRepository.findBySpaceIdAndUserId(space.id, UserId(100L))
+                } returns basicSpaceMember(role = SpaceMemberRole.VIEWER)
+
+                val result = useCase.perform(basicRequest())
+
+                result.canEdit shouldBe false
+            }
+
+            it("MEMBER role 은 편집할 수 없다 — canWrite 는 true 지만 canEdit 은 false") {
+                val space = basicSpace(visibility = SpaceVisibility.INTERNAL, id = SpaceId(1L))
+                every { spaceRepository.findBy(space.id) } returns space
+                every {
+                    spaceMemberRepository.findBySpaceIdAndUserId(space.id, UserId(100L))
+                } returns basicSpaceMember(role = SpaceMemberRole.MEMBER)
+
+                val result = useCase.perform(basicRequest())
+
+                result.canWrite shouldBe true
+                result.canEdit shouldBe false
+            }
+
+            it("OWNER role 은 편집할 수 있다") {
+                val space = basicSpace(visibility = SpaceVisibility.INTERNAL, id = SpaceId(1L))
+                every { spaceRepository.findBy(space.id) } returns space
+                every {
+                    spaceMemberRepository.findBySpaceIdAndUserId(space.id, UserId(100L))
+                } returns basicSpaceMember(role = SpaceMemberRole.OWNER)
+
+                val result = useCase.perform(basicRequest())
+
+                result.canEdit shouldBe true
+            }
+
+            it("ADMIN 글로벌 권한은 멤버가 아니어도 편집할 수 있다") {
+                val space = basicSpace(visibility = SpaceVisibility.PUBLIC)
+                every { spaceRepository.findBy(space.id) } returns space
+
+                val result =
+                    useCase.perform(
+                        basicRequest(
+                            viewer = Viewer.Member(userId = UserId(100L), isAdmin = true)
+                        )
+                    )
+
+                result.canEdit shouldBe true
+                verify(exactly = 0) {
+                    spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
+                }
+            }
+        }
+
         describe("응답의 viewerRole — viewer 의 스페이스 역할 노출") {
             data class Case(
                 val label: String,

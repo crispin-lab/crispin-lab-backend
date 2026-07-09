@@ -24,6 +24,7 @@ interface SpaceGetting : UseCase<Request, Result> {
         val description: String,
         val visibility: SpaceVisibility,
         val canWrite: Boolean,
+        val canEdit: Boolean,
         val viewerRole: SpaceMemberRole?,
         val createdAt: Instant,
         val updatedAt: Instant

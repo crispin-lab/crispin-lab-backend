@@ -37,6 +37,7 @@ class SpaceGettingControllerTest :
                         description = "공유 공간",
                         visibility = SpaceVisibility.INTERNAL,
                         canWrite = true,
+                        canEdit = true,
                         viewerRole = SpaceMemberRole.OWNER,
                         createdAt = DUMMY_INSTANT,
                         updatedAt = DUMMY_INSTANT
@@ -50,6 +51,7 @@ class SpaceGettingControllerTest :
                         jsonPath("$.spaceId").value("1"),
                         jsonPath("$.name").value("팀 위키"),
                         jsonPath("$.canWrite").value(true),
+                        jsonPath("$.canEdit").value(true),
                         jsonPath("$.viewerRole").value("OWNER")
                     ).document(
                         authHeader(required = false),
@@ -60,6 +62,9 @@ class SpaceGettingControllerTest :
                             "visibility".string("공개 범위")
                             "canWrite".boolean(
                                 "viewer 가 본 스페이스에 페이지를 작성할 수 있는지 여부 (ADMIN / OWNER / MEMBER → true, VIEWER · 비멤버 · 비로그인 → false)"
+                            )
+                            "canEdit".boolean(
+                                "viewer 가 본 스페이스의 메타데이터 (이름 / 설명 / 공개범위) 를 편집할 수 있는지 여부 (ADMIN / OWNER → true, MEMBER · VIEWER · 비멤버 · 비로그인 → false)"
                             )
                             "viewerRole".string(
                                 "viewer 의 본 스페이스 내 역할 (OWNER / MEMBER / VIEWER). 비-스페이스멤버 · 비로그인 · ADMIN → null (ADMIN 진입점은 별도 시그널로 판정)",
@@ -94,6 +99,7 @@ class SpaceGettingControllerTest :
                         description = "누구나 볼 수 있음",
                         visibility = SpaceVisibility.PUBLIC,
                         canWrite = false,
+                        canEdit = false,
                         viewerRole = null,
                         createdAt = DUMMY_INSTANT,
                         updatedAt = DUMMY_INSTANT
@@ -105,6 +111,7 @@ class SpaceGettingControllerTest :
                         status().isOk,
                         jsonPath("$.visibility").value("PUBLIC"),
                         jsonPath("$.canWrite").value(false),
+                        jsonPath("$.canEdit").value(false),
                         jsonPath("$.viewerRole").value(nullValue())
                     )
                 verify {

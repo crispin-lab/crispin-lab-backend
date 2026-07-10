@@ -148,6 +148,23 @@ class SpaceListingUseCaseTest :
                 }
             }
 
+            it("빈 문자열 sort/direction 은 미지정과 동일하게 default 로 fallback 된다") {
+                every { spaceRepository.findPage(any(), any(), any(), any(), any()) } returns
+                    PageResult.empty(PageRequest.firstPage())
+
+                useCase.perform(basicRequest(sort = "", direction = "   "))
+
+                verify {
+                    spaceRepository.findPage(
+                        pageRequest = any(),
+                        scope = any(),
+                        keyword = null,
+                        sort = SortOption.LAST_ACTIVITY_AT,
+                        direction = SortDirection.DESC
+                    )
+                }
+            }
+
             it("keyword 가 공백뿐이면 null 로 정규화된다") {
                 every { spaceRepository.findPage(any(), any(), any(), any(), any()) } returns
                     PageResult.empty(PageRequest.firstPage())

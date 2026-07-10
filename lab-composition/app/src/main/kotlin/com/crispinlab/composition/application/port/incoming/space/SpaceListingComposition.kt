@@ -26,8 +26,12 @@ interface SpaceListingComposition : UseCase<Request, PageResult<Result>> {
         size: Int = DEFAULT_SIZE,
         val viewer: Viewer
     ) {
-        val sort: SortOption? = sort?.asSortOption()
-        val direction: SortDirection? = direction?.asSortDirection()
+        val sort: SortOption? = sort?.trim()?.takeIf { it.isNotEmpty() }?.asSortOption()
+        val direction: SortDirection? =
+            direction
+                ?.trim()
+                ?.takeIf { it.isNotEmpty() }
+                ?.asSortDirection()
         val pageRequest: PageRequest =
             PageRequest(
                 page = page,

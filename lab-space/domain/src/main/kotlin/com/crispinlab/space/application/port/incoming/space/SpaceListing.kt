@@ -25,8 +25,11 @@ interface SpaceListing : UseCase<Request, PageResult<Summary>> {
         val viewer: Viewer
     ) {
         val keyword: String? = keyword?.trim()?.takeIf { it.isNotEmpty() }
-        val sort: SortOption = sort?.asSortOption() ?: SortOption.LAST_ACTIVITY_AT
-        val direction: SortDirection = direction?.asSortDirection() ?: this.sort.defaultDirection
+        val sort: SortOption =
+            sort?.trim()?.takeIf { it.isNotEmpty() }?.asSortOption() ?: SortOption.LAST_ACTIVITY_AT
+        val direction: SortDirection =
+            direction?.trim()?.takeIf { it.isNotEmpty() }?.asSortDirection()
+                ?: this.sort.defaultDirection
         val pageRequest: PageRequest =
             PageRequest(
                 page = page,

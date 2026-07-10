@@ -273,6 +273,33 @@ class SpaceListingCompositionControllerTest :
                 }
             }
 
+            it("빈 sort/direction 파라미터는 미지정과 동일하게 처리되어 200 을 반환한다") {
+                every { useCase.perform(any()) } returns
+                    PageResult(
+                        items = emptyList(),
+                        page = 0,
+                        size = 20,
+                        totalElements = 0L
+                    )
+
+                controller
+                    .`when`(
+                        get("/v1/spaces")
+                            .withAuth()
+                            .param("sort", "")
+                            .param("direction", "  ")
+                    ).then(status().isOk)
+
+                verify {
+                    useCase.perform(
+                        withArg {
+                            it.sort shouldBe null
+                            it.direction shouldBe null
+                        }
+                    )
+                }
+            }
+
             it("지원하지 않는 sort 값은 400 INVALID_REQUEST 로 응답하고 UseCase 는 호출되지 않는다") {
                 controller
                     .`when`(

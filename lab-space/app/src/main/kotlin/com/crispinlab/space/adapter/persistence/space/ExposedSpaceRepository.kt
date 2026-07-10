@@ -3,23 +3,27 @@ package com.crispinlab.space.adapter.persistence.space
 import com.crispinlab.common.pagination.PageRequest
 import com.crispinlab.common.pagination.PageResult
 import com.crispinlab.common.persistence.ExposedEntityRepository
-import com.crispinlab.space.adapter.persistence.toPageResult
+import com.crispinlab.common.persistence.escapeLike
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
+import com.crispinlab.space.application.port.outgoing.space.SpaceRepository.SortDirection
+import com.crispinlab.space.application.port.outgoing.space.SpaceRepository.SortOption
+import com.crispinlab.space.application.port.outgoing.space.SpaceRepository.Summary
 import com.crispinlab.space.application.port.outgoing.space.SpaceVisibilityScope
 import com.crispinlab.space.domain.space.Space
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.domain.space.SpaceVisibility.Companion.asSpaceVisibility
-import org.jetbrains.exposed.v1.core.Op
+import java.time.Instant
+import org.jetbrains.exposed.v1.core.IColumnType
+import org.jetbrains.exposed.v1.core.LongColumnType
 import org.jetbrains.exposed.v1.core.ResultRow
-import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.TextColumnType
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.core.inList
-import org.jetbrains.exposed.v1.core.or
+import org.jetbrains.exposed.v1.core.statements.StatementType
 import org.jetbrains.exposed.v1.core.statements.UpsertStatement
 import org.jetbrains.exposed.v1.jdbc.select
-import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
 import org.springframework.stereotype.Repository
 
 @Repository
@@ -67,40 +71,162 @@ class ExposedSpaceRepository :
 
     override fun findPage(
         pageRequest: PageRequest,
-        scope: SpaceVisibilityScope
-    ): PageResult<Space> =
-        Spaces
-            .selectAll()
-            .where { notDeleted() and scope.toCondition() }
-            .toPageResult(
-                pageRequest,
-                Spaces.createdAt to SortOrder.DESC,
-                Spaces.id to SortOrder.DESC
-            ) { it.toEntity() }
+        scope: SpaceVisibilityScope,
+        keyword: String?,
+        sort: SortOption,
+        direction: SortDirection
+    ): PageResult<Summary> {
+        val fragment = whereFragment(scope, keyword)
+        val orderClause = orderClause(sort, direction)
+        val totalElements = countBy(fragment)
+        val items =
+            if (totalElements == 0L) {
+                emptyList()
+            } else {
+                selectPage(fragment, orderClause, pageRequest.size, pageRequest.offset)
+            }
+        return PageResult(
+            items = items,
+            page = pageRequest.page,
+            size = pageRequest.size,
+            totalElements = totalElements
+        )
+    }
 
-    private fun SpaceVisibilityScope.toCondition(): Op<Boolean> =
+    private fun countBy(fragment: SqlFragment): Long {
+        val sql =
+            """
+            SELECT COUNT(*)
+            FROM spaces s
+            WHERE s.deleted_at IS NULL
+              AND ${fragment.sql}
+            """.trimIndent()
+        var count = 0L
+        TransactionManager.current().exec(
+            stmt = sql,
+            args = fragment.args,
+            explicitStatementType = StatementType.SELECT
+        ) { rs ->
+            if (rs.next()) count = rs.getLong(1)
+        }
+        return count
+    }
+
+    private fun selectPage(
+        fragment: SqlFragment,
+        orderClause: String,
+        limit: Int,
+        offset: Long
+    ): List<Summary> {
+        val sql =
+            """
+            SELECT s.id, s.name, s.description, s.visibility, s.created_at, s.updated_at,
+                   COALESCE(la.max_updated_at, s.updated_at) AS last_activity_at
+            FROM spaces s
+            LEFT JOIN (
+                SELECT space_id, MAX(updated_at) AS max_updated_at
+                FROM pages
+                WHERE deleted_at IS NULL
+                GROUP BY space_id
+            ) la ON la.space_id = s.id
+            WHERE s.deleted_at IS NULL
+              AND ${fragment.sql}
+            ORDER BY $orderClause
+            LIMIT ? OFFSET ?
+            """.trimIndent()
+        val args =
+            buildList<Pair<IColumnType<*>, Any?>> {
+                addAll(fragment.args)
+                add(LongColumnType() to limit.toLong())
+                add(LongColumnType() to offset)
+            }
+        return buildList {
+            TransactionManager.current().exec(
+                stmt = sql,
+                args = args,
+                explicitStatementType = StatementType.SELECT
+            ) { rs ->
+                while (rs.next()) {
+                    add(rs.toSummary())
+                }
+            }
+        }
+    }
+
+    private fun java.sql.ResultSet.toSummary(): Summary =
+        Summary(
+            spaceId = SpaceId(getLong("id")),
+            name = getString("name"),
+            description = getString("description"),
+            visibility = decodeSpaceVisibility(getString("visibility")),
+            lastActivityAt = getInstant("last_activity_at"),
+            createdAt = getInstant("created_at"),
+            updatedAt = getInstant("updated_at")
+        )
+
+    private fun java.sql.ResultSet.getInstant(column: String): Instant =
+        getTimestamp(column).toInstant()
+
+    private fun whereFragment(
+        scope: SpaceVisibilityScope,
+        keyword: String?
+    ): SqlFragment {
+        val parts = mutableListOf<String>()
+        val args = mutableListOf<Pair<IColumnType<*>, Any?>>()
+        scope.appendTo(parts, args)
+        keyword?.let {
+            parts += "LOWER(s.name) LIKE ?"
+            args += TextColumnType() to "%${it.lowercase().escapeLike()}%"
+        }
+        return SqlFragment(sql = parts.joinToString(" AND "), args = args)
+    }
+
+    private fun SpaceVisibilityScope.appendTo(
+        parts: MutableList<String>,
+        args: MutableList<Pair<IColumnType<*>, Any?>>
+    ) {
         when (this) {
             is SpaceVisibilityScope.Anonymous -> {
-                Spaces.visibility eq SpaceVisibility.PUBLIC.name
+                parts += "s.visibility = ?"
+                args += TextColumnType() to SpaceVisibility.PUBLIC.name
             }
 
             is SpaceVisibilityScope.Authenticated -> {
-                val publicClause = Spaces.visibility eq SpaceVisibility.PUBLIC.name
                 if (memberOfSpaceIds.isEmpty()) {
-                    publicClause
+                    parts += "s.visibility = ?"
+                    args += TextColumnType() to SpaceVisibility.PUBLIC.name
                 } else {
-                    publicClause or
-                        (
-                            (Spaces.visibility eq SpaceVisibility.INTERNAL.name) and
-                                (Spaces.id inList memberOfSpaceIds.map { it.value })
-                        )
+                    val placeholders = memberOfSpaceIds.joinToString(", ") { "?" }
+                    parts += "(s.visibility = ? OR (s.visibility = ? AND s.id IN ($placeholders)))"
+                    args += TextColumnType() to SpaceVisibility.PUBLIC.name
+                    args += TextColumnType() to SpaceVisibility.INTERNAL.name
+                    memberOfSpaceIds.forEach { args += LongColumnType() to it.value }
                 }
             }
 
             is SpaceVisibilityScope.Privileged -> {
-                Op.TRUE
+                parts += "TRUE"
             }
         }
+    }
+
+    private fun orderClause(
+        sort: SortOption,
+        direction: SortDirection
+    ): String {
+        val primary =
+            when (sort) {
+                SortOption.LAST_ACTIVITY_AT -> "last_activity_at"
+                SortOption.CREATED_AT -> "s.created_at"
+                SortOption.NAME -> "s.name"
+            }
+        return "$primary ${direction.name}, s.id ${direction.name}"
+    }
+
+    private data class SqlFragment(
+        val sql: String,
+        val args: List<Pair<IColumnType<*>, Any?>>
+    )
 }
 
 internal fun decodeSpaceVisibility(stored: String): SpaceVisibility =

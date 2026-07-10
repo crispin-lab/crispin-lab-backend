@@ -21,8 +21,6 @@ import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.tag.TagId
 import com.crispinlab.user.domain.user.UserId
-import java.time.LocalDateTime
-import java.time.ZoneOffset
 import org.jetbrains.exposed.v1.core.Expression
 import org.jetbrains.exposed.v1.core.IColumnType
 import org.jetbrains.exposed.v1.core.JoinType
@@ -159,10 +157,7 @@ class ExposedPageSearchAdapter : PageSearchPort {
                         LatestPage(
                             pageId = PageId(rs.getLong("id")),
                             title = rs.getString("title"),
-                            updatedAt =
-                                rs
-                                    .getObject("updated_at", LocalDateTime::class.java)
-                                    .toInstant(ZoneOffset.UTC)
+                            updatedAt = rs.getTimestamp("updated_at").toInstant()
                         )
                     )
                 }

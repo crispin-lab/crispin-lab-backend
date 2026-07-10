@@ -19,11 +19,17 @@ class SpaceListingCompositionController(
 ) {
     @GetMapping
     fun list(
+        @RequestParam(required = false) keyword: String?,
+        @RequestParam(required = false) sort: String?,
+        @RequestParam(required = false) direction: String?,
         @RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "$DEFAULT_SIZE") size: Int,
         auth: Auth?
     ): PageResult<Result> =
         Request(
+            keyword = keyword,
+            sort = sort,
+            direction = direction,
             page = page,
             size = size,
             viewer = auth.toViewer()

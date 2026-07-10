@@ -9,7 +9,6 @@ import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.space.SpaceVisibilityScope
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.application.usecase.access.memberSpaceIdsOf
-import com.crispinlab.space.domain.space.Space
 import org.springframework.stereotype.Service
 
 @Service
@@ -26,16 +25,24 @@ class SpaceListingUseCase(
     private fun Request.toResult(): PageResult<Summary> =
         spaceRepository
             .findPage(
-                pageRequest,
-                SpaceVisibilityScope.of(viewer, spaceMemberRepository.memberSpaceIdsOf(viewer))
+                pageRequest = pageRequest,
+                scope =
+                    SpaceVisibilityScope.of(
+                        viewer,
+                        spaceMemberRepository.memberSpaceIdsOf(viewer)
+                    ),
+                keyword = keyword,
+                sort = sort,
+                direction = direction
             ).map { it.toSummary() }
 
-    private fun Space.toSummary(): Summary =
+    private fun SpaceRepository.Summary.toSummary(): Summary =
         Summary(
-            spaceId = id,
+            spaceId = spaceId,
             name = name,
             description = description,
             visibility = visibility,
+            lastActivityAt = lastActivityAt,
             createdAt = createdAt,
             updatedAt = updatedAt
         )

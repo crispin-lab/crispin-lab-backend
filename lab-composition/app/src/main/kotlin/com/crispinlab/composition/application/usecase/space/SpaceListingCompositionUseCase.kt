@@ -13,7 +13,6 @@ import com.crispinlab.space.application.port.incoming.space.SpaceListing.Summary
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.spacemember.SpaceMemberRole
-import com.crispinlab.user.domain.user.UserId
 import org.springframework.stereotype.Service
 
 @Service
@@ -34,6 +33,9 @@ class SpaceListingCompositionUseCase(
 
     private fun Request.toDomainRequest(): SpaceListing.Request =
         SpaceListing.Request(
+            keyword = keyword,
+            sort = sort?.name,
+            direction = direction?.name,
             page = pageRequest.page,
             size = pageRequest.size,
             viewer = viewer
@@ -56,16 +58,15 @@ class SpaceListingCompositionUseCase(
 
     private fun Viewer.rolesFor(spaceIds: Set<SpaceId>): Map<SpaceId, SpaceMemberRole> =
         when (this) {
-            is Viewer.Member -> rolesSafely(userId, spaceIds)
-            Viewer.Anonymous -> emptyMap()
-        }
+            is Viewer.Member -> {
+                runCatching { spaceMembershipLookup.rolesOf(userId, spaceIds) }
+                    .getOrElse { emptyMap() }
+            }
 
-    private fun rolesSafely(
-        userId: UserId,
-        spaceIds: Set<SpaceId>
-    ): Map<SpaceId, SpaceMemberRole> =
-        runCatching { spaceMembershipLookup.rolesOf(userId, spaceIds) }
-            .getOrElse { emptyMap() }
+            Viewer.Anonymous -> {
+                emptyMap()
+            }
+        }
 
     private fun Summary.toResult(
         roles: Map<SpaceId, SpaceMemberRole>,
@@ -82,7 +83,7 @@ class SpaceListingCompositionUseCase(
             myRole = roles[spaceId],
             memberCount = memberCounts[spaceId] ?: 0L,
             pageCount = stat?.count ?: 0L,
-            lastActivityAt = maxOf(updatedAt, latest?.updatedAt ?: updatedAt),
+            lastActivityAt = lastActivityAt,
             latestPage = latest,
             createdAt = createdAt,
             updatedAt = updatedAt

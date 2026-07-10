@@ -6,6 +6,8 @@ import com.crispinlab.composition.application.port.incoming.space.SpaceListingCo
 import com.crispinlab.composition.application.port.incoming.space.SpaceListingComposition.LatestPage
 import com.crispinlab.composition.application.port.incoming.space.SpaceListingComposition.Result
 import com.crispinlab.composition.testsupport.CompositionAppControllerDescribeSpec
+import com.crispinlab.space.application.port.outgoing.space.SpaceRepository.SortDirection
+import com.crispinlab.space.application.port.outgoing.space.SpaceRepository.SortOption
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.space.SpaceId
@@ -13,12 +15,14 @@ import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.domain.spacemember.SpaceMemberRole
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.user.testsupport.withAuth
+import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.hamcrest.Matchers.nullValue
 import org.springframework.http.HttpHeaders
+import org.springframework.restdocs.request.RequestDocumentation.queryParameters
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
@@ -90,7 +94,17 @@ class SpaceListingCompositionControllerTest :
                         jsonPath("$.totalElements").value(2)
                     ).document(
                         authHeader(required = false),
-                        pagingParameters(),
+                        queryParameters(
+                            "keyword" isParameterFor
+                                "스페이스 이름 부분 일치 (case-insensitive, 공백은 필터 미적용)"
+                                isOptional true,
+                            "sort" isParameterFor
+                                "정렬 옵션 (LAST_ACTIVITY_AT / CREATED_AT / NAME, 기본 LAST_ACTIVITY_AT)"
+                                isOptional true,
+                            "direction" isParameterFor
+                                "정렬 방향 (ASC / DESC). 미지정 시 sort 별 자연 default"
+                                isOptional true
+                        ).withPaging(),
                         responseFields {
                             "items".array("스페이스 목록") {
                                 "spaceId".string("스페이스 식별자")
@@ -111,7 +125,7 @@ class SpaceListingCompositionControllerTest :
                                     "viewer 가 볼 수 있는 페이지 수 (lookup 실패 시 0)"
                                 )
                                 "lastActivityAt".datetime(
-                                    "MAX(space.updatedAt, latestPage.updatedAt), 페이지 없으면 space.updatedAt"
+                                    "정렬 값 (COALESCE(MAX(pages.updated_at), space.updated_at) — 삭제되지 않은 모든 페이지 기준. viewer 가 볼 수 없는 페이지도 포함될 수 있어 latestPage 와 다를 수 있음)"
                                 )
                                 "latestPage".`object`(
                                     description =
@@ -223,6 +237,61 @@ class SpaceListingCompositionControllerTest :
                         get("/v1/spaces")
                             .withAuth()
                             .param("size", "twenty")
+                    ).then(
+                        status().isBadRequest,
+                        jsonPath("$.code").value("INVALID_REQUEST")
+                    )
+                verify(exactly = 0) { useCase.perform(any()) }
+            }
+
+            it("keyword / sort / direction 을 UseCase Request 로 그대로 pass-through 한다") {
+                every { useCase.perform(any()) } returns
+                    PageResult(
+                        items = emptyList(),
+                        page = 0,
+                        size = 20,
+                        totalElements = 0L
+                    )
+
+                controller
+                    .`when`(
+                        get("/v1/spaces")
+                            .withAuth()
+                            .param("keyword", "위키")
+                            .param("sort", "NAME")
+                            .param("direction", "ASC")
+                    ).then(status().isOk)
+
+                verify {
+                    useCase.perform(
+                        withArg {
+                            it.keyword shouldBe "위키"
+                            it.sort shouldBe SortOption.NAME
+                            it.direction shouldBe SortDirection.ASC
+                        }
+                    )
+                }
+            }
+
+            it("지원하지 않는 sort 값은 400 INVALID_REQUEST 로 응답하고 UseCase 는 호출되지 않는다") {
+                controller
+                    .`when`(
+                        get("/v1/spaces")
+                            .withAuth()
+                            .param("sort", "SIZE")
+                    ).then(
+                        status().isBadRequest,
+                        jsonPath("$.code").value("INVALID_REQUEST")
+                    )
+                verify(exactly = 0) { useCase.perform(any()) }
+            }
+
+            it("지원하지 않는 direction 값은 400 INVALID_REQUEST 로 응답하고 UseCase 는 호출되지 않는다") {
+                controller
+                    .`when`(
+                        get("/v1/spaces")
+                            .withAuth()
+                            .param("direction", "SIDEWAYS")
                     ).then(
                         status().isBadRequest,
                         jsonPath("$.code").value("INVALID_REQUEST")

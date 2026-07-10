@@ -37,6 +37,7 @@ object Fixtures {
         description: String = "기본 설명",
         visibility: SpaceVisibility = SpaceVisibility.INTERNAL,
         createdAt: Instant = DUMMY_INSTANT,
+        updatedAt: Instant = createdAt,
         deletedAt: Instant? = null
     ): Space =
         Space(
@@ -45,6 +46,7 @@ object Fixtures {
             description = description,
             visibility = visibility,
             createdAt = createdAt,
+            updatedAt = updatedAt,
             deletedAt = deletedAt
         )
 

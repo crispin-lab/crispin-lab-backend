@@ -8,6 +8,8 @@ import com.crispinlab.composition.application.port.outgoing.space.PageStatLookup
 import com.crispinlab.composition.application.port.outgoing.space.SpaceMembershipLookup
 import com.crispinlab.space.application.port.incoming.space.SpaceListing
 import com.crispinlab.space.application.port.incoming.space.SpaceListing.Summary
+import com.crispinlab.space.application.port.outgoing.space.SpaceRepository.SortDirection
+import com.crispinlab.space.application.port.outgoing.space.SpaceRepository.SortOption
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.space.SpaceId
@@ -48,7 +50,12 @@ class SpaceListingCompositionUseCaseTest :
                 val member = memberViewer(userId = 100L)
                 every { spaceListing.perform(any()) } returns
                     domainListing(
-                        summaryOf(spaceId = 10L, name = "팀 위키", updatedAt = SPACE_UPDATED),
+                        summaryOf(
+                            spaceId = 10L,
+                            name = "팀 위키",
+                            updatedAt = SPACE_UPDATED,
+                            lastActivityAt = PAGE_UPDATED
+                        ),
                         summaryOf(spaceId = 20L, name = "공지", updatedAt = SPACE_UPDATED)
                     )
                 every { spaceMembershipLookup.rolesOf(any(), any()) } returns
@@ -222,6 +229,33 @@ class SpaceListingCompositionUseCaseTest :
                 result.items.single().myRole shouldBe null
             }
 
+            it("keyword / sort / direction 을 도메인 UseCase 로 그대로 forward 한다") {
+                val member = memberViewer(userId = 100L)
+                every { spaceListing.perform(any()) } returns domainListing()
+                every { spaceMembershipLookup.rolesOf(any(), any()) } returns emptyMap()
+                every { spaceMembershipLookup.memberCountsOf(any()) } returns emptyMap()
+                every { pageStatLookup.countsAndLatestOf(any(), any(), any()) } returns emptyMap()
+
+                useCaseWith().perform(
+                    basicRequestFor(
+                        viewer = member,
+                        keyword = "위키",
+                        sort = "NAME",
+                        direction = "ASC"
+                    )
+                )
+
+                verify {
+                    spaceListing.perform(
+                        withArg {
+                            it.keyword shouldBe "위키"
+                            it.sort shouldBe SortOption.NAME
+                            it.direction shouldBe SortDirection.ASC
+                        }
+                    )
+                }
+            }
+
             it("perform 진입에서 readOnly 트랜잭션으로 감싸고 모든 lookup 이 tx 블록 안에서 실행된다") {
                 val transactionProvider = RecordingTransactionProvider()
                 every { spaceMembershipLookup.memberSpaceIdsOf(any()) } answers {
@@ -260,8 +294,16 @@ class SpaceListingCompositionUseCaseTest :
             isAdmin: Boolean = false
         ): Viewer.Member = Viewer.Member(userId = UserId(userId), isAdmin = isAdmin)
 
-        fun basicRequestFor(viewer: Viewer): Request =
+        fun basicRequestFor(
+            viewer: Viewer,
+            keyword: String? = null,
+            sort: String? = null,
+            direction: String? = null
+        ): Request =
             Request(
+                keyword = keyword,
+                sort = sort,
+                direction = direction,
                 page = 0,
                 size = 20,
                 viewer = viewer
@@ -272,13 +314,15 @@ class SpaceListingCompositionUseCaseTest :
             name: String = "스페이스",
             description: String = "설명",
             visibility: SpaceVisibility = SpaceVisibility.PUBLIC,
-            updatedAt: Instant = DUMMY_INSTANT
+            updatedAt: Instant = DUMMY_INSTANT,
+            lastActivityAt: Instant = updatedAt
         ): Summary =
             Summary(
                 spaceId = SpaceId(spaceId),
                 name = name,
                 description = description,
                 visibility = visibility,
+                lastActivityAt = lastActivityAt,
                 createdAt = DUMMY_INSTANT,
                 updatedAt = updatedAt
             )

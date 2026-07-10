@@ -55,6 +55,8 @@ class SpaceListingCompositionControllerTest :
                                             title = "오늘의 회고",
                                             updatedAt = DUMMY_INSTANT.plusSeconds(3600)
                                         ),
+                                    lastVisitedAt = DUMMY_INSTANT.plusSeconds(1800),
+                                    unreadCount = 4L,
                                     createdAt = DUMMY_INSTANT,
                                     updatedAt = DUMMY_INSTANT
                                 ),
@@ -68,6 +70,8 @@ class SpaceListingCompositionControllerTest :
                                     pageCount = 0L,
                                     lastActivityAt = DUMMY_INSTANT,
                                     latestPage = null,
+                                    lastVisitedAt = null,
+                                    unreadCount = 0L,
                                     createdAt = DUMMY_INSTANT,
                                     updatedAt = DUMMY_INSTANT
                                 )
@@ -88,9 +92,12 @@ class SpaceListingCompositionControllerTest :
                         jsonPath("$.items[0].pageCount").value(12),
                         jsonPath("$.items[0].latestPage.pageId").value("555"),
                         jsonPath("$.items[0].latestPage.title").value("오늘의 회고"),
+                        jsonPath("$.items[0].unreadCount").value(4),
                         jsonPath("$.items[1].myRole").value(nullValue()),
                         jsonPath("$.items[1].latestPage").value(nullValue()),
                         jsonPath("$.items[1].pageCount").value(0),
+                        jsonPath("$.items[1].lastVisitedAt").value(nullValue()),
+                        jsonPath("$.items[1].unreadCount").value(0),
                         jsonPath("$.totalElements").value(2)
                     ).document(
                         authHeader(required = false),
@@ -136,6 +143,14 @@ class SpaceListingCompositionControllerTest :
                                     "title".string("페이지 제목")
                                     "updatedAt".datetime("페이지 편집 시각")
                                 }
+                                "lastVisitedAt".datetime(
+                                    description =
+                                        "viewer 가 이 스페이스를 마지막으로 방문한 시각 (미방문·Anonymous·lookup 실패 시 null)",
+                                    optional = true
+                                )
+                                "unreadCount".number(
+                                    "lastVisitedAt 이후 편집된 페이지 수 (미방문 스페이스는 전체 페이지 수 · Anonymous · lookup 실패 시 0)"
+                                )
                                 "createdAt".datetime("스페이스 생성 시각")
                                 "updatedAt".datetime("스페이스 갱신 시각")
                             }

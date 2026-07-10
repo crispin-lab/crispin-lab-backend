@@ -1,0 +1,60 @@
+package com.crispinlab.space.adapter.web.visit
+
+import com.crispinlab.space.application.port.incoming.visit.SpaceVisitRecording
+import com.crispinlab.space.domain.space.SpaceId
+import com.crispinlab.space.testsupport.SpaceAppControllerDescribeSpec
+import com.crispinlab.user.testsupport.withAuth
+import io.mockk.clearMocks
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.runs
+import io.mockk.verify
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+
+class SpaceVisitRecordingControllerTest :
+    SpaceAppControllerDescribeSpec(tag = "SpaceVisit", body = {
+        val useCase = mockk<SpaceVisitRecording>()
+        val controller = SpaceVisitRecordingController(useCase)
+
+        beforeEach { clearMocks(useCase) }
+
+        describe("스페이스 방문 기록") {
+            it("성공하면 204 를 반환한다") {
+                every {
+                    useCase.perform(
+                        match {
+                            it.spaceId == SpaceId(10L) && it.viewer.userId.value == 100L
+                        }
+                    )
+                } just runs
+
+                controller
+                    .`when`(
+                        post("/v1/spaces/{spaceId}/visits", 10).withAuth()
+                    ).then(status().isNoContent)
+                    .document(authHeader(required = true))
+
+                verify(exactly = 1) { useCase.perform(any()) }
+            }
+
+            it("Authorization 토큰이 없으면 401 을 반환한다") {
+                controller
+                    .`when`(post("/v1/spaces/{spaceId}/visits", 10))
+                    .then(
+                        status().isUnauthorized,
+                        jsonPath("$.code").value("INVALID_SESSION")
+                    )
+                verify(exactly = 0) { useCase.perform(any()) }
+            }
+
+            it("spaceId 형식이 숫자가 아니면 400 을 반환한다") {
+                controller
+                    .`when`(post("/v1/spaces/{spaceId}/visits", "not-a-number").withAuth())
+                    .then(status().isBadRequest)
+                verify(exactly = 0) { useCase.perform(any()) }
+            }
+        }
+    })

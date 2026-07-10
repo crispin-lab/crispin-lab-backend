@@ -8,11 +8,13 @@ import com.crispinlab.composition.application.port.incoming.space.SpaceListingCo
 import com.crispinlab.composition.application.port.incoming.space.SpaceListingComposition.Result
 import com.crispinlab.composition.application.port.outgoing.space.PageStatLookup
 import com.crispinlab.composition.application.port.outgoing.space.SpaceMembershipLookup
+import com.crispinlab.composition.application.port.outgoing.space.SpaceVisitLookup
 import com.crispinlab.space.application.port.incoming.space.SpaceListing
 import com.crispinlab.space.application.port.incoming.space.SpaceListing.Summary
 import com.crispinlab.space.domain.access.Viewer
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.spacemember.SpaceMemberRole
+import java.time.Instant
 import org.springframework.stereotype.Service
 
 @Service
@@ -20,6 +22,7 @@ class SpaceListingCompositionUseCase(
     private val spaceListing: SpaceListing,
     private val spaceMembershipLookup: SpaceMembershipLookup,
     private val pageStatLookup: PageStatLookup,
+    private val spaceVisitLookup: SpaceVisitLookup,
     private val transactionProvider: TransactionProvider
 ) : SpaceListingComposition {
     override fun perform(request: Request): PageResult<Result> =
@@ -53,7 +56,17 @@ class SpaceListingCompositionUseCase(
         val pageStats =
             runCatching { pageStatLookup.countsAndLatestOf(spaceIds, viewer, memberSpaceIds) }
                 .getOrElse { emptyMap() }
-        return map { it.toResult(roles, memberCounts, pageStats) }
+        val lastVisitedAt = viewer.lastVisitedAtFor(spaceIds)
+        val unreadCounts = viewer.unreadCountsFor(spaceIds, lastVisitedAt, memberSpaceIds)
+        return map {
+            it.toResult(
+                roles = roles,
+                memberCounts = memberCounts,
+                pageStats = pageStats,
+                lastVisitedAt = lastVisitedAt,
+                unreadCounts = unreadCounts
+            )
+        }
     }
 
     private fun Viewer.rolesFor(spaceIds: Set<SpaceId>): Map<SpaceId, SpaceMemberRole> =
@@ -68,10 +81,42 @@ class SpaceListingCompositionUseCase(
             }
         }
 
+    private fun Viewer.lastVisitedAtFor(spaceIds: Set<SpaceId>): Map<SpaceId, Instant> =
+        when (this) {
+            is Viewer.Member -> {
+                runCatching { spaceVisitLookup.lastVisitedAtOf(userId, spaceIds) }
+                    .getOrElse { emptyMap() }
+            }
+
+            Viewer.Anonymous -> {
+                emptyMap()
+            }
+        }
+
+    private fun Viewer.unreadCountsFor(
+        spaceIds: Set<SpaceId>,
+        lastVisitedAt: Map<SpaceId, Instant>,
+        memberSpaceIds: Set<SpaceId>
+    ): Map<SpaceId, Long> =
+        when (this) {
+            is Viewer.Member -> {
+                val sinceOf = spaceIds.associateWith { lastVisitedAt[it] }
+                runCatching {
+                    pageStatLookup.updatedCountsSince(sinceOf, this, memberSpaceIds)
+                }.getOrElse { emptyMap() }
+            }
+
+            Viewer.Anonymous -> {
+                emptyMap()
+            }
+        }
+
     private fun Summary.toResult(
         roles: Map<SpaceId, SpaceMemberRole>,
         memberCounts: Map<SpaceId, Long>,
-        pageStats: Map<SpaceId, PageStatLookup.PageStat>
+        pageStats: Map<SpaceId, PageStatLookup.PageStat>,
+        lastVisitedAt: Map<SpaceId, Instant>,
+        unreadCounts: Map<SpaceId, Long>
     ): Result {
         val stat = pageStats[spaceId]
         val latest = stat?.latest?.toLatestPage()
@@ -85,6 +130,8 @@ class SpaceListingCompositionUseCase(
             pageCount = stat?.count ?: 0L,
             lastActivityAt = lastActivityAt,
             latestPage = latest,
+            lastVisitedAt = lastVisitedAt[spaceId],
+            unreadCount = unreadCounts.getOrDefault(spaceId, 0L),
             createdAt = createdAt,
             updatedAt = updatedAt
         )

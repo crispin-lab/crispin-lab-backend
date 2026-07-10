@@ -26,6 +26,8 @@ import com.crispinlab.space.domain.spacemember.SpaceMemberRole
 import com.crispinlab.space.domain.tag.PageTag
 import com.crispinlab.space.domain.tag.Tag
 import com.crispinlab.space.domain.tag.TagId
+import com.crispinlab.space.domain.visit.SpaceVisit
+import com.crispinlab.space.domain.visit.SpaceVisitId
 import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.user.domain.user.UserId
 import java.time.Instant
@@ -184,6 +186,19 @@ object Fixtures {
             userId = userId,
             role = role,
             joinedAt = joinedAt
+        )
+
+    fun basicSpaceVisit(
+        id: SpaceVisitId = SpaceVisitId(1L),
+        userId: UserId = UserId(100L),
+        spaceId: SpaceId = SpaceId(10L),
+        lastVisitedAt: Instant = DUMMY_INSTANT
+    ): SpaceVisit =
+        SpaceVisit(
+            id = id,
+            userId = userId,
+            spaceId = spaceId,
+            lastVisitedAt = lastVisitedAt
         )
 
     fun basicSpaceAuditEntry(

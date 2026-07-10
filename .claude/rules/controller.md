@@ -116,6 +116,7 @@ private fun UserSearching.Result.toResultFor(viewer: Viewer.Member): Result {
 - **write 뒤 응답 조립** 또는 **read 의 optional 부수 필드** — 두 가지가 격리 대상. 단건 read 의 필수 필드 (예: `PageGettingCompositionUseCase` 의 `authorHandle` — page 응답의 표시 이름이므로 여기선 격리하지 않는다) 는 격리하지 않아 실패가 사용자에게 명시적으로 나타난다.
 - 격리 시 fallback 값은 sentinel (빈 문자열 / 빈 Map / 빈 컬렉션) — null 을 payload 에 흘리지 않는다.
 - **`runCatching` 범위는 lookup 호출 한 줄만** — lookup 호출 자체 (write composition 은 lookup 을 감싸는 readOnly tx 블록까지) 만 감싸고, `toResult` / `toResults` 조립 흐름 전체를 감싸지 않는다. 조립 전체를 감싸면 lookup 실패뿐 아니라 mapping 로직의 예기치 못한 버그 (NPE / index 초과 / 도메인 매핑 미처리 케이스) 까지 sentinel 로 흡수되어, 장애가 성공 응답으로 숨고 클라이언트가 잘못된 payload 를 정상으로 오인한다.
+- **scope precondition lookup 은 격리하지 않는다** — 예: `SpaceListingCompositionUseCase` 의 `spaceMembershipLookup.memberSpaceIdsOf(viewer)` 는 이후 모든 visibility scope 판정 (도메인 UseCase 의 페이지 필터링 + BFF `pageStatLookup` 의 visibility 필터) 의 입력이라, 실패하면 응답 자체가 정확히 조립될 수 없다. 부분 응답 (memberSpaceIds = emptySet) 은 "viewer 가 아무 스페이스에도 안 속했음" 이라는 잘못된 시맨틱을 만들어 사용자에게 오도적 응답을 반환한다 — 이런 lookup 은 fail-fast 로 500 을 반환하는 게 정합. 격리 여부의 판정 기준: **그 lookup 결과가 downstream 조립의 근거로 쓰여, 실패 시 조립 자체의 정확성이 무너지는가.** 그렇다면 격리 안 함, 그렇지 않고 응답의 optional 부수 필드만 채운다면 격리.
 
 ### 도메인 UseCase Result 는 identifier 만
 

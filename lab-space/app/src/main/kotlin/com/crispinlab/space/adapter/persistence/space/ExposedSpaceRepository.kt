@@ -220,7 +220,7 @@ class ExposedSpaceRepository :
                 SortOption.CREATED_AT -> "s.created_at"
                 SortOption.NAME -> "s.name"
             }
-        return "$primary ${direction.name}, s.id DESC"
+        return "$primary ${direction.name}, s.id ${direction.name}"
     }
 
     private data class SqlFragment(

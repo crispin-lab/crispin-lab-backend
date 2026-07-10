@@ -565,6 +565,28 @@ class ExposedSpaceRepositoryTest :
                 }
             }
 
+            it(
+                "direction=ASC 일 때 id tiebreaker 도 ASC — offset 페이지네이션 중 동일 primary 값 새 INSERT 회귀 방지"
+            ) {
+                transaction(database) {
+                    repository.save(basicSpace(id = SpaceId(700L), name = "팀 위키"))
+                    repository.save(basicSpace(id = SpaceId(701L), name = "팀 위키"))
+                    repository.save(basicSpace(id = SpaceId(702L), name = "팀 위키"))
+                }
+
+                transaction(database) {
+                    val result =
+                        repository.findPage(
+                            PageRequest(page = 0, size = 10),
+                            privileged,
+                            sort = SortOption.NAME,
+                            direction = SortDirection.ASC
+                        )
+                    result.items.map { it.spaceId } shouldBe
+                        listOf(SpaceId(700L), SpaceId(701L), SpaceId(702L))
+                }
+            }
+
             it("direction=ASC 는 default direction (DESC) 을 뒤집는다") {
                 transaction(database) {
                     repository.save(

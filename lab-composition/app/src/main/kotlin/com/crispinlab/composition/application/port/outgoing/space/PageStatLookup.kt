@@ -12,6 +12,12 @@ interface PageStatLookup {
         memberSpaceIds: Set<SpaceId>
     ): Map<SpaceId, PageStat>
 
+    fun updatedCountsSince(
+        sinceOf: Map<SpaceId, Instant?>,
+        viewer: Viewer,
+        memberSpaceIds: Set<SpaceId>
+    ): Map<SpaceId, Long>
+
     data class PageStat(
         val count: Long,
         val latest: LatestPage?

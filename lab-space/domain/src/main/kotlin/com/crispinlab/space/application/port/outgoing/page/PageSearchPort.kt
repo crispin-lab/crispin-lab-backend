@@ -29,6 +29,11 @@ interface PageSearchPort {
         scope: VisibilityScope
     ): Map<SpaceId, PageStat>
 
+    fun updatedCountsSince(
+        sinceOf: Map<SpaceId, Instant>,
+        scope: VisibilityScope
+    ): Map<SpaceId, Long>
+
     enum class SortOption {
         CREATED_AT,
         UPDATED_AT,

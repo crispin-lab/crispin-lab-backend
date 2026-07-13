@@ -6,6 +6,7 @@ import com.crispinlab.common.transaction.TransactionProvider
 import com.crispinlab.composition.application.port.incoming.space.SpaceListingComposition.Request
 import com.crispinlab.composition.application.port.outgoing.space.PageStatLookup
 import com.crispinlab.composition.application.port.outgoing.space.SpaceMembershipLookup
+import com.crispinlab.composition.application.port.outgoing.space.SpaceVisitLookup
 import com.crispinlab.space.application.port.incoming.space.SpaceListing
 import com.crispinlab.space.application.port.incoming.space.SpaceListing.Summary
 import com.crispinlab.space.application.port.outgoing.space.SpaceRepository.SortDirection
@@ -31,18 +32,24 @@ class SpaceListingCompositionUseCaseTest :
         val spaceListing = mockk<SpaceListing>()
         val spaceMembershipLookup = mockk<SpaceMembershipLookup>()
         val pageStatLookup = mockk<PageStatLookup>()
+        val spaceVisitLookup = mockk<SpaceVisitLookup>()
 
         fun useCaseWith(transactionProvider: TransactionProvider = RecordingTransactionProvider()) =
             SpaceListingCompositionUseCase(
                 spaceListing = spaceListing,
                 spaceMembershipLookup = spaceMembershipLookup,
                 pageStatLookup = pageStatLookup,
+                spaceVisitLookup = spaceVisitLookup,
                 transactionProvider = transactionProvider
             )
 
         beforeEach {
-            clearMocks(spaceListing, spaceMembershipLookup, pageStatLookup)
+            clearMocks(spaceListing, spaceMembershipLookup, pageStatLookup, spaceVisitLookup)
             every { spaceMembershipLookup.memberSpaceIdsOf(any()) } returns emptySet()
+            every { spaceVisitLookup.lastVisitedAtOf(any(), any()) } returns emptyMap()
+            every {
+                pageStatLookup.updatedCountsSince(any(), any(), any())
+            } returns emptyMap()
         }
 
         describe("스페이스 목록 조립") {
@@ -94,7 +101,7 @@ class SpaceListingCompositionUseCaseTest :
                 second.lastActivityAt shouldBe SPACE_UPDATED
             }
 
-            it("distinct spaceIds set 으로 batch lookup 3건을 각각 1회 호출한다 (N+1 방지)") {
+            it("distinct spaceIds set 으로 batch lookup 5건을 각각 1회 호출한다 (N+1 방지)") {
                 val member = memberViewer(userId = 100L)
                 every { spaceListing.perform(any()) } returns
                     domainListing(
@@ -112,6 +119,8 @@ class SpaceListingCompositionUseCaseTest :
                 verify(exactly = 1) { spaceMembershipLookup.rolesOf(UserId(100L), expected) }
                 verify(exactly = 1) { spaceMembershipLookup.memberCountsOf(expected) }
                 verify(exactly = 1) { pageStatLookup.countsAndLatestOf(expected, member, any()) }
+                verify(exactly = 1) { spaceVisitLookup.lastVisitedAtOf(UserId(100L), expected) }
+                verify(exactly = 1) { pageStatLookup.updatedCountsSince(any(), member, any()) }
                 verify(exactly = 1) { spaceMembershipLookup.memberSpaceIdsOf(member) }
             }
 
@@ -142,6 +151,13 @@ class SpaceListingCompositionUseCaseTest :
                 verify(exactly = 1) {
                     pageStatLookup.countsAndLatestOf(
                         setOf(SpaceId(10L)),
+                        member,
+                        setOf(SpaceId(10L), SpaceId(20L))
+                    )
+                }
+                verify(exactly = 1) {
+                    pageStatLookup.updatedCountsSince(
+                        any(),
                         member,
                         setOf(SpaceId(10L), SpaceId(20L))
                     )
@@ -278,10 +294,141 @@ class SpaceListingCompositionUseCaseTest :
                     transactionProvider.inTransaction shouldBe true
                     emptyMap()
                 }
+                every { spaceVisitLookup.lastVisitedAtOf(any(), any()) } answers {
+                    transactionProvider.inTransaction shouldBe true
+                    emptyMap()
+                }
+                every { pageStatLookup.updatedCountsSince(any(), any(), any()) } answers {
+                    transactionProvider.inTransaction shouldBe true
+                    emptyMap()
+                }
 
                 useCaseWith(transactionProvider).perform(basicRequestFor(memberViewer(100L)))
 
                 transactionProvider.readOnlyInvocations shouldBe listOf(true)
+            }
+        }
+
+        describe("미읽음 계산") {
+            it("방문한 스페이스는 lastVisitedAt 세팅 + 그 이후 편집 페이지 수로 unreadCount 세팅") {
+                val member = memberViewer(userId = 100L)
+                every { spaceListing.perform(any()) } returns
+                    domainListing(summaryOf(spaceId = 10L))
+                every { spaceMembershipLookup.rolesOf(any(), any()) } returns emptyMap()
+                every { spaceMembershipLookup.memberCountsOf(any()) } returns emptyMap()
+                every { pageStatLookup.countsAndLatestOf(any(), any(), any()) } returns emptyMap()
+                val visitedAt = DUMMY_INSTANT.plusSeconds(3600)
+                every {
+                    spaceVisitLookup.lastVisitedAtOf(UserId(100L), setOf(SpaceId(10L)))
+                } returns mapOf(SpaceId(10L) to visitedAt)
+                every { pageStatLookup.updatedCountsSince(any(), member, any()) } returns
+                    mapOf(SpaceId(10L) to 3L)
+
+                val result = useCaseWith().perform(basicRequestFor(member))
+
+                val first = result.items.single()
+                first.lastVisitedAt shouldBe visitedAt
+                first.unreadCount shouldBe 3L
+                verify(exactly = 1) {
+                    pageStatLookup.updatedCountsSince(
+                        mapOf(SpaceId(10L) to visitedAt),
+                        member,
+                        any()
+                    )
+                }
+            }
+
+            it("방문 이후 편집이 없으면 unreadCount = 0") {
+                val member = memberViewer(userId = 100L)
+                every { spaceListing.perform(any()) } returns
+                    domainListing(summaryOf(spaceId = 10L))
+                every { spaceMembershipLookup.rolesOf(any(), any()) } returns emptyMap()
+                every { spaceMembershipLookup.memberCountsOf(any()) } returns emptyMap()
+                every { pageStatLookup.countsAndLatestOf(any(), any(), any()) } returns emptyMap()
+                every { spaceVisitLookup.lastVisitedAtOf(any(), any()) } returns
+                    mapOf(SpaceId(10L) to DUMMY_INSTANT.plusSeconds(3600))
+                every { pageStatLookup.updatedCountsSince(any(), any(), any()) } returns emptyMap()
+
+                val result = useCaseWith().perform(basicRequestFor(member))
+
+                result.items.single().unreadCount shouldBe 0L
+            }
+
+            it("미방문 스페이스는 lastVisitedAt = null 이고 sinceOf 에 null 로 넘어간다") {
+                val member = memberViewer(userId = 100L)
+                every { spaceListing.perform(any()) } returns
+                    domainListing(summaryOf(spaceId = 10L))
+                every { spaceMembershipLookup.rolesOf(any(), any()) } returns emptyMap()
+                every { spaceMembershipLookup.memberCountsOf(any()) } returns emptyMap()
+                every { pageStatLookup.countsAndLatestOf(any(), any(), any()) } returns emptyMap()
+                every { spaceVisitLookup.lastVisitedAtOf(any(), any()) } returns emptyMap()
+                every { pageStatLookup.updatedCountsSince(any(), any(), any()) } returns
+                    mapOf(SpaceId(10L) to 12L)
+
+                val result = useCaseWith().perform(basicRequestFor(member))
+
+                val first = result.items.single()
+                first.lastVisitedAt shouldBe null
+                first.unreadCount shouldBe 12L
+                verify(exactly = 1) {
+                    pageStatLookup.updatedCountsSince(
+                        mapOf(SpaceId(10L) to null),
+                        member,
+                        any()
+                    )
+                }
+            }
+
+            it("Anonymous viewer 는 lastVisitedAt=null / unreadCount=0 이고 두 lookup 이 호출되지 않는다") {
+                every { spaceListing.perform(any()) } returns
+                    domainListing(summaryOf(spaceId = 10L))
+                every { spaceMembershipLookup.memberCountsOf(any()) } returns emptyMap()
+                every { pageStatLookup.countsAndLatestOf(any(), any(), any()) } returns emptyMap()
+
+                val result = useCaseWith().perform(basicRequestFor(Viewer.Anonymous))
+
+                val first = result.items.single()
+                first.lastVisitedAt shouldBe null
+                first.unreadCount shouldBe 0L
+                verify(exactly = 0) { spaceVisitLookup.lastVisitedAtOf(any(), any()) }
+                verify(exactly = 0) { pageStatLookup.updatedCountsSince(any(), any(), any()) }
+            }
+
+            it("visitLookup 실패는 lastVisitedAt/unreadCount 를 fallback + updatedCountsSince 미호출") {
+                val member = memberViewer(userId = 100L)
+                every { spaceListing.perform(any()) } returns
+                    domainListing(summaryOf(spaceId = 10L))
+                every { spaceMembershipLookup.rolesOf(any(), any()) } returns emptyMap()
+                every { spaceMembershipLookup.memberCountsOf(any()) } returns emptyMap()
+                every { pageStatLookup.countsAndLatestOf(any(), any(), any()) } returns emptyMap()
+                every { spaceVisitLookup.lastVisitedAtOf(any(), any()) } throws
+                    IllegalStateException("visit lookup 실패")
+
+                val result = useCaseWith().perform(basicRequestFor(member))
+
+                val first = result.items.single()
+                first.lastVisitedAt shouldBe null
+                first.unreadCount shouldBe 0L
+                verify(exactly = 0) { pageStatLookup.updatedCountsSince(any(), any(), any()) }
+            }
+
+            it("updatedCountsSince 실패는 unreadCount=0 으로 degrade") {
+                val member = memberViewer(userId = 100L)
+                every { spaceListing.perform(any()) } returns
+                    domainListing(summaryOf(spaceId = 10L))
+                every { spaceMembershipLookup.rolesOf(any(), any()) } returns emptyMap()
+                every { spaceMembershipLookup.memberCountsOf(any()) } returns emptyMap()
+                every { pageStatLookup.countsAndLatestOf(any(), any(), any()) } returns emptyMap()
+                every { spaceVisitLookup.lastVisitedAtOf(any(), any()) } returns
+                    mapOf(SpaceId(10L) to DUMMY_INSTANT)
+                every { pageStatLookup.updatedCountsSince(any(), any(), any()) } throws
+                    RuntimeException("count 실패")
+
+                val result = useCaseWith().perform(basicRequestFor(member))
+
+                val first = result.items.single()
+                first.lastVisitedAt shouldBe DUMMY_INSTANT
+                first.unreadCount shouldBe 0L
             }
         }
     }) {

@@ -49,6 +49,8 @@ interface SpaceListingComposition : UseCase<Request, PageResult<Result>> {
         val pageCount: Long,
         val lastActivityAt: Instant,
         val latestPage: LatestPage?,
+        val lastVisitedAt: Instant?,
+        val unreadCount: Long,
         val createdAt: Instant,
         val updatedAt: Instant
     )

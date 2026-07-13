@@ -1795,6 +1795,171 @@ class ExposedPageSearchAdapterTest :
                 stats shouldBe emptyMap()
             }
         }
+
+        describe("스페이스별 방문 이후 편집 페이지 카운트") {
+            it("since 시각 이후 편집된 페이지만 space 별로 세고 미갱신 space 는 결과에서 누락된다") {
+                transaction(database) {
+                    pageRepository.save(
+                        publicPage(
+                            id = PageId(1L),
+                            spaceId = SpaceId(10L),
+                            title = "10-오래됨",
+                            createdAt = DUMMY_INSTANT
+                        )
+                    )
+                    pageRepository.save(
+                        publicPage(
+                            id = PageId(2L),
+                            spaceId = SpaceId(10L),
+                            title = "10-최근",
+                            createdAt = DUMMY_INSTANT.plusSeconds(120)
+                        )
+                    )
+                    pageRepository.save(
+                        publicPage(
+                            id = PageId(3L),
+                            spaceId = SpaceId(20L),
+                            title = "20-이전",
+                            createdAt = DUMMY_INSTANT
+                        )
+                    )
+                }
+
+                val counts =
+                    transaction(database) {
+                        adapter.updatedCountsSince(
+                            sinceOf =
+                                mapOf(
+                                    SpaceId(10L) to DUMMY_INSTANT.plusSeconds(60),
+                                    SpaceId(20L) to DUMMY_INSTANT.plusSeconds(60)
+                                ),
+                            scope = VisibilityScope.Anonymous
+                        )
+                    }
+
+                counts[SpaceId(10L)] shouldBe 1L
+                counts[SpaceId(20L)] shouldBe null
+            }
+
+            it("since 를 EPOCH 로 주면 전체 페이지가 카운트된다 (미방문 스페이스)") {
+                transaction(database) {
+                    pageRepository.save(
+                        publicPage(id = PageId(1L), spaceId = SpaceId(10L))
+                    )
+                    pageRepository.save(
+                        publicPage(id = PageId(2L), spaceId = SpaceId(10L))
+                    )
+                }
+
+                val counts =
+                    transaction(database) {
+                        adapter.updatedCountsSince(
+                            sinceOf = mapOf(SpaceId(10L) to Instant.EPOCH),
+                            scope = VisibilityScope.Anonymous
+                        )
+                    }
+
+                counts[SpaceId(10L)] shouldBe 2L
+            }
+
+            it("deleted page 는 카운트에서 제외된다") {
+                transaction(database) {
+                    pageRepository.save(
+                        publicPage(
+                            id = PageId(1L),
+                            spaceId = SpaceId(10L),
+                            createdAt = DUMMY_INSTANT.plusSeconds(120)
+                        )
+                    )
+                    pageRepository.save(
+                        publicPage(
+                            id = PageId(2L),
+                            spaceId = SpaceId(10L),
+                            createdAt = DUMMY_INSTANT.plusSeconds(120)
+                        )
+                    )
+                    pageRepository.delete(PageId(2L))
+                }
+
+                val counts =
+                    transaction(database) {
+                        adapter.updatedCountsSince(
+                            sinceOf = mapOf(SpaceId(10L) to DUMMY_INSTANT.plusSeconds(60)),
+                            scope = VisibilityScope.Anonymous
+                        )
+                    }
+
+                counts[SpaceId(10L)] shouldBe 1L
+            }
+
+            it("Anonymous scope 는 DRAFT / MEMBER 페이지를 카운트하지 않는다") {
+                transaction(database) {
+                    pageRepository.save(
+                        basicPage(
+                            id = PageId(1L),
+                            spaceId = SpaceId(10L),
+                            title = "다른 사용자 DRAFT",
+                            visibility = Visibility.DRAFT,
+                            authorId = UserId(999L),
+                            createdAt = DUMMY_INSTANT.plusSeconds(120)
+                        )
+                    )
+                    pageRepository.save(
+                        publicPage(
+                            id = PageId(2L),
+                            spaceId = SpaceId(10L),
+                            title = "PUBLIC",
+                            createdAt = DUMMY_INSTANT.plusSeconds(120)
+                        )
+                    )
+                }
+
+                val counts =
+                    transaction(database) {
+                        adapter.updatedCountsSince(
+                            sinceOf = mapOf(SpaceId(10L) to DUMMY_INSTANT.plusSeconds(60)),
+                            scope = VisibilityScope.Anonymous
+                        )
+                    }
+
+                counts[SpaceId(10L)] shouldBe 1L
+            }
+
+            it("deleted space 의 페이지는 카운트에서 제외된다") {
+                transaction(database) {
+                    pageRepository.save(
+                        publicPage(
+                            id = PageId(1L),
+                            spaceId = SpaceId(20L),
+                            createdAt = DUMMY_INSTANT.plusSeconds(120)
+                        )
+                    )
+                    spaceRepository.delete(SpaceId(20L))
+                }
+
+                val counts =
+                    transaction(database) {
+                        adapter.updatedCountsSince(
+                            sinceOf = mapOf(SpaceId(20L) to Instant.EPOCH),
+                            scope = VisibilityScope.Anonymous
+                        )
+                    }
+
+                counts[SpaceId(20L)] shouldBe null
+            }
+
+            it("빈 sinceOf 는 emptyMap 을 반환한다") {
+                val counts =
+                    transaction(database) {
+                        adapter.updatedCountsSince(
+                            sinceOf = emptyMap(),
+                            scope = VisibilityScope.Anonymous
+                        )
+                    }
+
+                counts shouldBe emptyMap()
+            }
+        }
     }) {
     companion object {
         fun publicPage(

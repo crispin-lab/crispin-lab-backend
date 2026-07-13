@@ -21,6 +21,7 @@ import com.crispinlab.space.domain.page.PageId
 import com.crispinlab.space.domain.space.SpaceId
 import com.crispinlab.space.domain.tag.TagId
 import com.crispinlab.user.domain.user.UserId
+import java.time.Instant
 import org.jetbrains.exposed.v1.core.Expression
 import org.jetbrains.exposed.v1.core.IColumnType
 import org.jetbrains.exposed.v1.core.JoinType
@@ -30,9 +31,11 @@ import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.compoundAnd
+import org.jetbrains.exposed.v1.core.compoundOr
 import org.jetbrains.exposed.v1.core.count
 import org.jetbrains.exposed.v1.core.countDistinct
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.greater
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.like
@@ -101,6 +104,34 @@ class ExposedPageSearchAdapter : PageSearchPort {
             .mapValues { (spaceId, count) ->
                 PageStat(count = count, latest = latests[spaceId.value])
             }
+    }
+
+    override fun updatedCountsSince(
+        sinceOf: Map<SpaceId, Instant>,
+        scope: VisibilityScope
+    ): Map<SpaceId, Long> {
+        if (sinceOf.isEmpty()) return emptyMap()
+        val rawSpaceIds = sinceOf.keys.map { it.value }.distinct()
+        val tuplePredicate =
+            sinceOf.entries
+                .map { (spaceId, since) ->
+                    (Pages.spaceId eq spaceId.value) and (Pages.updatedAt greater since)
+                }.compoundOr()
+        val countColumn = Pages.id.count()
+        return Pages
+            .join(
+                otherTable = Spaces,
+                joinType = JoinType.INNER,
+                additionalConstraint = { Pages.spaceId eq Spaces.id }
+            ).select(Pages.spaceId, countColumn)
+            .where {
+                (Pages.spaceId inList rawSpaceIds) and
+                    Pages.notDeleted() and
+                    Spaces.deletedAt.isNull() and
+                    scope.toClauses().toExposedOp() and
+                    tuplePredicate
+            }.groupBy(Pages.spaceId)
+            .associate { SpaceId(it[Pages.spaceId]) to it[countColumn] }
     }
 
     private fun countsBySpaceIds(

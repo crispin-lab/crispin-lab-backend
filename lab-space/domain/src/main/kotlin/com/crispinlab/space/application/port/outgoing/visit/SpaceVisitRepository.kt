@@ -7,11 +7,6 @@ import com.crispinlab.user.domain.user.UserId
 interface SpaceVisitRepository {
     fun save(entity: SpaceVisit)
 
-    fun findByUserIdAndSpaceId(
-        userId: UserId,
-        spaceId: SpaceId
-    ): SpaceVisit?
-
     fun findByUserIdAndSpaceIds(
         userId: UserId,
         spaceIds: Collection<SpaceId>

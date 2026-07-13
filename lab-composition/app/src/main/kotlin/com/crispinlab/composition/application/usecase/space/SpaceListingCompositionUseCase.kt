@@ -56,15 +56,13 @@ class SpaceListingCompositionUseCase(
         val pageStats =
             runCatching { pageStatLookup.countsAndLatestOf(spaceIds, viewer, memberSpaceIds) }
                 .getOrElse { emptyMap() }
-        val lastVisitedAt = viewer.lastVisitedAtFor(spaceIds)
-        val unreadCounts = viewer.unreadCountsFor(spaceIds, lastVisitedAt, memberSpaceIds)
+        val visitStats = viewer.visitStatsFor(spaceIds, memberSpaceIds)
         return map {
             it.toResult(
                 roles = roles,
                 memberCounts = memberCounts,
                 pageStats = pageStats,
-                lastVisitedAt = lastVisitedAt,
-                unreadCounts = unreadCounts
+                visitStats = visitStats
             )
         }
     }
@@ -81,42 +79,27 @@ class SpaceListingCompositionUseCase(
             }
         }
 
-    private fun Viewer.lastVisitedAtFor(spaceIds: Set<SpaceId>): Map<SpaceId, Instant> =
-        when (this) {
-            is Viewer.Member -> {
-                runCatching { spaceVisitLookup.lastVisitedAtOf(userId, spaceIds) }
-                    .getOrElse { emptyMap() }
-            }
-
-            Viewer.Anonymous -> {
-                emptyMap()
-            }
-        }
-
-    private fun Viewer.unreadCountsFor(
+    private fun Viewer.visitStatsFor(
         spaceIds: Set<SpaceId>,
-        lastVisitedAt: Map<SpaceId, Instant>,
         memberSpaceIds: Set<SpaceId>
-    ): Map<SpaceId, Long> =
-        when (this) {
-            is Viewer.Member -> {
-                val sinceOf = spaceIds.associateWith { lastVisitedAt[it] }
-                runCatching {
-                    pageStatLookup.updatedCountsSince(sinceOf, this, memberSpaceIds)
-                }.getOrElse { emptyMap() }
-            }
-
-            Viewer.Anonymous -> {
-                emptyMap()
-            }
-        }
+    ): VisitStats {
+        if (this !is Viewer.Member) return VisitStats.EMPTY
+        val visited =
+            runCatching { spaceVisitLookup.lastVisitedAtOf(userId, spaceIds) }
+                .getOrElse { return VisitStats.EMPTY }
+        val sinceOf = spaceIds.associateWith { visited[it] }
+        val counts =
+            runCatching {
+                pageStatLookup.updatedCountsSince(sinceOf, this, memberSpaceIds)
+            }.getOrElse { emptyMap() }
+        return VisitStats(visited, counts)
+    }
 
     private fun Summary.toResult(
         roles: Map<SpaceId, SpaceMemberRole>,
         memberCounts: Map<SpaceId, Long>,
         pageStats: Map<SpaceId, PageStatLookup.PageStat>,
-        lastVisitedAt: Map<SpaceId, Instant>,
-        unreadCounts: Map<SpaceId, Long>
+        visitStats: VisitStats
     ): Result {
         val stat = pageStats[spaceId]
         val latest = stat?.latest?.toLatestPage()
@@ -130,8 +113,8 @@ class SpaceListingCompositionUseCase(
             pageCount = stat?.count ?: 0L,
             lastActivityAt = lastActivityAt,
             latestPage = latest,
-            lastVisitedAt = lastVisitedAt[spaceId],
-            unreadCount = unreadCounts.getOrDefault(spaceId, 0L),
+            lastVisitedAt = visitStats.lastVisitedAt[spaceId],
+            unreadCount = visitStats.unreadCounts.getOrDefault(spaceId, 0L),
             createdAt = createdAt,
             updatedAt = updatedAt
         )
@@ -143,4 +126,13 @@ class SpaceListingCompositionUseCase(
             title = title,
             updatedAt = updatedAt
         )
+
+    private data class VisitStats(
+        val lastVisitedAt: Map<SpaceId, Instant>,
+        val unreadCounts: Map<SpaceId, Long>
+    ) {
+        companion object {
+            val EMPTY = VisitStats(emptyMap(), emptyMap())
+        }
+    }
 }

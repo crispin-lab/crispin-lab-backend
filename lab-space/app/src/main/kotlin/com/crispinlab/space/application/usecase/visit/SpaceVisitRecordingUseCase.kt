@@ -9,7 +9,9 @@ import com.crispinlab.space.application.port.outgoing.space.SpaceRepository
 import com.crispinlab.space.application.port.outgoing.space.SpaceVisibilityScope
 import com.crispinlab.space.application.port.outgoing.spacemember.SpaceMemberRepository
 import com.crispinlab.space.application.port.outgoing.visit.SpaceVisitRepository
+import com.crispinlab.space.domain.space.Space
 import com.crispinlab.space.domain.space.SpaceErrorCode
+import com.crispinlab.space.domain.space.SpaceVisibility
 import com.crispinlab.space.domain.visit.SpaceVisit
 import com.crispinlab.space.domain.visit.SpaceVisitId
 import java.time.Instant.now
@@ -33,18 +35,24 @@ class SpaceVisitRecordingUseCase(
     }
 
     private fun Request.validate() {
-        val membership =
-            if (viewer.isAdmin) {
-                null
-            } else {
-                spaceMemberRepository.findBySpaceIdAndUserId(spaceId, viewer.userId)
-            }
-        val memberOfSpaceIds = membership?.let { setOf(spaceId) } ?: emptySet()
-        val scope = SpaceVisibilityScope.of(viewer, memberOfSpaceIds)
-        spaceRepository
-            .findBy(spaceId)
-            ?.takeIf { scope.allows(it.visibility, it.id) }
-            ?: throw NotFoundException(SpaceErrorCode.SPACE_NOT_FOUND)
+        val space =
+            spaceRepository.findBy(spaceId)
+                ?: throw NotFoundException(SpaceErrorCode.SPACE_NOT_FOUND)
+        if (!scopeFor(space).allows(space.visibility, space.id)) {
+            throw NotFoundException(SpaceErrorCode.SPACE_NOT_FOUND)
+        }
+    }
+
+    private fun Request.scopeFor(space: Space): SpaceVisibilityScope {
+        if (viewer.isAdmin || space.visibility == SpaceVisibility.PUBLIC) {
+            return SpaceVisibilityScope.of(viewer, emptySet())
+        }
+        val memberOfSpaceIds =
+            spaceMemberRepository
+                .findBySpaceIdAndUserId(spaceId, viewer.userId)
+                ?.let { setOf(spaceId) }
+                ?: emptySet()
+        return SpaceVisibilityScope.of(viewer, memberOfSpaceIds)
     }
 
     private fun Request.toEntity(): SpaceVisit =

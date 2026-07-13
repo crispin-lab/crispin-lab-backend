@@ -394,7 +394,7 @@ class SpaceListingCompositionUseCaseTest :
                 verify(exactly = 0) { pageStatLookup.updatedCountsSince(any(), any(), any()) }
             }
 
-            it("spaceVisitLookup 실패는 lastVisitedAt=null 로 degrade") {
+            it("visitLookup 실패는 lastVisitedAt/unreadCount 를 fallback + updatedCountsSince 미호출") {
                 val member = memberViewer(userId = 100L)
                 every { spaceListing.perform(any()) } returns
                     domainListing(summaryOf(spaceId = 10L))
@@ -403,14 +403,13 @@ class SpaceListingCompositionUseCaseTest :
                 every { pageStatLookup.countsAndLatestOf(any(), any(), any()) } returns emptyMap()
                 every { spaceVisitLookup.lastVisitedAtOf(any(), any()) } throws
                     IllegalStateException("visit lookup 실패")
-                every { pageStatLookup.updatedCountsSince(any(), any(), any()) } returns
-                    mapOf(SpaceId(10L) to 5L)
 
                 val result = useCaseWith().perform(basicRequestFor(member))
 
                 val first = result.items.single()
                 first.lastVisitedAt shouldBe null
-                first.unreadCount shouldBe 5L
+                first.unreadCount shouldBe 0L
+                verify(exactly = 0) { pageStatLookup.updatedCountsSince(any(), any(), any()) }
             }
 
             it("updatedCountsSince 실패는 unreadCount=0 으로 degrade") {

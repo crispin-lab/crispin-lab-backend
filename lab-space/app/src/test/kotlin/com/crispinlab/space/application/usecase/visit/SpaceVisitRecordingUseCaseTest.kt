@@ -56,7 +56,7 @@ class SpaceVisitRecordingUseCaseTest :
         }
 
         describe("스페이스 방문 기록") {
-            it("PUBLIC 스페이스면 현재 시각으로 SpaceVisit 을 upsert 한다") {
+            it("PUBLIC 스페이스면 현재 시각으로 SpaceVisit 을 upsert 하고 멤버십 조회를 skip 한다") {
                 every { idGenerator.next() } returns 42L
                 val saved = slot<SpaceVisit>()
                 every { spaceVisitRepository.save(capture(saved)) } returns Unit
@@ -71,6 +71,9 @@ class SpaceVisitRecordingUseCaseTest :
                 val captured = saved.captured.lastVisitedAt.toEpochMilli()
                 captured shouldBeGreaterThanOrEqual before.toEpochMilli()
                 captured shouldBeLessThanOrEqual after.toEpochMilli()
+                verify(exactly = 0) {
+                    spaceMemberRepository.findBySpaceIdAndUserId(any(), any())
+                }
             }
 
             it("존재하지 않는 space 는 NotFoundException 을 던지고 save 하지 않는다") {

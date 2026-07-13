@@ -149,7 +149,7 @@ class SpaceListingCompositionControllerTest :
                                     optional = true
                                 )
                                 "unreadCount".number(
-                                    "lastVisitedAt 이후 편집된 페이지 수 (미방문 스페이스는 전체 페이지 수 · Anonymous · lookup 실패 시 0)"
+                                    "lastVisitedAt 이후 편집된 페이지 수 (미방문 스페이스는 전체 페이지 수 · Anonymous 또는 방문 lookup 실패 시 0 · updatedCounts lookup 실패 시 0)"
                                 )
                                 "createdAt".datetime("스페이스 생성 시각")
                                 "updatedAt".datetime("스페이스 갱신 시각")

@@ -7,8 +7,6 @@ import com.crispinlab.space.testsupport.Dummies.DUMMY_INSTANT
 import com.crispinlab.space.testsupport.Fixtures.basicSpaceVisit
 import com.crispinlab.user.domain.user.UserId
 import io.kotest.core.spec.style.DescribeSpec
-import io.kotest.matchers.nulls.shouldBeNull
-import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
@@ -20,7 +18,7 @@ class ExposedSpaceVisitRepositoryTest :
         afterEach { PostgresTestContext.truncateAll() }
 
         describe("ExposedSpaceVisitRepository") {
-            it("save 후 findByUserIdAndSpaceId 로 동일 entity 가 복원된다") {
+            it("save 후 batch 조회로 저장된 entity 가 복원된다") {
                 transaction(database) {
                     repository.save(
                         basicSpaceVisit(
@@ -34,13 +32,15 @@ class ExposedSpaceVisitRepositoryTest :
 
                 transaction(database) {
                     val found =
-                        repository
-                            .findByUserIdAndSpaceId(UserId(100L), SpaceId(10L))
-                            .shouldNotBeNull()
-                    found.id shouldBe SpaceVisitId(1L)
-                    found.userId shouldBe UserId(100L)
-                    found.spaceId shouldBe SpaceId(10L)
-                    found.lastVisitedAt shouldBe DUMMY_INSTANT
+                        repository.findByUserIdAndSpaceIds(
+                            userId = UserId(100L),
+                            spaceIds = setOf(SpaceId(10L))
+                        )
+                    val visit = found[SpaceId(10L)] ?: error("expected visit for space 10")
+                    visit.id shouldBe SpaceVisitId(1L)
+                    visit.userId shouldBe UserId(100L)
+                    visit.spaceId shouldBe SpaceId(10L)
+                    visit.lastVisitedAt shouldBe DUMMY_INSTANT
                 }
             }
 
@@ -69,18 +69,49 @@ class ExposedSpaceVisitRepositoryTest :
                 }
 
                 transaction(database) {
-                    val found =
-                        repository
-                            .findByUserIdAndSpaceId(UserId(200L), SpaceId(20L))
-                            .shouldNotBeNull()
-                    found.id shouldBe SpaceVisitId(2L)
-                    found.lastVisitedAt shouldBe later
+                    val visit =
+                        repository.findByUserIdAndSpaceIds(
+                            userId = UserId(200L),
+                            spaceIds = setOf(SpaceId(20L))
+                        )[SpaceId(20L)] ?: error("expected visit for space 20")
+                    visit.id shouldBe SpaceVisitId(2L)
+                    visit.lastVisitedAt shouldBe later
                 }
             }
 
-            it("findByUserIdAndSpaceId 는 매핑이 없으면 null 을 반환한다") {
+            it("out-of-order save 로 오래된 timestamp 가 들어와도 최신 값이 유지된다") {
+                val newer = DUMMY_INSTANT.plusSeconds(3600)
+                val older = DUMMY_INSTANT
                 transaction(database) {
-                    repository.findByUserIdAndSpaceId(UserId(300L), SpaceId(30L)).shouldBeNull()
+                    repository.save(
+                        basicSpaceVisit(
+                            id = SpaceVisitId(6L),
+                            userId = UserId(600L),
+                            spaceId = SpaceId(60L),
+                            lastVisitedAt = newer
+                        )
+                    )
+                }
+
+                transaction(database) {
+                    repository.save(
+                        basicSpaceVisit(
+                            id = SpaceVisitId(7L),
+                            userId = UserId(600L),
+                            spaceId = SpaceId(60L),
+                            lastVisitedAt = older
+                        )
+                    )
+                }
+
+                transaction(database) {
+                    val visit =
+                        repository.findByUserIdAndSpaceIds(
+                            userId = UserId(600L),
+                            spaceIds = setOf(SpaceId(60L))
+                        )[SpaceId(60L)] ?: error("expected visit for space 60")
+                    visit.id shouldBe SpaceVisitId(6L)
+                    visit.lastVisitedAt shouldBe newer
                 }
             }
 
